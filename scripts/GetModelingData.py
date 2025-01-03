@@ -30,7 +30,7 @@ def check_results_naming(results_dict, SR, KP):
                             raise ValueError('Team missing: '+team)
 
 # Run Web Scrapers
-#from scrapers import GetData_KP, GetData_SR
+from scrapers import GetData_KP, GetData_SR
 
 # Read Data
 KP = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), 'data/raw/kenpom.csv'))
