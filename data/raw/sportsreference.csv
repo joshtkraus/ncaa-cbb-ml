@@ -1,0 +1,705 @@
+Year,Team,Round,Conf Tourney,Region,Seed
+2013,Indiana,3,0,Midwest,1
+2013,James Madison,1,1,Midwest,16
+2013,North Carolina State,1,0,Midwest,8
+2013,Temple,2,0,Midwest,9
+2013,Nevada Las Vegas,1,0,Midwest,5
+2013,California,2,0,Midwest,12
+2013,Syracuse,5,0,Midwest,4
+2013,Montana,1,1,Midwest,13
+2013,Butler,2,0,Midwest,6
+2013,Bucknell,1,1,Midwest,11
+2013,Marquette,4,0,Midwest,3
+2013,Davidson,1,1,Midwest,14
+2013,Illinois,2,0,Midwest,7
+2013,Colorado,1,0,Midwest,10
+2013,Miami Fl,3,1,Midwest,2
+2013,Pacific,1,1,Midwest,15
+2013,Gonzaga,2,1,East,1
+2013,Southern,1,1,East,16
+2013,Pittsburgh,1,0,East,8
+2013,Wichita State,5,0,East,9
+2013,Wisconsin,1,0,East,5
+2013,Mississippi,2,1,East,12
+2013,Kansas State,1,0,East,4
+2013,La Salle,3,0,East,13
+2013,Arizona,3,0,East,6
+2013,Belmont,1,1,East,11
+2013,New Mexico,1,1,East,3
+2013,Harvard,2,0,East,14
+2013,Notre Dame,1,0,East,7
+2013,Iowa State,2,0,East,10
+2013,Ohio State,4,1,East,2
+2013,Iona,1,1,East,15
+2013,Louisville,7,1,West,1
+2013,North Carolina At,1,1,West,16
+2013,Colorado State,2,0,West,8
+2013,Missouri,1,0,West,9
+2013,Oklahoma State,1,0,West,5
+2013,Oregon,3,1,West,12
+2013,Saint Louis,2,1,West,4
+2013,New Mexico State,1,1,West,13
+2013,Memphis,2,1,West,6
+2013,Saint Marys Ca,1,0,West,11
+2013,Michigan State,3,0,West,3
+2013,Valparaiso,1,1,West,14
+2013,Creighton,2,1,West,7
+2013,Cincinnati,1,0,West,10
+2013,Duke,4,0,West,2
+2013,Albany Ny,1,1,West,15
+2013,Kansas,3,1,South,1
+2013,Western Kentucky,1,1,South,16
+2013,North Carolina,2,0,South,8
+2013,Villanova,1,0,South,9
+2013,Virginia Commonwealth,2,0,South,5
+2013,Akron,1,1,South,12
+2013,Michigan,6,0,South,4
+2013,South Dakota State,1,1,South,13
+2013,Ucla,1,0,South,6
+2013,Minnesota,2,0,South,11
+2013,Florida,4,0,South,3
+2013,Northwestern State,1,1,South,14
+2013,San Diego State,2,0,South,7
+2013,Oklahoma,1,0,South,10
+2013,Georgetown,1,0,South,2
+2013,Florida Gulf Coast,3,1,South,15
+2014,Virginia,3,1,East,1
+2014,Coastal Carolina,1,1,East,16
+2014,Memphis,2,0,East,8
+2014,George Washington,1,0,East,9
+2014,Cincinnati,1,0,East,5
+2014,Harvard,2,0,East,12
+2014,Michigan State,4,1,East,4
+2014,Delaware,1,1,East,13
+2014,North Carolina,2,0,East,6
+2014,Providence,1,1,East,11
+2014,Iowa State,3,1,East,3
+2014,North Carolina Central,1,1,East,14
+2014,Connecticut,7,0,East,7
+2014,Saint Josephs,1,1,East,10
+2014,Villanova,2,0,East,2
+2014,Milwaukee,1,1,East,15
+2014,Arizona,4,0,South,1
+2014,Weber State,1,1,South,16
+2014,Gonzaga,2,1,South,8
+2014,Oklahoma State,1,0,South,9
+2014,Oklahoma,1,0,South,5
+2014,North Dakota State,2,1,South,12
+2014,San Diego State,3,0,South,4
+2014,New Mexico State,1,1,South,13
+2014,Baylor,3,0,South,6
+2014,Nebraska,1,0,South,11
+2014,Creighton,2,0,South,3
+2014,Louisiana Lafayette,1,1,South,14
+2014,Oregon,2,0,South,7
+2014,Brigham Young,1,0,South,10
+2014,Wisconsin,5,0,South,2
+2014,American,1,1,South,15
+2014,Wichita State,2,1,Midwest,1
+2014,Cal Poly,1,1,Midwest,16
+2014,Kentucky,6,0,Midwest,8
+2014,Kansas State,1,0,Midwest,9
+2014,Saint Louis,2,0,Midwest,5
+2014,North Carolina State,1,0,Midwest,12
+2014,Louisville,3,1,Midwest,4
+2014,Manhattan,1,1,Midwest,13
+2014,Massachusetts,1,0,Midwest,6
+2014,Tennessee,3,0,Midwest,11
+2014,Duke,1,0,Midwest,3
+2014,Mercer,2,1,Midwest,14
+2014,Texas,2,0,Midwest,7
+2014,Arizona State,1,0,Midwest,10
+2014,Michigan,4,0,Midwest,2
+2014,Wofford,1,1,Midwest,15
+2014,Florida,5,1,West,1
+2014,Albany Ny,1,1,West,16
+2014,Colorado,1,0,West,8
+2014,Pittsburgh,2,0,West,9
+2014,Virginia Commonwealth,1,0,West,5
+2014,Stephen F Austin,2,1,West,12
+2014,Ucla,3,1,West,4
+2014,Tulsa,1,1,West,13
+2014,Ohio State,1,0,West,6
+2014,Dayton,4,0,West,11
+2014,Syracuse,2,0,West,3
+2014,Western Michigan,1,1,West,14
+2014,New Mexico,1,1,West,7
+2014,Stanford,3,0,West,10
+2014,Kansas,2,0,West,2
+2014,Eastern Kentucky,1,1,West,15
+2015,Villanova,2,1,South,1
+2015,Lafayette,1,1,South,16
+2015,North Carolina State,3,0,South,8
+2015,Louisiana State,1,0,South,9
+2015,Northern Iowa,2,1,South,5
+2015,Wyoming,1,1,South,12
+2015,Louisville,4,0,South,4
+2015,California Irvine,1,1,South,13
+2015,Providence,1,0,South,6
+2015,Dayton,2,0,South,11
+2015,Oklahoma,3,0,South,3
+2015,Albany Ny,1,1,South,14
+2015,Michigan State,5,0,South,7
+2015,Georgia,1,0,South,10
+2015,Virginia,2,0,South,2
+2015,Belmont,1,1,South,15
+2015,Wisconsin,6,1,East,1
+2015,Coastal Carolina,1,1,East,16
+2015,Oregon,2,0,East,8
+2015,Oklahoma State,1,0,East,9
+2015,Arkansas,2,0,East,5
+2015,Wofford,1,1,East,12
+2015,North Carolina,3,0,East,4
+2015,Harvard,1,0,East,13
+2015,Xavier,3,0,East,6
+2015,Mississippi,1,0,East,11
+2015,Baylor,1,0,East,3
+2015,Georgia State,2,1,East,14
+2015,Virginia Commonwealth,1,1,East,7
+2015,Ohio State,2,0,East,10
+2015,Arizona,4,1,East,2
+2015,Texas Southern,1,1,East,15
+2015,Kentucky,5,1,West,1
+2015,Hampton,1,1,West,16
+2015,Cincinnati,2,0,West,8
+2015,Purdue,1,0,West,9
+2015,West Virginia,3,0,West,5
+2015,Buffalo,1,1,West,12
+2015,Maryland,2,0,West,4
+2015,Valparaiso,1,1,West,13
+2015,Butler,2,0,West,6
+2015,Texas,1,0,West,11
+2015,Notre Dame,4,1,West,3
+2015,Northeastern,1,1,West,14
+2015,Wichita State,3,0,West,7
+2015,Indiana,1,0,West,10
+2015,Kansas,2,0,West,2
+2015,New Mexico State,1,1,West,15
+2015,Duke,7,0,Midwest,1
+2015,Robert Morris,1,1,Midwest,16
+2015,San Diego State,2,0,Midwest,8
+2015,St Johns Ny,1,0,Midwest,9
+2015,Utah,3,0,Midwest,5
+2015,Stephen F Austin,1,1,Midwest,12
+2015,Georgetown,2,0,Midwest,4
+2015,Eastern Washington,1,1,Midwest,13
+2015,Southern Methodist,1,1,Midwest,6
+2015,Ucla,3,0,Midwest,11
+2015,Iowa State,1,1,Midwest,3
+2015,Alabama Birmingham,2,1,Midwest,14
+2015,Iowa,2,0,Midwest,7
+2015,Davidson,1,0,Midwest,10
+2015,Gonzaga,4,1,Midwest,2
+2015,North Dakota State,1,1,Midwest,15
+2016,North Carolina,6,1,South,1
+2016,Florida Gulf Coast,1,1,South,16
+2016,Southern California,1,0,South,8
+2016,Providence,2,0,South,9
+2016,Indiana,3,0,South,5
+2016,Chattanooga,1,1,South,12
+2016,Kentucky,2,1,South,4
+2016,Stony Brook,1,1,South,13
+2016,Notre Dame,4,0,South,6
+2016,Michigan,1,0,South,11
+2016,West Virginia,1,0,South,3
+2016,Stephen F Austin,2,1,South,14
+2016,Wisconsin,3,0,South,7
+2016,Pittsburgh,1,0,South,10
+2016,Xavier,2,0,South,2
+2016,Weber State,1,1,South,15
+2016,Oregon,4,1,East,1
+2016,Holy Cross,1,1,East,16
+2016,Saint Josephs,2,1,East,8
+2016,Cincinnati,1,0,East,9
+2016,Baylor,1,0,East,5
+2016,Yale,2,0,East,12
+2016,Duke,3,0,East,4
+2016,North Carolina Wilmington,1,1,East,13
+2016,Texas,1,0,East,6
+2016,Northern Iowa,2,1,East,11
+2016,Texas Am,3,0,East,3
+2016,Green Bay,1,1,East,14
+2016,Oregon State,1,0,East,7
+2016,Virginia Commonwealth,2,0,East,10
+2016,Oklahoma,5,0,East,2
+2016,Cal State Bakersfield,1,1,East,15
+2016,Virginia,4,0,Midwest,1
+2016,Hampton,1,1,Midwest,16
+2016,Texas Tech,1,0,Midwest,8
+2016,Butler,2,0,Midwest,9
+2016,Purdue,1,0,Midwest,5
+2016,Arkansas Little Rock,2,1,Midwest,12
+2016,Iowa State,3,0,Midwest,4
+2016,Iona,1,1,Midwest,13
+2016,Seton Hall,1,1,Midwest,6
+2016,Gonzaga,3,1,Midwest,11
+2016,Utah,2,0,Midwest,3
+2016,Fresno State,1,1,Midwest,14
+2016,Dayton,1,0,Midwest,7
+2016,Syracuse,5,0,Midwest,10
+2016,Michigan State,1,1,Midwest,2
+2016,Middle Tennessee,2,1,Midwest,15
+2016,Kansas,4,1,West,1
+2016,Austin Peay,1,1,West,16
+2016,Colorado,1,0,West,8
+2016,Connecticut,2,1,West,9
+2016,Maryland,3,0,West,5
+2016,South Dakota State,1,1,West,12
+2016,California,1,0,West,4
+2016,Hawaii,2,1,West,13
+2016,Arizona,1,0,West,6
+2016,Wichita State,2,0,West,11
+2016,Miami Fl,3,0,West,3
+2016,Buffalo,1,1,West,14
+2016,Iowa,2,0,West,7
+2016,Temple,1,0,West,10
+2016,Villanova,7,0,West,2
+2016,North Carolina Asheville,1,1,West,15
+2017,Villanova,2,1,West,1
+2017,Mount St Marys,1,1,West,16
+2017,Wisconsin,3,0,West,8
+2017,Virginia Tech,1,0,West,9
+2017,Virginia,2,0,West,5
+2017,North Carolina Wilmington,1,1,West,12
+2017,Florida,4,0,West,4
+2017,East Tennessee State,1,1,West,13
+2017,Southern Methodist,1,1,West,6
+2017,Southern California,2,0,West,11
+2017,Baylor,3,0,West,3
+2017,New Mexico State,1,1,West,14
+2017,South Carolina,5,0,West,7
+2017,Marquette,1,0,West,10
+2017,Duke,2,1,West,2
+2017,Troy,1,1,West,15
+2017,Gonzaga,6,1,East,1
+2017,South Dakota State,1,1,East,16
+2017,Northwestern,2,0,East,8
+2017,Vanderbilt,1,0,East,9
+2017,Notre Dame,2,0,East,5
+2017,Princeton,1,1,East,12
+2017,West Virginia,3,0,East,4
+2017,Bucknell,1,1,East,13
+2017,Maryland,1,0,East,6
+2017,Xavier,4,0,East,11
+2017,Florida State,2,0,East,3
+2017,Florida Gulf Coast,1,1,East,14
+2017,Saint Marys Ca,2,0,East,7
+2017,Virginia Commonwealth,1,0,East,10
+2017,Arizona,3,1,East,2
+2017,North Dakota,1,1,East,15
+2017,Kansas,4,0,South,1
+2017,California Davis,1,1,South,16
+2017,Miami Fl,1,0,South,8
+2017,Michigan State,2,0,South,9
+2017,Iowa State,2,1,South,5
+2017,Nevada,1,1,South,12
+2017,Purdue,3,0,South,4
+2017,Vermont,1,1,South,13
+2017,Creighton,1,0,South,6
+2017,Rhode Island,2,1,South,11
+2017,Oregon,5,0,South,3
+2017,Iona,1,1,South,14
+2017,Michigan,3,1,South,7
+2017,Oklahoma State,1,0,South,10
+2017,Louisville,2,0,South,2
+2017,Jacksonville State,1,1,South,15
+2017,North Carolina,7,0,Midwest,1
+2017,Texas Southern,1,1,Midwest,16
+2017,Arkansas,2,0,Midwest,8
+2017,Seton Hall,1,0,Midwest,9
+2017,Minnesota,1,0,Midwest,5
+2017,Middle Tennessee,2,1,Midwest,12
+2017,Butler,3,0,Midwest,4
+2017,Winthrop,1,1,Midwest,13
+2017,Cincinnati,2,0,Midwest,6
+2017,Kansas State,1,0,Midwest,11
+2017,Ucla,3,0,Midwest,3
+2017,Kent State,1,1,Midwest,14
+2017,Dayton,1,0,Midwest,7
+2017,Wichita State,2,1,Midwest,10
+2017,Kentucky,4,1,Midwest,2
+2017,Northern Kentucky,1,1,Midwest,15
+2018,Villanova,7,1,South,1
+2018,Radford,1,1,South,16
+2018,Virginia Tech,1,0,South,8
+2018,Alabama,2,0,South,9
+2018,West Virginia,3,0,South,5
+2018,Murray State,1,1,South,12
+2018,Wichita State,1,0,South,4
+2018,Marshall,2,1,South,13
+2018,Florida,2,0,South,6
+2018,St Bonaventure,1,0,South,11
+2018,Texas Tech,4,0,South,3
+2018,Stephen F Austin,1,1,South,14
+2018,Arkansas,1,0,South,7
+2018,Butler,2,0,South,10
+2018,Purdue,3,0,South,2
+2018,Cal State Fullerton,1,1,South,15
+2018,Xavier,2,0,East,1
+2018,Texas Southern,1,1,East,16
+2018,Missouri,1,0,East,8
+2018,Florida State,4,0,East,9
+2018,Ohio State,2,0,East,5
+2018,South Dakota State,1,1,East,12
+2018,Gonzaga,3,1,East,4
+2018,North Carolina Greensboro,1,1,East,13
+2018,Houston,2,0,East,6
+2018,San Diego State,1,1,East,11
+2018,Michigan,6,1,East,3
+2018,Montana,1,1,East,14
+2018,Texas Am,3,0,East,7
+2018,Providence,1,0,East,10
+2018,North Carolina,2,0,East,2
+2018,Lipscomb,1,1,East,15
+2018,Kansas,5,1,Midwest,1
+2018,Pennsylvania,1,1,Midwest,16
+2018,Seton Hall,2,0,Midwest,8
+2018,North Carolina State,1,0,Midwest,9
+2018,Clemson,3,0,Midwest,5
+2018,New Mexico State,1,1,Midwest,12
+2018,Auburn,2,0,Midwest,4
+2018,College Of Charleston,1,1,Midwest,13
+2018,Texas Christian,1,0,Midwest,6
+2018,Syracuse,3,0,Midwest,11
+2018,Michigan State,2,0,Midwest,3
+2018,Bucknell,1,1,Midwest,14
+2018,Rhode Island,2,0,Midwest,7
+2018,Oklahoma,1,0,Midwest,10
+2018,Duke,4,0,Midwest,2
+2018,Iona,1,1,Midwest,15
+2018,Virginia,1,1,West,1
+2018,Maryland Baltimore County,2,1,West,16
+2018,Creighton,1,0,West,8
+2018,Kansas State,4,0,West,9
+2018,Kentucky,3,1,West,5
+2018,Davidson,1,1,West,12
+2018,Arizona,1,1,West,4
+2018,Buffalo,2,1,West,13
+2018,Miami Fl,1,0,West,6
+2018,Loyola Il,5,1,West,11
+2018,Tennessee,2,0,West,3
+2018,Wright State,1,1,West,14
+2018,Nevada,3,0,West,7
+2018,Texas,1,0,West,10
+2018,Cincinnati,2,1,West,2
+2018,Georgia State,1,1,West,15
+2019,Duke,4,1,West,1
+2019,North Dakota State,1,1,West,16
+2019,Virginia Commonwealth,1,0,West,8
+2019,Central Florida,2,0,West,9
+2019,Mississippi State,1,0,West,5
+2019,Liberty,2,1,West,12
+2019,Virginia Tech,3,0,West,4
+2019,Saint Louis,1,1,West,13
+2019,Maryland,2,0,West,6
+2019,Belmont,1,0,West,11
+2019,Louisiana State,3,0,West,3
+2019,Yale,1,1,West,14
+2019,Louisville,1,0,West,7
+2019,Minnesota,2,0,West,10
+2019,Michigan State,5,1,West,2
+2019,Bradley,1,1,West,15
+2019,Gonzaga,4,0,East,1
+2019,Fairleigh Dickinson,1,1,East,16
+2019,Syracuse,1,0,East,8
+2019,Baylor,2,0,East,9
+2019,Marquette,1,0,East,5
+2019,Murray State,2,1,East,12
+2019,Florida State,3,0,East,4
+2019,Vermont,1,1,East,13
+2019,Buffalo,2,1,East,6
+2019,Arizona State,1,0,East,11
+2019,Texas Tech,6,0,East,3
+2019,Northern Kentucky,1,1,East,14
+2019,Nevada,1,0,East,7
+2019,Florida,2,0,East,10
+2019,Michigan,3,0,East,2
+2019,Montana,1,1,East,15
+2019,North Carolina,3,0,Midwest,1
+2019,Iona,1,1,Midwest,16
+2019,Utah State,1,1,Midwest,8
+2019,Washington,2,0,Midwest,9
+2019,Auburn,5,1,Midwest,5
+2019,New Mexico State,1,1,Midwest,12
+2019,Kansas,2,0,Midwest,4
+2019,Northeastern,1,1,Midwest,13
+2019,Iowa State,1,1,Midwest,6
+2019,Ohio State,2,0,Midwest,11
+2019,Houston,3,0,Midwest,3
+2019,Georgia State,1,1,Midwest,14
+2019,Wofford,2,1,Midwest,7
+2019,Seton Hall,1,0,Midwest,10
+2019,Kentucky,4,0,Midwest,2
+2019,Abilene Christian,1,1,Midwest,15
+2019,Virginia,7,0,South,1
+2019,Gardner Webb,1,1,South,16
+2019,Mississippi,1,0,South,8
+2019,Oklahoma,2,0,South,9
+2019,Wisconsin,1,0,South,5
+2019,Oregon,3,1,South,12
+2019,Kansas State,1,0,South,4
+2019,California Irvine,2,1,South,13
+2019,Villanova,2,1,South,6
+2019,Saint Marys Ca,1,1,South,11
+2019,Purdue,4,0,South,3
+2019,Old Dominion,1,1,South,14
+2019,Cincinnati,1,1,South,7
+2019,Iowa,2,0,South,10
+2019,Tennessee,3,0,South,2
+2019,Colgate,1,1,South,15
+2021,Michigan,4,0,East,1
+2021,Texas Southern,1,1,East,16
+2021,Louisiana State,2,0,East,8
+2021,St Bonaventure,1,1,East,9
+2021,Colorado,2,0,East,5
+2021,Georgetown,1,1,East,12
+2021,Florida State,3,0,East,4
+2021,North Carolina Greensboro,1,1,East,13
+2021,Brigham Young,1,0,East,6
+2021,Ucla,5,0,East,11
+2021,Texas,1,1,East,3
+2021,Abilene Christian,2,1,East,14
+2021,Connecticut,1,0,East,7
+2021,Maryland,2,0,East,10
+2021,Alabama,3,1,East,2
+2021,Iona,1,1,East,15
+2021,Gonzaga,6,1,West,1
+2021,Norfolk State,1,1,West,16
+2021,Oklahoma,2,0,West,8
+2021,Missouri,1,0,West,9
+2021,Creighton,3,0,West,5
+2021,California Santa Barbara,1,1,West,12
+2021,Virginia,1,0,West,4
+2021,Ohio,2,1,West,13
+2021,Southern California,4,0,West,6
+2021,Drake,1,0,West,11
+2021,Kansas,2,0,West,3
+2021,Eastern Washington,1,1,West,14
+2021,Oregon,3,0,West,7
+2021,Virginia Commonwealth,1,0,West,10
+2021,Iowa,2,0,West,2
+2021,Grand Canyon,1,1,West,15
+2021,Illinois,2,1,Midwest,1
+2021,Drexel,1,1,Midwest,16
+2021,Loyola Il,3,1,Midwest,8
+2021,Georgia Tech,1,1,Midwest,9
+2021,Tennessee,1,0,Midwest,5
+2021,Oregon State,4,1,Midwest,12
+2021,Oklahoma State,2,0,Midwest,4
+2021,Liberty,1,1,Midwest,13
+2021,San Diego State,1,1,Midwest,6
+2021,Syracuse,3,0,Midwest,11
+2021,West Virginia,2,0,Midwest,3
+2021,Morehead State,1,1,Midwest,14
+2021,Clemson,1,0,Midwest,7
+2021,Rutgers,2,0,Midwest,10
+2021,Houston,5,1,Midwest,2
+2021,Cleveland State,1,1,Midwest,15
+2021,Baylor,7,0,South,1
+2021,Hartford,1,1,South,16
+2021,North Carolina,1,0,South,8
+2021,Wisconsin,2,0,South,9
+2021,Villanova,3,0,South,5
+2021,Winthrop,1,1,South,12
+2021,Purdue,1,0,South,4
+2021,North Texas,2,1,South,13
+2021,Texas Tech,2,0,South,6
+2021,Utah State,1,0,South,11
+2021,Arkansas,4,0,South,3
+2021,Colgate,1,1,South,14
+2021,Florida,2,0,South,7
+2021,Virginia Tech,1,0,South,10
+2021,Ohio State,1,0,South,2
+2021,Oral Roberts,3,1,South,15
+2022,Baylor,2,0,East,1
+2022,Norfolk State,1,1,East,16
+2022,North Carolina,6,0,East,8
+2022,Marquette,1,0,East,9
+2022,Saint Marys Ca,2,0,East,5
+2022,Indiana,1,0,East,12
+2022,Ucla,3,0,East,4
+2022,Akron,1,1,East,13
+2022,Texas,2,0,East,6
+2022,Virginia Tech,1,1,East,11
+2022,Purdue,3,0,East,3
+2022,Yale,1,1,East,14
+2022,Murray State,2,1,East,7
+2022,San Francisco,1,0,East,10
+2022,Kentucky,1,0,East,2
+2022,Saint Peters,4,1,East,15
+2022,Gonzaga,3,1,West,1
+2022,Georgia State,1,1,West,16
+2022,Boise State,1,1,West,8
+2022,Memphis,2,0,West,9
+2022,Connecticut,1,0,West,5
+2022,New Mexico State,2,1,West,12
+2022,Arkansas,4,0,West,4
+2022,Vermont,1,1,West,13
+2022,Alabama,1,0,West,6
+2022,Notre Dame,2,0,West,11
+2022,Texas Tech,3,0,West,3
+2022,Montana State,1,1,West,14
+2022,Michigan State,2,0,West,7
+2022,Davidson,1,0,West,10
+2022,Duke,5,0,West,2
+2022,Cal State Fullerton,1,1,West,15
+2022,Kansas,7,1,Midwest,1
+2022,Texas Southern,1,1,Midwest,16
+2022,San Diego State,1,0,Midwest,8
+2022,Creighton,2,0,Midwest,9
+2022,Iowa,1,1,Midwest,5
+2022,Richmond,2,1,Midwest,12
+2022,Providence,3,0,Midwest,4
+2022,South Dakota State,1,1,Midwest,13
+2022,Louisiana State,1,0,Midwest,6
+2022,Iowa State,3,0,Midwest,11
+2022,Wisconsin,2,0,Midwest,3
+2022,Colgate,1,1,Midwest,14
+2022,Southern California,1,0,Midwest,7
+2022,Miami Fl,4,0,Midwest,10
+2022,Auburn,2,0,Midwest,2
+2022,Jacksonville State,1,0,Midwest,15
+2022,Arizona,3,1,South,1
+2022,Wright State,1,1,South,16
+2022,Seton Hall,1,0,South,8
+2022,Texas Christian,2,0,South,9
+2022,Houston,4,1,South,5
+2022,Alabama Birmingham,1,1,South,12
+2022,Illinois,2,0,South,4
+2022,Chattanooga,1,1,South,13
+2022,Colorado State,1,0,South,6
+2022,Michigan,3,0,South,11
+2022,Tennessee,2,1,South,3
+2022,Longwood,1,1,South,14
+2022,Ohio State,2,0,South,7
+2022,Loyola Il,1,1,South,10
+2022,Villanova,5,1,South,2
+2022,Delaware,1,1,South,15
+2023,Purdue,1,1,East,1
+2023,Fairleigh Dickinson,2,0,East,16
+2023,Memphis,1,1,East,8
+2023,Florida Atlantic,5,1,East,9
+2023,Duke,2,1,East,5
+2023,Oral Roberts,1,1,East,12
+2023,Tennessee,3,0,East,4
+2023,Louisiana Lafayette,1,1,East,13
+2023,Kentucky,2,0,East,6
+2023,Providence,1,0,East,11
+2023,Kansas State,4,0,East,3
+2023,Montana State,1,1,East,14
+2023,Michigan State,3,0,East,7
+2023,Southern California,1,0,East,10
+2023,Marquette,2,1,East,2
+2023,Vermont,1,1,East,15
+2023,Kansas,2,0,Midwest,1
+2023,Howard,1,1,Midwest,16
+2023,Arkansas,3,0,Midwest,8
+2023,Illinois,1,0,Midwest,9
+2023,Saint Marys Ca,2,0,Midwest,5
+2023,Virginia Commonwealth,1,1,Midwest,12
+2023,Connecticut,7,0,Midwest,4
+2023,Iona,1,1,Midwest,13
+2023,Texas Christian,2,0,Midwest,6
+2023,Arizona State,1,0,Midwest,11
+2023,Gonzaga,4,1,Midwest,3
+2023,Grand Canyon,1,1,Midwest,14
+2023,Northwestern,2,0,Midwest,7
+2023,Boise State,1,0,Midwest,10
+2023,Ucla,3,0,Midwest,2
+2023,North Carolina Asheville,1,1,Midwest,15
+2023,Houston,3,0,South,1
+2023,Northern Kentucky,1,1,South,16
+2023,Iowa,1,0,South,8
+2023,Auburn,2,0,South,9
+2023,Miami Fl,5,0,South,5
+2023,Drake,1,1,South,12
+2023,Indiana,2,0,South,4
+2023,Kent State,1,1,South,13
+2023,Iowa State,1,0,South,6
+2023,Pittsburgh,2,0,South,11
+2023,Xavier,3,0,South,3
+2023,Kennesaw State,1,1,South,14
+2023,Texas Am,1,0,South,7
+2023,Penn State,2,0,South,10
+2023,Texas,4,1,South,2
+2023,Colgate,1,1,South,15
+2023,Alabama,3,1,West,1
+2023,Texas Am Corpus Christi,1,1,West,16
+2023,Maryland,2,0,West,8
+2023,West Virginia,1,0,West,9
+2023,San Diego State,6,1,West,5
+2023,College Of Charleston,1,1,West,12
+2023,Virginia,1,0,West,4
+2023,Furman,2,1,West,13
+2023,Creighton,4,0,West,6
+2023,North Carolina State,1,0,West,11
+2023,Baylor,2,0,West,3
+2023,California Santa Barbara,1,1,West,14
+2023,Missouri,2,0,West,7
+2023,Utah State,1,0,West,10
+2023,Arizona,1,1,West,2
+2023,Princeton,3,1,West,15
+2024,Connecticut,7,1,West,1
+2024,Stetson,1,1,West,16
+2024,Florida Atlantic,1,0,West,8
+2024,Northwestern,2,0,West,9
+2024,San Diego State,3,0,West,5
+2024,Alabama Birmingham,1,1,West,12
+2024,Auburn,1,1,West,4
+2024,Yale,2,1,West,13
+2024,Brigham Young,1,0,West,6
+2024,Duquesne,2,1,West,11
+2024,Illinois,4,1,West,3
+2024,Morehead State,1,1,West,14
+2024,Washington State,2,0,West,7
+2024,Drake,1,1,West,10
+2024,Iowa State,3,1,West,2
+2024,South Dakota State,1,1,West,15
+2024,North Carolina,3,0,East,1
+2024,Wagner,1,1,East,16
+2024,Mississippi State,1,0,East,8
+2024,Michigan State,2,0,East,9
+2024,Saint Marys Ca,1,1,East,5
+2024,Grand Canyon,2,1,East,12
+2024,Alabama,5,0,East,4
+2024,College Of Charleston,1,1,East,13
+2024,Clemson,4,0,East,6
+2024,New Mexico,1,1,East,11
+2024,Baylor,2,0,East,3
+2024,Colgate,1,1,East,14
+2024,Dayton,2,0,East,7
+2024,Nevada,1,0,East,10
+2024,Arizona,3,0,East,2
+2024,Long Beach State,1,1,East,15
+2024,Purdue,6,0,Midwest,1
+2024,Grambling,1,1,Midwest,16
+2024,Utah State,2,0,Midwest,8
+2024,Texas Christian,1,0,Midwest,9
+2024,Gonzaga,3,0,Midwest,5
+2024,Mcneese State,1,1,Midwest,12
+2024,Kansas,2,0,Midwest,4
+2024,Samford,1,1,Midwest,13
+2024,South Carolina,1,0,Midwest,6
+2024,Oregon,2,1,Midwest,11
+2024,Creighton,3,0,Midwest,3
+2024,Akron,1,1,Midwest,14
+2024,Texas,2,0,Midwest,7
+2024,Colorado State,1,0,Midwest,10
+2024,Tennessee,4,0,Midwest,2
+2024,Saint Peters,1,1,Midwest,15
+2024,Houston,3,0,South,1
+2024,Longwood,1,1,South,16
+2024,Nebraska,1,0,South,8
+2024,Texas Am,2,0,South,9
+2024,Wisconsin,1,0,South,5
+2024,James Madison,2,1,South,12
+2024,Duke,4,0,South,4
+2024,Vermont,1,1,South,13
+2024,Texas Tech,1,0,South,6
+2024,North Carolina State,5,1,South,11
+2024,Kentucky,1,0,South,3
+2024,Oakland,2,1,South,14
+2024,Florida,1,0,South,7
+2024,Colorado,2,0,South,10
+2024,Marquette,3,0,South,2
+2024,Western Kentucky,1,1,South,15
