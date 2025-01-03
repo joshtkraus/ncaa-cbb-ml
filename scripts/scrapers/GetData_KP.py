@@ -6,7 +6,7 @@ from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 import time
 
-# To Check Year Length
+# Unit Tests
 def check_year_length(df):
     if len(df) < 64:
         raise ValueError('< 64 Teams, # of Teams is: '+str(len(df)))
@@ -140,7 +140,7 @@ for year in years:
     # Standardize Naming
     kp_yeardata['Team'] = kp_yeardata['Team'].str.replace('-',' ')
 
-    # Check Year Length
+    # Unit Test
     check_year_length(kp_yeardata)
 
     # Append sub df to full

@@ -10,13 +10,12 @@ import time
 from urllib.parse import urlparse
 import pickle
 
-# To Check Year Length
+# Unit Tests
 def check_year_length_df(df):
     if len(df) < 64:
         raise ValueError('< 64 Teams, # of Teams is: '+str(len(df)))
     elif len(df) > 64:
         raise ValueError('> 64 Teams, # of Teams is: '+str(len(df)))
-    
 def check_year_round_length_dict(picks_dict):
     for region, rounds in picks_dict.items():
         if region == 'Winner':
@@ -228,7 +227,7 @@ for year in years:
                             # Create a DataFrame of the full data by appending all the dataframes created in the for loop
                             seeddata = pd.concat([seeddata,yeardata])
     
-    # Check Year Length
+    # Unit Tests
     check_year_length_df(seeddata[seeddata['Year'] == year])
     check_year_round_length_dict(bracket_data[year])
 
