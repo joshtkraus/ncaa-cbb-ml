@@ -130,11 +130,15 @@ for year in years:
     # Delete rows with extra header data (labeled as 'Team')
     kp_yeardata = kp_yeardata[kp_yeardata['Team'] != 'Team']
 
-    # Change cols from string to float
-    kp_yeardata[['W','AdjO','AdjD','AdjT','Luck', 'OppO','OppD']] = kp_yeardata[['W','AdjO','AdjD','AdjT','Luck','OppO','OppD']].astype(float)
+    # Convert Dtypes
+    kp_yeardata[['AdjO','AdjD','AdjT','Luck', 'OppO','OppD']] = kp_yeardata[['AdjO','AdjD','AdjT','Luck','OppO','OppD']].astype(float)
+    kp_yeardata['W'] = kp_yeardata['W'].astype(int)
 
     # Specify the year of each team's Pomeroy data
     kp_yeardata['Year'] = year
+
+    # Standardize Naming
+    kp_yeardata['Team'] = kp_yeardata['Team'].str.replace('-',' ')
 
     # Check Year Length
     check_year_length(kp_yeardata)
