@@ -1,5 +1,5 @@
 numpy == 2.2.0
 pandas == 2.2.3
 beautifulsoup4 == 4.12.3
-imbalanced-learn == 0.13.0
-scikit-learn == 1.6.0
+imbalanced-learn == 0.12.4
+scikit-learn == 1.5.0
