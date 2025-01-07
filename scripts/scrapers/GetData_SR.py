@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 import re
 import time
 from urllib.parse import urlparse
-import pickle
+import json
 
 # Unit Tests
 def check_year_length_df(df):
@@ -113,7 +113,7 @@ for year in years:
             team_names = [re.sub(r'-'," ", team.title()) for team in team_names]
             # 2024 Winner missing for some reason
             if year == 2024:
-                bracket_data[year]['Winner'] = 'UConn'
+                bracket_data[year]['Winner'] = 'Connecticut'
             else:
                 bracket_data[year]['Winner'] = team_names[0]
 
@@ -235,9 +235,9 @@ for year in years:
 # Export Data
 # Get File Path
 data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/raw/sportsreference.csv')
-bracket_path = os.path.join(os.path.abspath(os.getcwd()), 'data/raw/results.pkl')
+bracket_path = os.path.join(os.path.abspath(os.getcwd()), 'data/raw/results.json')
 # Export DF
 seeddata.to_csv(data_path,index=False)
 # Export Dictionary
-with open(bracket_path, 'wb') as f:
-    pickle.dump(bracket_data, f)
+with open(bracket_path, 'w') as f:
+    json.dump(bracket_data, f)
