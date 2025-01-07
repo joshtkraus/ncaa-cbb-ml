@@ -3,7 +3,7 @@ import sys
 sys.path.append('../scripts')
 import os
 import pandas as pd
-import pickle
+import json
 from utils.NameCleaner_KP import clean_KP
 from utils.NameCleaner_SR import clean_SR
 from utils.NameCleaner_Results import clean_results
@@ -35,8 +35,8 @@ from scrapers import GetData_KP, GetData_SR
 # Read Data
 KP = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), 'data/raw/kenpom.csv'))
 SR = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), 'data/raw/sportsreference.csv'))
-with open(os.path.join(os.path.abspath(os.getcwd()), 'data/raw/results.pkl'), 'rb') as f:
-    results = pickle.load(f)
+with open(os.path.join(os.path.abspath(os.getcwd()), 'data/raw/results.json'), "r") as json_file:
+    results = json.load(json_file)
 
 # Clean Naming
 KP = clean_KP(KP)
@@ -57,9 +57,9 @@ check_results_naming(results, SR, KP)
 # Export Data
 # Get File Path
 data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/processed/data.csv')
-bracket_path = os.path.join(os.path.abspath(os.getcwd()), 'data/processed/results.pkl')
+bracket_path = os.path.join(os.path.abspath(os.getcwd()), 'data/processed/results.json')
 # Export DF
 data.to_csv(data_path,index=False)
 # Export Dictionary
-with open(bracket_path, 'wb') as f:
-    pickle.dump(results, f)
+with open(bracket_path, 'w') as f:
+    json.dump(results, f)
