@@ -35,12 +35,12 @@ def backwards_model(team_data):
         accs[r]['NN'] = accs[r]['NN'] / total
     return best_params, accs
 
-def combine_model(team_data,best_params,model_accs):
+def combine_model(team_data,best_params,model_accs,correct_picks):
     print('Combining Models...')
     # Libraries
     import os
     import pandas as pd
-    from models.utils.DataProcessing import create_splits
+    import json
     from imblearn.pipeline import Pipeline as ImbPipeline
     from sklearn.preprocessing import StandardScaler
     from imblearn.over_sampling import BorderlineSMOTE
@@ -51,13 +51,16 @@ def combine_model(team_data,best_params,model_accs):
     from sklearn.neural_network import MLPClassifier
     from sklearn.ensemble import VotingClassifier
     from models.utils.metrics import calculate_precision
+    from models.utils.DataProcessing import create_splits
+    from models.utils.StandarizePredictions import standarize
+    from models.utils.MakePicks import predict_bracket
     from sklearn.exceptions import ConvergenceWarning
     from warnings import simplefilter
     simplefilter('ignore', category=ConvergenceWarning)
-    from models.utils.StandarizePredictions import standarize
 
     # Initialize
     accs = {}
+    cv_models = {}
     models = {}
     predictions = {}
     for year in team_data['Year']:
@@ -70,6 +73,7 @@ def combine_model(team_data,best_params,model_accs):
     for r in range(2,8):
         # Initialize
         accs[r] = []
+        cv_models[r] = {}
 
         # Data Splits
         X, y = create_splits(team_data,r)
@@ -111,6 +115,9 @@ def combine_model(team_data,best_params,model_accs):
             # Fit
             voting_clf.fit(X_train, y_train)
 
+            # Store
+            cv_models[r][year] = voting_clf
+
             # Evaluate, store
             accuracy = calculate_precision(y_test, voting_clf.predict(X_test))
             accs[r].append(accuracy)
@@ -134,7 +141,11 @@ def combine_model(team_data,best_params,model_accs):
         models[r] = voting_clf
     
     # Standardize Predictions & Export
-    for year in team_data['Year']:
+    # Initialize
+    points = {}
+    pick_accs = {}
+    # Iterate Years
+    for year in team_data['Year'].unique():
         # To DF
         pred_df = pd.DataFrame.from_dict(predictions[year])
         # Standardize
@@ -143,4 +154,32 @@ def combine_model(team_data,best_params,model_accs):
         path = os.path.join(os.path.abspath(os.getcwd()), 'results/predictions/'+str(year)+'.csv')
         pred_df.to_csv(path,index=False)
 
-    return models, accs
+        # Make Picks
+        pick_accs[year] = {}
+        # Make Predictions
+        picks, point, acc = predict_bracket(pred_df,
+                                            correct_picks[str(year)])
+        # Save Predictions
+        path = os.path.join(os.path.abspath(os.getcwd()), 'results/picks/'+str(year)+'.json')
+        with open(path, 'w') as f:
+            json.dump(picks, f)
+        # Store
+        points[year] = point
+        pick_accs[year]['R32'] = acc['R32'] / 32
+        pick_accs[year]['S16'] = acc['S16'] / 16
+        pick_accs[year]['E8'] = acc['E8'] / 8
+        pick_accs[year]['F4'] = acc['F4'] / 4
+        pick_accs[year]['NCG'] = acc['NCG'] / 2
+        pick_accs[year]['Winner'] = acc['Winner']
+
+    # Create DFs
+    # Points
+    points_df = pd.DataFrame([points])
+    points_df['Mean'] = points_df.mean(axis=1).iloc[0]
+    points_df['SD'] = points_df.std(axis=1).iloc[0]
+    # Accuracy
+    accs_df = pd.DataFrame(pick_accs).reset_index()
+    accs_df.rename(columns={'index': 'Round'}, inplace=True)
+    accs_df['Mean'] = accs_df.iloc[:, 1:].mean(axis=1)
+    accs_df['Standard Deviation'] = accs_df.iloc[:, 1:-1].std(axis=1)
+    return models, accs, points_df, accs_df
