@@ -7,6 +7,7 @@ import json
 from utils.NameCleaner_KP import clean_KP
 from utils.NameCleaner_SR import clean_SR
 from utils.NameCleaner_Results import clean_results
+from utils.GetSeedProb import calc_seed_prob
 
 # Unit Tests
 def check_data_join(data, SR, KP):
@@ -53,6 +54,9 @@ data.dropna(inplace=True)
 # Unit Tests
 check_data_join(data, SR, KP)
 check_results_naming(results, SR, KP)
+
+# Get Historical Seed Probabilities
+data = calc_seed_prob(data)
 
 # Export Data
 # Get File Path
