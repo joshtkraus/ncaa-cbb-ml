@@ -27,12 +27,6 @@ def backwards_model(team_data):
         print('Fitting NN...')
         best_params[r]['NN'],accs[r]['NN'] = NN_Fit(team_data,r)
 
-        # Standaridze Accuracies
-        total = sum([accs[r]['Log'], accs[r]['RF'], accs[r]['GB'], accs[r]['NN']])
-        accs[r]['Log'] = accs[r]['Log'] / total
-        accs[r]['RF'] = accs[r]['RF'] / total
-        accs[r]['GB'] = accs[r]['GB'] / total
-        accs[r]['NN'] = accs[r]['NN'] / total
     return best_params, accs
 
 def combine_model(team_data,best_params,model_accs,correct_picks):
@@ -93,8 +87,8 @@ def combine_model(team_data,best_params,model_accs,correct_picks):
         # Best Model w/ Elastic  et
         voting_clf = ImbPipeline([
                         ('scaler', StandardScaler()),
-                        ('tomek', TomekLinks(sampling_strategy='not minority')),
                         ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=0)),
+                        ('tomek', TomekLinks(sampling_strategy='not minority')),
                         ('clf', VotingClassifier(estimators=[
                                             ('lr', log),
                                             ('rf', rf),
@@ -128,8 +122,8 @@ def combine_model(team_data,best_params,model_accs,correct_picks):
         # Get Full Model
         voting_clf = ImbPipeline([
                         ('scaler', StandardScaler()),
-                        ('tomek', TomekLinks(sampling_strategy='not minority')),
                         ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=0)),
+                        ('tomek', TomekLinks(sampling_strategy='not minority')),
                         ('clf', VotingClassifier(estimators=[
                                             ('lr', log),
                                             ('rf', rf),
