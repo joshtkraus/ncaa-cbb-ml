@@ -3,7 +3,9 @@
 # Libraries
 import os
 import pandas as pd
-from urllib.request import urlopen
+import ssl
+import certifi
+from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 import re
 import time
@@ -78,6 +80,9 @@ round_dict = {
                 5:'F4'
                 }
 
+# SSL Context
+ssl_context = ssl.create_default_context(cafile=certifi.where())
+
 # Iterate years
 print('Scraping Sports Reference...')
 for year in years:
@@ -86,9 +91,10 @@ for year in years:
     time.sleep(5)
     # Open url
     year_url = "https://www.sports-reference.com/cbb/postseason/{}-ncaa.html".format(year)
-    year_html = urlopen(year_url)
+    year_url_req = Request(year_url, headers={'User-Agent': 'Mozilla/5.0'})
+    year_html = urlopen(year_url_req, context=ssl_context).read()
     # Parse html
-    year_soup = BeautifulSoup(year_html, features='lxml')
+    year_soup = BeautifulSoup(year_html, features='html.parser')
 
     # Initialize Year
     bracket_data[year] = {}
@@ -150,8 +156,8 @@ for year in years:
                         time.sleep(5)
                         # Open url, get data
                         team_url = 'https://www.sports-reference.com' + links
-                        team_html = urlopen(team_url)
-                        team_soup = BeautifulSoup(team_html, features='lxml')
+                        team_html = urlopen(team_url, context=ssl_context)
+                        team_soup = BeautifulSoup(team_html, features='html.parser')
 
                         # Create a dictionary to store scraped data
                         yeardict = {}

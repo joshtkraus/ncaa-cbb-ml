@@ -2,6 +2,8 @@
 import os
 import numpy as np
 import pandas as pd
+import ssl
+import certifi
 from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 import time
@@ -11,6 +13,7 @@ def check_year_length(df):
     if len(df) < 64:
         raise ValueError('< 64 Teams, # of Teams is: '+str(len(df)))
     elif len(df) > 64:
+        print(df['Team'].unique())
         raise ValueError('> 64 Teams, # of Teams is: '+str(len(df)))
 
 # Empty DF for Loop
@@ -39,9 +42,9 @@ kp_urls = {
 playin_dict = {
                 2024:['Howard','Virginia','Montana St.','Boise St.'],
                 2023:['Southeast Missouri St.','Texas Southern','Nevada','Mississippi St.'],
-                2022:['Wyoming','Texas A&M; Corpus Chris','Bryant','Rutgers'],
+                2022:['Wyoming','Texas A&M Corpus Chris','Bryant','Rutgers'],
                 2021:["Mount St. Mary's",'Michigan St.','Appalachian St.','Wichita St.'],
-                2019:['North Carolina Central','Temple','Prairie View A&M;',"St. John's"],
+                2019:['North Carolina Central','Temple','Prairie View A&M',"St. John's"],
                 2018:['LIU Brooklyn','UCLA','Arizona St.','North Carolina Central'],
                 2017:['New Orleans','Providence','North Carolina Central','Wake Forest'],
                 2016:['Fairleigh Dickinson','Tulsa','Vanderbilt','Southern'],
@@ -61,6 +64,9 @@ playin_dict = {
                 2002:['Alcorn St.']
                 }
 
+# SSL Context
+ssl_context = ssl.create_default_context(cafile=certifi.where())
+
 # Iterate URLS
 print('Scraping KenPom...')
 for year in years:
@@ -70,9 +76,9 @@ for year in years:
 
     # Get HTML
     year_kp_url = kp_urls[year]
-    year_hp_req = Request(year_kp_url, headers = {'User-Agent': 'Mozilla/5.0'})
-    year_kp_html = urlopen(year_hp_req).read()
-    year_kp_soup = BeautifulSoup(year_kp_html, features='lxml')
+    year_hp_req = Request(year_kp_url, headers={'User-Agent': 'Mozilla/5.0'})
+    year_kp_html = urlopen(year_hp_req, context=ssl_context).read()
+    year_kp_soup = BeautifulSoup(year_kp_html, features='html.parser')
     year_kp_soup.find_all("span", {'seed-nit'})
 
     # Remove the seed number from teams in the NIT (to filter out later)
