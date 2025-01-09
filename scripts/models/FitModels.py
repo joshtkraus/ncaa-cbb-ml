@@ -73,10 +73,10 @@ def combine_model(team_data,best_params,model_accs,correct_picks):
         X, y = create_splits(team_data,r)
 
         # Tuned Models
-        log = LogisticRegression(**best_params[r]['Log'])
-        rf = RandomForestClassifier(**best_params[r]['RF'])
-        gb = GradientBoostingClassifier(**best_params[r]['GB'])
-        nn = MLPClassifier(**best_params[r]['NN'])
+        log = LogisticRegression(**best_params[r]['Log'], random_state=0)
+        rf = RandomForestClassifier(**best_params[r]['RF'], random_state=0)
+        gb = GradientBoostingClassifier(**best_params[r]['GB'], random_state=0)
+        nn = MLPClassifier(**best_params[r]['NN'], random_state=0)
 
         # Model Weights
         weights = [model_accs[r]['Log'],
