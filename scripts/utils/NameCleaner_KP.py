@@ -11,4 +11,13 @@ def clean_KP(df):
     df['Team'] = df['Team'].str.replace('Stephen F. Austin', 'Stephen F Austin',regex=False)
     df['Team'] = df['Team'].str.replace('College of Charleston', 'Charleston',regex=False)
     df['Team'] = df['Team'].str.replace('Louisiana Lafayette', 'Louisiana',regex=False)
+    df['Team'] = df['Team'].str.replace('Detroit', 'Detroit Mercy',regex=False)
+    df['Team'] = df['Team'].str.replace('Central Connecticut', 'Central Connecticut State',regex=False)
+    df['Team'] = df['Team'].str.replace('Troy State', 'Troy',regex=False)
+    df['Team'] = df['Team'].str.replace('^NC Asheville', 'UNC Asheville',regex=True)
+    df['Team'] = df['Team'].str.replace('Brigham Young', 'BYU',regex=False)
+    df['Team'] = df['Team'].str.replace('Texas San Antonio', 'UTSA',regex=False)
+    df['Team'] = df['Team'].str.replace('Nevada Las Vegas', 'UNLV',regex=False)
+    df['Team'] = df['Team'].str.replace('LIU Brooklyn', 'Long Island',regex=False)
+    df['Team'] = df['Team'].str.replace('Southern Miss', 'Southern Mississippi',regex=False)
     return df

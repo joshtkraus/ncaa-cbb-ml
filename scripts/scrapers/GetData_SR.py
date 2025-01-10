@@ -49,7 +49,7 @@ seeddata = pd.DataFrame()
 bracket_data = {}
 
 # Years to scrape
-years = [*range(2013,2025)]
+years = [*range(2002,2025)]
 years.remove(2020)
 
 # All possible region names
@@ -68,7 +68,18 @@ regions_convert = {
                     2016:{'south':'West','west':'East','east':'South','midwest':'Midwest'},
                     2015:{'midwest':'West','west':'East','east':'South','south':'Midwest'},
                     2014:{'south':'West','east':'East','west':'South','midwest':'Midwest'},
-                    2013:{'midwest':'West','west':'East','south':'South','east':'Midwest'}
+                    2013:{'midwest':'West','west':'East','south':'South','east':'Midwest'},
+                    2012:{'south':'West','west':'East','east':'South','midwest':'Midwest'},
+                    2011:{'east':'West','west':'East','southwest':'South','southeast':'Midwest'},
+                    2010:{'midwest':'West','west':'East','east':'South','south':'Midwest'},
+                    2009:{'midwest':'West','west':'East','east':'South','south':'Midwest'},
+                    2008:{'east':'West','midwest':'East','south':'South','west':'Midwest'},
+                    2007:{'midwest':'West','west':'East','east':'South','south':'Midwest'},
+                    2006:{'atlanta':'West','oakland':'East','washington':'South','minneapolis':'Midwest'},
+                    2005:{'chicago':'West','albuquerque':'East','syracuse':'South','austin':'Midwest'},
+                    2004:{'stlouis':'West','eastrutherford':'East','atlanta':'South','phoenix':'Midwest'},
+                    2003:{'midwest':'West','west':'East','south':'South','east':'Midwest'},
+                    2002:{'south':'West','west':'East','east':'South','midwest':'Midwest'}
                     }
 
 # Round Num to Name
