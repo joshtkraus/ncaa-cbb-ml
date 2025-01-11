@@ -37,7 +37,7 @@ def check_results_naming(results_dict, SR, KP):
                             raise ValueError('Team missing: '+team)
 
 # Run Web Scraper
-#from scrapers import GetData_SR
+from scrapers import GetData_SR
 
 # Read Data
 SR = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), 'data/raw/sportsreference.csv'))

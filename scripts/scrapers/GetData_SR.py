@@ -178,9 +178,17 @@ for year in years:
                         part_url = re.sub('https://www.sports-reference.com/cbb/schools/','',team_url)
                         yeardict[year][re.sub('/(\d+).html','',part_url).title()] = {}
 
-                        # Determine which round each team made it to
+                        # Homepage Texet
                         homepage = team_soup.select_one('div#info')
                         homepage_text= [hp.getText()for hp in homepage.findAll('p')]
+
+                        # Conference
+                        yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Conf'] = re.search(r'\b(Big\s+\w+|\w+)\s+MBB', homepage_text[2]).group(1)
+
+                        # Win Total
+                        yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Wins'] = homepage_text[2][9:11]
+
+                        # Determine which round each team made it to
                         if any('Won National Final' in text for text in homepage_text):
                             yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round'] = 7
                         elif any('Lost National Final' in text for text in homepage_text):
@@ -232,10 +240,10 @@ for year in years:
                                                     for j in yeardict[i].keys()},
                                                    orient='index')
                             yeardata.reset_index(inplace=True)
-                            yeardata.columns = ['Year','Team','Round','Conf Tourney','Region','Seed']
+                            yeardata.columns = ['Year','Team','Conf','Wins','Round','Conf Tourney','Region','Seed']
 
                             # Convert Dtypes
-                            yeardata[['Round','Conf Tourney','Seed']] = yeardata[['Round','Conf Tourney','Seed']].astype(int)
+                            yeardata[['Wins','Round','Conf Tourney','Seed']] = yeardata[['Wins','Round','Conf Tourney','Seed']].astype(int)
 
                             # Standardize Naming
                             yeardata['Team'] = yeardata['Team'].str.replace('/Men','')
@@ -247,7 +255,6 @@ for year in years:
     # Unit Tests
     check_year_length_df(seeddata[seeddata['Year'] == year])
     check_year_round_length_dict(bracket_data[year])
-
 
 # Export Data
 # Get File Path
