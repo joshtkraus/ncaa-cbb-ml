@@ -1,4 +1,4 @@
-def backwards_model(team_data):
+def backwards_model(team_data, validation_start=2016):
     print('Tuning Models...')
     # Libraries
     from models.Models import Logistic_Fit, RF_Fit, GB_Fit, NN_Fit
@@ -19,17 +19,17 @@ def backwards_model(team_data):
 
         # Fit Models
         print('Fitting Logistic...')
-        best_params[r]['Log'],accs[r]['Log'] = Logistic_Fit(team_data,r)
+        best_params[r]['Log'],accs[r]['Log'] = Logistic_Fit(team_data,r,validation_start)
         print('Fitting RF...')
-        best_params[r]['RF'],accs[r]['RF'] = RF_Fit(team_data,r)
+        best_params[r]['RF'],accs[r]['RF'] = RF_Fit(team_data,r,validation_start)
         print('Fitting GB...')
-        best_params[r]['GB'],accs[r]['GB'] = GB_Fit(team_data,r)
+        best_params[r]['GB'],accs[r]['GB'] = GB_Fit(team_data,r,validation_start)
         print('Fitting NN...')
-        best_params[r]['NN'],accs[r]['NN'] = NN_Fit(team_data,r)
+        best_params[r]['NN'],accs[r]['NN'] = NN_Fit(team_data,r,validation_start)
 
     return best_params, accs
 
-def combine_model(team_data,best_params,model_accs,correct_picks):
+def combine_model(team_data,best_params,model_accs,correct_picks,test_start=2021):
     print('Combining Models...')
     # Libraries
     import os
@@ -39,7 +39,6 @@ def combine_model(team_data,best_params,model_accs,correct_picks):
     from sklearn.preprocessing import StandardScaler
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
-    from sklearn.model_selection import LeaveOneGroupOut
     from sklearn.linear_model import LogisticRegression
     from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
     from sklearn.neural_network import MLPClassifier
@@ -52,12 +51,15 @@ def combine_model(team_data,best_params,model_accs,correct_picks):
     from warnings import simplefilter
     simplefilter('ignore', category=ConvergenceWarning)
 
+    # Create Train/Test Splits
+    test_data = team_data[team_data['Year']>=test_start]
+
     # Initialize
     accs = {}
     cv_models = {}
     models = {}
     predictions = {}
-    for year in team_data['Year']:
+    for year in test_data['Year'].unique():
         predictions[year] = {}
         predictions[year]['Team'] = team_data.loc[team_data['Year']==year,'Team'].values
         predictions[year]['Seed'] = team_data.loc[team_data['Year']==year,'Seed'].values
@@ -71,6 +73,10 @@ def combine_model(team_data,best_params,model_accs,correct_picks):
 
         # Data Splits
         X, y = create_splits(team_data,r)
+
+        # Create Splits
+        X_train = X[team_data['Year']<test_start]
+        y_train = y[team_data['Year']<test_start]
 
         # Tuned Models
         log = LogisticRegression(**best_params[r]['Log'], random_state=0)
@@ -98,13 +104,10 @@ def combine_model(team_data,best_params,model_accs,correct_picks):
                     ])
         
         # Cross Validation
-        for train_idx, test_idx in LeaveOneGroupOut().split(X, y, team_data['Year']):
-            # Split data
-            X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
-            y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
-
-            # Year in Holdout
-            year = X_test['Year'].unique()[0]
+        for year in test_data['Year'].unique():
+            # Subset Testing Year
+            X_test = X[team_data['Year']==year]
+            y_test = y[team_data['Year']==year]
 
             # Fit
             voting_clf.fit(X_train, y_train)
@@ -139,7 +142,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks):
     points = {}
     pick_accs = {}
     # Iterate Years
-    for year in team_data['Year'].unique():
+    for year in test_data['Year'].unique():
         # To DF
         pred_df = pd.DataFrame.from_dict(predictions[year])
         # Standardize

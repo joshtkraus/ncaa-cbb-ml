@@ -1,10 +1,10 @@
-def Logistic_Fit(team_data, r):    
+def Logistic_Fit(team_data, r, validation_start=2016):    
     # Libraries
     import pandas as pd
     import os
     from sklearn.preprocessing import StandardScaler
     from sklearn.linear_model import LogisticRegression
-    from sklearn.model_selection import LeaveOneGroupOut, GridSearchCV
+    from sklearn.model_selection import GridSearchCV, PredefinedSplit
     from imblearn.pipeline import Pipeline as ImbPipeline
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
@@ -13,6 +13,10 @@ def Logistic_Fit(team_data, r):
 
     # Data Splits
     X, y = create_splits(team_data,r)
+
+    # Create Training/Valdation Splits
+    team_data['Split'] = -1
+    team_data.loc[team_data['Year']>=validation_start,'Split'] = 0
 
     # Parameter grid
     param_grid = {
@@ -37,7 +41,7 @@ def Logistic_Fit(team_data, r):
         pipeline,
         param_grid,
         scoring=custom_precision_scorer,
-        cv=LeaveOneGroupOut().split(X, y, team_data['Year']),
+        cv=PredefinedSplit(test_fold=team_data['Split'].values),
         n_jobs=-1
     )
     grid_search.fit(X, y)
@@ -61,13 +65,13 @@ def Logistic_Fit(team_data, r):
     CV_df.to_csv(path,index=False)
     return best_params, best_acc
 
-def RF_Fit(team_data, r):
+def RF_Fit(team_data, r, validation_start=2016):
     # Libraries
     import pandas as pd
     import os
     from sklearn.preprocessing import StandardScaler
     from sklearn.ensemble import RandomForestClassifier
-    from sklearn.model_selection import LeaveOneGroupOut, GridSearchCV
+    from sklearn.model_selection import GridSearchCV, PredefinedSplit
     from imblearn.pipeline import Pipeline as ImbPipeline
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
@@ -76,6 +80,10 @@ def RF_Fit(team_data, r):
 
     # Data Splits
     X, y = create_splits(team_data,r)
+
+    # Create Training/Valdation Splits
+    team_data['Split'] = -1
+    team_data.loc[team_data['Year']>=validation_start,'Split'] = 0
 
     # Parameter grid
     param_grid = {
@@ -101,7 +109,7 @@ def RF_Fit(team_data, r):
         pipeline,
         param_grid,
         scoring=custom_precision_scorer,
-        cv=LeaveOneGroupOut().split(X, y, team_data['Year']),
+        cv=PredefinedSplit(test_fold=team_data['Split'].values),
         n_jobs=-1
     )
     grid_search.fit(X, y)
@@ -125,13 +133,13 @@ def RF_Fit(team_data, r):
     CV_df.to_csv(path,index=False)
     return best_params, best_acc
 
-def GB_Fit(team_data, r):
+def GB_Fit(team_data, r, validation_start=2016):
     # Libraries
     import pandas as pd
     import os
     from sklearn.preprocessing import StandardScaler
     from sklearn.ensemble import GradientBoostingClassifier
-    from sklearn.model_selection import LeaveOneGroupOut, GridSearchCV
+    from sklearn.model_selection import GridSearchCV, PredefinedSplit
     from imblearn.pipeline import Pipeline as ImbPipeline
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
@@ -140,6 +148,10 @@ def GB_Fit(team_data, r):
 
     # Data Splits
     X, y = create_splits(team_data,r)
+
+    # Create Training/Valdation Splits
+    team_data['Split'] = -1
+    team_data.loc[team_data['Year']>=validation_start,'Split'] = 0
 
     # Parameter grid
     param_grid = {
@@ -163,7 +175,7 @@ def GB_Fit(team_data, r):
         pipeline,
         param_grid,
         scoring=custom_precision_scorer,
-        cv=LeaveOneGroupOut().split(X, y, team_data['Year']),
+        cv=PredefinedSplit(test_fold=team_data['Split'].values),
         n_jobs=-1
     )
     grid_search.fit(X, y)
@@ -187,13 +199,13 @@ def GB_Fit(team_data, r):
     CV_df.to_csv(path,index=False)
     return best_params, best_acc
 
-def NN_Fit(team_data, r):
+def NN_Fit(team_data, r, validation_start=2016):
     # Libraries
     import pandas as pd
     import os
     from sklearn.preprocessing import StandardScaler
     from sklearn.neural_network import MLPClassifier
-    from sklearn.model_selection import LeaveOneGroupOut, GridSearchCV
+    from sklearn.model_selection import GridSearchCV, PredefinedSplit
     from imblearn.pipeline import Pipeline as ImbPipeline
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
@@ -202,6 +214,10 @@ def NN_Fit(team_data, r):
 
     # Data Splits
     X, y = create_splits(team_data,r)
+
+    # Create Training/Valdation Splits
+    team_data['Split'] = -1
+    team_data.loc[team_data['Year']>=validation_start,'Split'] = 0
 
     # Parameter grid
     param_grid = {
@@ -227,7 +243,7 @@ def NN_Fit(team_data, r):
         pipeline,
         param_grid,
         scoring=custom_precision_scorer,
-        cv=LeaveOneGroupOut().split(X, y, team_data['Year']),
+        cv=PredefinedSplit(test_fold=team_data['Split'].values),
         n_jobs=-1
     )
     grid_search.fit(X, y)
