@@ -183,10 +183,7 @@ for year in years:
                         homepage_text= [hp.getText()for hp in homepage.findAll('p')]
 
                         # Conference
-                        yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Conf'] = re.search(r'\b(Big\s+\w+|\w+)\s+MBB', homepage_text[2]).group(1)
-
-                        # Win Total
-                        yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Wins'] = homepage_text[2][9:11]
+                        yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Conf'] = re.search(r'\bin\s+(.*?)\s+MBB', homepage_text[2]).group(1)
 
                         # Determine which round each team made it to
                         if any('Won National Final' in text for text in homepage_text):
@@ -211,6 +208,9 @@ for year in years:
                                 yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round'] = 2
                             else:
                                 yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round'] = 1
+                        
+                        # Adjust Wins by Rounds in Tournament
+                        yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Wins'] = homepage_text[2][9:11] - (yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round']-1)
                         
                         # Determine if team won conference tourney
                         import_text = [im.getText()for im in homepage.findAll('a')]
@@ -240,10 +240,10 @@ for year in years:
                                                     for j in yeardict[i].keys()},
                                                    orient='index')
                             yeardata.reset_index(inplace=True)
-                            yeardata.columns = ['Year','Team','Conf','Wins','Round','Conf Tourney','Region','Seed']
+                            yeardata.columns = ['Year','Team','Conf','Round','Wins','Conf Tourney','Region','Seed']
 
                             # Convert Dtypes
-                            yeardata[['Wins','Round','Conf Tourney','Seed']] = yeardata[['Wins','Round','Conf Tourney','Seed']].astype(int)
+                            yeardata[['Round','Wins','Conf Tourney','Seed']] = yeardata[['Round','Wins','Conf Tourney','Seed']].astype(int)
 
                             # Standardize Naming
                             yeardata['Team'] = yeardata['Team'].str.replace('/Men','')
