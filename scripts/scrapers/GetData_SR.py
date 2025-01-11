@@ -210,7 +210,7 @@ for year in years:
                                 yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round'] = 1
                         
                         # Adjust Wins by Rounds in Tournament
-                        yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Wins'] = homepage_text[2][9:11] - (yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round']-1)
+                        yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Wins'] = int(homepage_text[2][9:11]) - (yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round']-1)
                         
                         # Determine if team won conference tourney
                         import_text = [im.getText()for im in homepage.findAll('a')]

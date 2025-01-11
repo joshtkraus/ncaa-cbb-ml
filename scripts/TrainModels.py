@@ -33,7 +33,7 @@ with open(path, "r") as json_file:
 model_accs = {int(key): value for key, value in model_accs.items()}
 
 # Combine Models
-models, accs, points_df, accs_df = combine_model(teams,best_params,model_accs,results, test_start=2021)
+models, accs, points_df, accs_df = combine_model(teams,best_params,model_accs,results, test_start=2016)
 
 # Cross Validated Results
 results = {}

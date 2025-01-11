@@ -134,7 +134,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,test_start=2021
                                             ('mlp', nn),
                                         ], voting='soft',weights=weights)) 
                     ])
-        voting_clf.fit(X_train,y_train)
+        voting_clf.fit(X,y)
         models[r] = voting_clf
     
     # Standardize Predictions & Export
