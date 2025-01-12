@@ -49,7 +49,7 @@ seeddata = pd.DataFrame()
 bracket_data = {}
 
 # Years to scrape
-years = [*range(2002,2025)]
+years = [*range(2006,2025)]
 years.remove(2020)
 
 # All possible region names

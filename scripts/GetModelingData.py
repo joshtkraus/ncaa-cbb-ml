@@ -71,7 +71,7 @@ playin_dict = {
                 2002:['Alcorn St.']
                 }
 # List of years to include, excluding 2020
-years = list(range(2002, 2025))
+years = list(range(2006, 2025))
 years.remove(2020)
 # Initialize
 KP = pd.DataFrame()
