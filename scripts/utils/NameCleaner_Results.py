@@ -9,8 +9,7 @@ def clean_names(team):
     team = re.sub(r'Saint Johns Ny', "Saint John's", team)
     team = re.sub(r'Saint Peters', "Saint Peter's", team)
     team = re.sub(r'Loyola Il', 'Loyola Chicago', team)
-    team = re.sub(r'Texas Am Corpus Christi', 'Texas A&M Corpus Christi', team)
-    team = re.sub(r'Texas Am', 'Texas A&M', team)
+    team = re.sub(r' Am', ' A&M', team)
     team = re.sub(r'North Carolina At', 'North Carolina A&T', team)
     team = re.sub(r'Brigham Young', 'BYU', team)
     team = re.sub(r'California Irvine', 'UC Irvine', team)
@@ -33,6 +32,15 @@ def clean_names(team):
     team = re.sub(r'Ucla', 'UCLA', team)
     team = re.sub(r'Miami Fl', 'Miami FL', team)
     team = re.sub(r'Mcneese State', 'McNeese State', team)
+    team = re.sub(r'Iupui', 'IUPUI', team)
+    team = re.sub(r'Depaul', 'DePaul', team)
+    team = re.sub(r'Miami Oh', 'Miami OH', team)
+    team = re.sub(r'Loyola Md', 'Loyola MD', team)
+    team = re.sub(r'Texas El Paso', 'UTEP', team)
+    team = re.sub(r'Texas San Antonio', 'UTSA', team)
+    team = re.sub(r'Nevada Las Vegas', 'UNLV', team)
+    team = re.sub(r'Texas Arlington', 'UT Arlington', team)
+    team = re.sub(r'Long Island University', 'Long Island', team)
     return team
 
 # Function to Iterate Renaming

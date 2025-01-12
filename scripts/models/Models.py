@@ -36,18 +36,21 @@ def Logistic_Fit(team_data, r, validation_start=2016):
     ])
 
     # Grid Search
-    custom_precision_scorer = make_scorer(precision_score, zero_division=0)
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
+<<<<<<< HEAD
         scoring=custom_precision_scorer,
+=======
+        scoring='neg_brier_score',
+>>>>>>> add_years
         cv=PredefinedSplit(test_fold=team_data['Split'].values),
         n_jobs=-1
     )
     grid_search.fit(X, y)
 
     # Get best parameters and precision
-    best_acc = grid_search.best_score_
+    best_acc = 1 / (-1*grid_search.best_score_)
     best_params = grid_search.best_params_
     
     # Remove prefix from tuned param
@@ -104,18 +107,21 @@ def RF_Fit(team_data, r, validation_start=2016):
     ])
 
     # Grid Search
-    custom_precision_scorer = make_scorer(precision_score, zero_division=0)
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
+<<<<<<< HEAD
         scoring=custom_precision_scorer,
+=======
+        scoring='neg_brier_score',
+>>>>>>> add_years
         cv=PredefinedSplit(test_fold=team_data['Split'].values),
         n_jobs=-1
     )
     grid_search.fit(X, y)
 
     # Get best parameters and precision
-    best_acc = grid_search.best_score_
+    best_acc = 1 / (-1*grid_search.best_score_)
     best_params = grid_search.best_params_
 
     # Remove prefix from tuned param
@@ -170,18 +176,21 @@ def GB_Fit(team_data, r, validation_start=2016):
     ])
 
     # Grid Search
-    custom_precision_scorer = make_scorer(precision_score, zero_division=0)
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
+<<<<<<< HEAD
         scoring=custom_precision_scorer,
+=======
+        scoring='neg_brier_score',
+>>>>>>> add_years
         cv=PredefinedSplit(test_fold=team_data['Split'].values),
         n_jobs=-1
     )
     grid_search.fit(X, y)
 
     # Get best parameters and precision
-    best_acc = grid_search.best_score_
+    best_acc = 1 / (-1*grid_search.best_score_)
     best_params = grid_search.best_params_
 
     # Remove prefix from tuned param
@@ -238,18 +247,21 @@ def NN_Fit(team_data, r, validation_start=2016):
     ])
 
     # Grid Search
-    custom_precision_scorer = make_scorer(precision_score, zero_division=0)
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
+<<<<<<< HEAD
         scoring=custom_precision_scorer,
+=======
+        scoring='neg_brier_score',
+>>>>>>> add_years
         cv=PredefinedSplit(test_fold=team_data['Split'].values),
         n_jobs=-1
     )
     grid_search.fit(X, y)
 
     # Get best parameters and precision
-    best_acc = grid_search.best_score_
+    best_acc = 1 / (-1*grid_search.best_score_)
     best_params = grid_search.best_params_
     # Remove prefix from tuned param
     best_params = dict(zip([key[5:] for key in best_params.keys()],best_params.values()))

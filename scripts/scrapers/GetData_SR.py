@@ -49,7 +49,7 @@ seeddata = pd.DataFrame()
 bracket_data = {}
 
 # Years to scrape
-years = [*range(2013,2025)]
+years = [*range(2002,2025)]
 years.remove(2020)
 
 # All possible region names
@@ -68,7 +68,18 @@ regions_convert = {
                     2016:{'south':'West','west':'East','east':'South','midwest':'Midwest'},
                     2015:{'midwest':'West','west':'East','east':'South','south':'Midwest'},
                     2014:{'south':'West','east':'East','west':'South','midwest':'Midwest'},
-                    2013:{'midwest':'West','west':'East','south':'South','east':'Midwest'}
+                    2013:{'midwest':'West','west':'East','south':'South','east':'Midwest'},
+                    2012:{'south':'West','west':'East','east':'South','midwest':'Midwest'},
+                    2011:{'east':'West','west':'East','southwest':'South','southeast':'Midwest'},
+                    2010:{'midwest':'West','west':'East','east':'South','south':'Midwest'},
+                    2009:{'midwest':'West','west':'East','east':'South','south':'Midwest'},
+                    2008:{'east':'West','midwest':'East','south':'South','west':'Midwest'},
+                    2007:{'midwest':'West','west':'East','east':'South','south':'Midwest'},
+                    2006:{'atlanta':'West','oakland':'East','washington':'South','minneapolis':'Midwest'},
+                    2005:{'chicago':'West','albuquerque':'East','syracuse':'South','austin':'Midwest'},
+                    2004:{'stlouis':'West','eastrutherford':'East','atlanta':'South','phoenix':'Midwest'},
+                    2003:{'midwest':'West','west':'East','south':'South','east':'Midwest'},
+                    2002:{'south':'West','west':'East','east':'South','midwest':'Midwest'}
                     }
 
 # Round Num to Name
@@ -167,9 +178,14 @@ for year in years:
                         part_url = re.sub('https://www.sports-reference.com/cbb/schools/','',team_url)
                         yeardict[year][re.sub('/(\d+).html','',part_url).title()] = {}
 
-                        # Determine which round each team made it to
+                        # Homepage Texet
                         homepage = team_soup.select_one('div#info')
                         homepage_text= [hp.getText()for hp in homepage.findAll('p')]
+
+                        # Conference
+                        yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Conf'] = re.search(r'\bin\s+(.*?)\s+MBB', homepage_text[2]).group(1)
+
+                        # Determine which round each team made it to
                         if any('Won National Final' in text for text in homepage_text):
                             yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round'] = 7
                         elif any('Lost National Final' in text for text in homepage_text):
@@ -192,6 +208,9 @@ for year in years:
                                 yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round'] = 2
                             else:
                                 yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round'] = 1
+                        
+                        # Adjust Wins by Rounds in Tournament
+                        yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Wins'] = int(homepage_text[2][9:11]) - (yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round']-1)
                         
                         # Determine if team won conference tourney
                         import_text = [im.getText()for im in homepage.findAll('a')]
@@ -221,10 +240,10 @@ for year in years:
                                                     for j in yeardict[i].keys()},
                                                    orient='index')
                             yeardata.reset_index(inplace=True)
-                            yeardata.columns = ['Year','Team','Round','Conf Tourney','Region','Seed']
+                            yeardata.columns = ['Year','Team','Conf','Round','Wins','Conf Tourney','Region','Seed']
 
                             # Convert Dtypes
-                            yeardata[['Round','Conf Tourney','Seed']] = yeardata[['Round','Conf Tourney','Seed']].astype(int)
+                            yeardata[['Round','Wins','Conf Tourney','Seed']] = yeardata[['Round','Wins','Conf Tourney','Seed']].astype(int)
 
                             # Standardize Naming
                             yeardata['Team'] = yeardata['Team'].str.replace('/Men','')
@@ -236,7 +255,6 @@ for year in years:
     # Unit Tests
     check_year_length_df(seeddata[seeddata['Year'] == year])
     check_year_round_length_dict(bracket_data[year])
-
 
 # Export Data
 # Get File Path
