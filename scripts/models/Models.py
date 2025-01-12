@@ -39,11 +39,7 @@ def Logistic_Fit(team_data, r, validation_start=2016):
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
-<<<<<<< HEAD
-        scoring=custom_precision_scorer,
-=======
         scoring='neg_brier_score',
->>>>>>> add_years
         cv=PredefinedSplit(test_fold=team_data['Split'].values),
         n_jobs=-1
     )
@@ -110,11 +106,7 @@ def RF_Fit(team_data, r, validation_start=2016):
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
-<<<<<<< HEAD
-        scoring=custom_precision_scorer,
-=======
         scoring='neg_brier_score',
->>>>>>> add_years
         cv=PredefinedSplit(test_fold=team_data['Split'].values),
         n_jobs=-1
     )
@@ -179,11 +171,7 @@ def GB_Fit(team_data, r, validation_start=2016):
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
-<<<<<<< HEAD
-        scoring=custom_precision_scorer,
-=======
         scoring='neg_brier_score',
->>>>>>> add_years
         cv=PredefinedSplit(test_fold=team_data['Split'].values),
         n_jobs=-1
     )
@@ -250,11 +238,7 @@ def NN_Fit(team_data, r, validation_start=2016):
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
-<<<<<<< HEAD
-        scoring=custom_precision_scorer,
-=======
         scoring='neg_brier_score',
->>>>>>> add_years
         cv=PredefinedSplit(test_fold=team_data['Split'].values),
         n_jobs=-1
     )
