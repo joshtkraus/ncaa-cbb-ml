@@ -18,19 +18,19 @@ with open(bracket_path, "r") as json_file:
     results = json.load(json_file)
 
 # Tune Component Models
-#best_params, model_accs = backwards_model(teams, validation_start=2017)
+best_params, model_accs = backwards_model(teams, validation_start=2017)
 
-# Temp Load
-# Tuned Params
-path = os.path.join(os.path.abspath(os.getcwd()), 'models/tuned_params.json')
-with open(path, "r") as json_file:
-    best_params = json.load(json_file)
-best_params = {int(key): value for key, value in best_params.items()}
-# Tuned Weights
-path = os.path.join(os.path.abspath(os.getcwd()), 'models/tuned_weights.json')
-with open(path, "r") as json_file:
-    model_accs = json.load(json_file)
-model_accs = {int(key): value for key, value in model_accs.items()}
+# # Temp Load
+# # Tuned Params
+# path = os.path.join(os.path.abspath(os.getcwd()), 'models/tuned_params.json')
+# with open(path, "r") as json_file:
+#     best_params = json.load(json_file)
+# best_params = {int(key): value for key, value in best_params.items()}
+# # Tuned Weights
+# path = os.path.join(os.path.abspath(os.getcwd()), 'models/tuned_weights.json')
+# with open(path, "r") as json_file:
+#     model_accs = json.load(json_file)
+# model_accs = {int(key): value for key, value in model_accs.items()}
 
 # Combine Models
 models, accs, points_df, accs_df = combine_model(teams,best_params,model_accs,results,backwards_test=2013,validation_year=2017)
