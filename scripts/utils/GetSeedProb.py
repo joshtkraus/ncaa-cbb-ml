@@ -1,6 +1,6 @@
 # Create Historical Seed Probabilities
 
-def calc_seed_prob(df):
+def calc_seed_prob(df, lag=None, ind_col=True):
     # Libraries
     import pandas as pd
 
@@ -15,10 +15,20 @@ def calc_seed_prob(df):
     # Iterate Year
     for year in df['Year'].unique():
         # Get Historical Probabilities
-        # Count by Round
-        counts = df[df['Year']<year].groupby(['Seed','Round']).size().to_frame('Count').reset_index()
-        # Total Occurence of each Seed
-        total = len(df[df['Year']<year]) / 16
+        if lag == None:
+            # Count by Round
+            counts = df[df['Year']<year].groupby(['Seed','Round']).size().to_frame('Count').reset_index()
+             # Total Occurence of each Seed
+            total = len(df[df['Year']<year]) / 16
+            # Col Suffix
+            suffix = 'Full'
+        else:
+            # Count by Round
+            counts = df[(df['Year']<year)&(df['Year']>=year-lag)].groupby(['Seed','Round']).size().to_frame('Count').reset_index()
+             # Total Occurence of each Seed
+            total = len(df[(df['Year']<year)&(df['Year']>=year-lag)]) / 16
+            # Col Suffix
+            suffix = str(lag)
         # Total for each Round
         R32 = counts[counts['Round']>1].groupby('Seed')['Count'].sum().reset_index()
         S16 = counts[counts['Round']>2].groupby('Seed')['Count'].sum().reset_index()
@@ -34,19 +44,19 @@ def calc_seed_prob(df):
         NCG['Year'] = year
         Winner['Year'] = year
         # Rename Cols
-        R32.columns = ['Seed','R32_Actual','Year']
-        S16.columns = ['Seed','S16_Actual','Year']
-        E8.columns = ['Seed','E8_Actual','Year']
-        F4.columns = ['Seed','F4_Actual','Year']
-        NCG.columns = ['Seed','NCG_Actual','Year']
-        Winner.columns = ['Seed','Winner_Actual','Year']
+        R32.columns = ['Seed','R32_Actual_'+suffix,'Year']
+        S16.columns = ['Seed','S16_Actual_'+suffix,'Year']
+        E8.columns = ['Seed','E8_Actual_'+suffix,'Year']
+        F4.columns = ['Seed','F4_Actual_'+suffix,'Year']
+        NCG.columns = ['Seed','NCG_Actual_'+suffix,'Year']
+        Winner.columns = ['Seed','Winner_Actual_'+suffix,'Year']
         # Divide by Total
-        R32['R32_Actual'] = R32['R32_Actual'] / total
-        S16['S16_Actual'] = S16['S16_Actual'] / total
-        E8['E8_Actual'] = E8['E8_Actual'] / total
-        F4['F4_Actual'] = F4['F4_Actual'] / total
-        NCG['NCG_Actual'] = NCG['NCG_Actual'] / total
-        Winner['Winner_Actual'] = Winner['Winner_Actual'] / total
+        R32['R32_Actual_'+suffix] = R32['R32_Actual_'+suffix] / total
+        S16['S16_Actual_'+suffix] = S16['S16_Actual_'+suffix] / total
+        E8['E8_Actual_'+suffix] = E8['E8_Actual_'+suffix] / total
+        F4['F4_Actual_'+suffix] = F4['F4_Actual_'+suffix] / total
+        NCG['NCG_Actual_'+suffix] = NCG['NCG_Actual_'+suffix] / total
+        Winner['Winner_Actual_'+suffix] = Winner['Winner_Actual_'+suffix] / total
         # Append
         R32_Full.append(R32)
         S16_Full.append(S16)
@@ -74,7 +84,10 @@ def calc_seed_prob(df):
     # Fill NAs (no occurences) w/ 0
     df = df.fillna(0)
 
-    # Create Indicator for Missing df Seed (2013)
-    df['First_Year'] = 0
-    df.loc[df['Year']==df['Year'].min(),'First_Year'] = 1
-    return df
+    if ind_col == True:
+        # Create Indicator for Missing df Seed (2013)
+        df['First_Year'] = 0
+        df.loc[df['Year']==df['Year'].min(),'First_Year'] = 1
+        return df[['R32_Actual_'+suffix,'S16_Actual_'+suffix,'E8_Actual_'+suffix,'F4_Actual_'+suffix,'NCG_Actual_'+suffix,'Winner_Actual_'+suffix,'First_Year']]
+    else:
+        return df[['R32_Actual_'+suffix,'S16_Actual_'+suffix,'E8_Actual_'+suffix,'F4_Actual_'+suffix,'NCG_Actual_'+suffix,'Winner_Actual_'+suffix]]

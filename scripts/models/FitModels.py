@@ -27,9 +27,18 @@ def backwards_model(team_data, validation_start=2016):
         print('Fitting NN...')
         best_params[r]['NN'],accs[r]['NN'] = NN_Fit(team_data,r,validation_start)
 
+        # Neg Log Loss
+        # Total
+        total_loss = sum([accs[r]['Log'],accs[r]['RF'],accs[r]['GB'],accs[r]['NN']])
+        # Normalize
+        accs[r]['Log'] = accs[r]['Log'] / total_loss
+        accs[r]['RF'] = accs[r]['RF'] / total_loss
+        accs[r]['GB'] = accs[r]['GB'] / total_loss
+        accs[r]['NN'] = accs[r]['NN'] / total_loss
+
     return best_params, accs
 
-def combine_model(team_data,best_params,model_accs,correct_picks,test_year=2016):
+def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=2013,validation_year=2017):
     print('Combining Models...')
     # Libraries
     import os
@@ -52,7 +61,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,test_year=2016)
     from warnings import simplefilter
     simplefilter('ignore', category=ConvergenceWarning)
     # Years
-    years = [*range(test_year-1,2024)]
+    years = [*range(backwards_test-1,2024)]
     years.remove(2020)
 
     # Initialize
@@ -76,6 +85,10 @@ def combine_model(team_data,best_params,model_accs,correct_picks,test_year=2016)
 
         # Data Splits
         X, y = create_splits(team_data,r)
+
+        # Test Set for Permutation Importance
+        X_test_full = X[team_data['Year']>=validation_year]
+        y_test_full = y[team_data['Year']>=validation_year]
 
         # Iterate years
         for year in years:
@@ -120,6 +133,24 @@ def combine_model(team_data,best_params,model_accs,correct_picks,test_year=2016)
 
             # Fit
             voting_clf.fit(X_train, y_train)
+
+            # If training year is one less that validation year
+            if year == validation_year-1:
+                # Feature Importance
+                perm_importance = permutation_importance(voting_clf, X_test_full, y_test_full, n_repeats=10, random_state=0)
+                # To DF
+                feature_names = X.columns
+                importances_mean = perm_importance.importances_mean
+                importances_std = perm_importance.importances_std
+                importance_df = pd.DataFrame({
+                    "Feature": feature_names,
+                    "Importance Mean": importances_mean,
+                    "Importance Std": importances_std
+                })
+                importance_df = importance_df.sort_values(by="Importance Mean", ascending=False)
+                # Export
+                path = os.path.join(os.path.abspath(os.getcwd()), 'results/feature_importance/Round_'+str(r)+'.csv')
+                importance_df.to_csv(path,index=False)
 
             # Evaluate, store
             accuracy = calculate_precision(y_test, voting_clf.predict(X_test))
