@@ -9,7 +9,6 @@ def Logistic_Fit(team_data, r, validation_start=2016):
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
-    from sklearn.metrics import make_scorer, precision_score
 
     # Data Splits
     X, y = create_splits(team_data,r)
@@ -21,10 +20,10 @@ def Logistic_Fit(team_data, r, validation_start=2016):
     # Parameter grid
     param_grid = {
         'clf__max_iter': [10000],
-        'clf__C': [0.01, 0.05, 0.1, 0.5, 1, 5, 10],
+        'clf__C': [0.0001, 0.001, 0.01, 0.05, 0.1, 0.5, 1],
         'clf__solver': ['saga'],
         'clf__penalty': ['elasticnet'],
-        'clf__l1_ratio':[0.1, 0.3, 0.5, 0.7, 0.9]
+        'clf__l1_ratio':[0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0]
     }
 
     # Pipeline
@@ -46,7 +45,7 @@ def Logistic_Fit(team_data, r, validation_start=2016):
     grid_search.fit(X, y)
 
     # Get best parameters and precision
-    best_acc = 1 / (-1*grid_search.best_score_)
+    best_acc = 1 - (-1*grid_search.best_score_)
     best_params = grid_search.best_params_
     
     # Remove prefix from tuned param
@@ -75,7 +74,6 @@ def RF_Fit(team_data, r, validation_start=2016):
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
-    from sklearn.metrics import make_scorer, precision_score
 
     # Data Splits
     X, y = create_splits(team_data,r)
@@ -86,12 +84,12 @@ def RF_Fit(team_data, r, validation_start=2016):
 
     # Parameter grid
     param_grid = {
-        'clf__n_estimators':[50, 100, 150, 1500, 2000, 2500],
+        'clf__n_estimators':[25, 50, 100, 150],
         'clf__criterion': ['gini', 'entropy'],
         'clf__class_weight': ['balanced', None],
-        'clf__min_samples_split': [5, 10, 20, 50, 75],
-        'clf__min_samples_leaf': [1, 2, 5, 10, 15, 20],
-        'clf__max_depth': [1, 5, 20, 40]
+        'clf__min_samples_split': [2, 5, 10, 75],
+        'clf__min_samples_leaf': [1, 2, 5],
+        'clf__max_depth': [5, 10, 15, 20, 25]
     }
 
     # Pipeline
@@ -113,7 +111,7 @@ def RF_Fit(team_data, r, validation_start=2016):
     grid_search.fit(X, y)
 
     # Get best parameters and precision
-    best_acc = 1 / (-1*grid_search.best_score_)
+    best_acc = 1 - (-1*grid_search.best_score_)
     best_params = grid_search.best_params_
 
     # Remove prefix from tuned param
@@ -142,7 +140,6 @@ def GB_Fit(team_data, r, validation_start=2016):
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
-    from sklearn.metrics import make_scorer, precision_score
 
     # Data Splits
     X, y = create_splits(team_data,r)
@@ -153,10 +150,10 @@ def GB_Fit(team_data, r, validation_start=2016):
 
     # Parameter grid
     param_grid = {
-        'clf__n_estimators': [50, 100, 150, 500, 1000, 1500, 2000, 2500],
-        'clf__min_samples_split': [2, 5, 10, 15, 20],
-        'clf__min_samples_leaf': [5, 10, 20, 50, 75],
-        'clf__max_depth': [1, 2, 5, 8, 10]
+        'clf__n_estimators': [10, 25, 50, 100, 200, 300],
+        'clf__min_samples_split': [2, 3, 5],
+        'clf__min_samples_leaf': [20, 50, 75, 100, 150],
+        'clf__max_depth': [5, 10, 15, 20, 25]
     }
 
     # Pipeline
@@ -178,7 +175,7 @@ def GB_Fit(team_data, r, validation_start=2016):
     grid_search.fit(X, y)
 
     # Get best parameters and precision
-    best_acc = 1 / (-1*grid_search.best_score_)
+    best_acc = 1 - (-1*grid_search.best_score_)
     best_params = grid_search.best_params_
 
     # Remove prefix from tuned param
@@ -207,7 +204,6 @@ def NN_Fit(team_data, r, validation_start=2016):
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
-    from sklearn.metrics import make_scorer, precision_score
 
     # Data Splits
     X, y = create_splits(team_data,r)
@@ -219,9 +215,10 @@ def NN_Fit(team_data, r, validation_start=2016):
     # Parameter grid
     param_grid = {
         'clf__max_iter':[10000],
-        'clf__hidden_layer_sizes': [(20,), (40,), (80,), (20,10), (40,20)],
+        'clf__hidden_layer_sizes': [(40,), (60,), (80,), (120,), (160,), (200,), (240,) ,
+                                    (40,20), (60, 30), (80,40), (120,60), (160,80), (200,100), (240,120)],
         'clf__activation': ['tanh', 'relu'],
-        'clf__alpha': [0.001, 0.01, 0.1, 1, 10],
+        'clf__alpha': [0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 10, 15],
         'clf__learning_rate': ['constant'],
         'clf__solver': ['adam']
     }
@@ -245,7 +242,7 @@ def NN_Fit(team_data, r, validation_start=2016):
     grid_search.fit(X, y)
 
     # Get best parameters and precision
-    best_acc = 1 / (-1*grid_search.best_score_)
+    best_acc = 1 - (-1*grid_search.best_score_)
     best_params = grid_search.best_params_
     # Remove prefix from tuned param
     best_params = dict(zip([key[5:] for key in best_params.keys()],best_params.values()))
