@@ -42,6 +42,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
     # Libraries
     import os
     import json
+    import numpy as np
     import pandas as pd
     from imblearn.pipeline import Pipeline as ImbPipeline
     from sklearn.preprocessing import StandardScaler
@@ -111,61 +112,83 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                     model_accs[r]['RF'],
                     model_accs[r]['GB'],
                     model_accs[r]['NN']]
-
-            # Create Voting Classifier
-            voting_clf = ImbPipeline([
-                            ('scaler', StandardScaler()),
-                            ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=0)),
-                            ('tomek', TomekLinks(sampling_strategy='not minority')),
-                            ('clf', VotingClassifier(estimators=[
-                                                ('lr', log),
-                                                ('rf', rf),
-                                                ('gb', gb),
-                                                ('mlp', nn),
-                                            ], voting='soft',weights=weights)) 
-                        ])
-            
+                       
             # Subset Testing Year
             X_test = X[team_data['Year']==test_year]
             y_test = y[team_data['Year']==test_year]
 
-            # Fit
-            voting_clf.fit(X_train, y_train)
+            # Iterate random states
+            # Max Iterations
+            max_iter = 1
+            # Initialize
+            prec_list_avg = []
+            prob_list_avg = []
+            import_list_avg = []
+            for state in range(0,max_iter):
+                # Create Voting Classifier
+                voting_clf = ImbPipeline([
+                                ('scaler', StandardScaler()),
+                                ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=state)),
+                                ('tomek', TomekLinks(sampling_strategy='not minority')),
+                                ('clf', VotingClassifier(estimators=[
+                                                    ('lr', log),
+                                                    ('rf', rf),
+                                                    ('gb', gb),
+                                                    ('mlp', nn),
+                                                ], voting='soft',weights=weights)) 
+                            ])
 
-            # If end of Training meets w/ Validation Set
+                # Fit
+                voting_clf.fit(X_train, y_train)
+
+                # If end of Training meets w/ Validation Set
+                if year == validation_year-1:
+                    # Permutation Importance
+                    perm_importance = permutation_importance(voting_clf,
+                                                            X_test_full,
+                                                            y_test_full,
+                                                            n_repeats=10,
+                                                            scoring=precision_scorer, 
+                                                            random_state=0)
+                    import_list_avg.append(perm_importance.importances_mean)
+                    
+
+                # Get Precision, Probabilities
+                prec_sub = precision_score(y_test,
+                                           voting_clf.predict(X_test),
+                                           pos_label=1,
+                                           average='binary',
+                                           zero_division=0.0)
+                probs_sub = voting_clf.predict_proba(X_test)[:,1]
+
+                # Store
+                prec_list_avg.append(prec_sub)
+                prob_list_avg.append(probs_sub)
+            
+            # Get Averaged Results
+            prec = np.mean(prec_list_avg,axis=0)
+            prob = np.mean(prob_list_avg,axis=0)
+
+            # Store Averaged Results
+            # Precision
+            prec_list[r].append(prec)
+            # Predictions
+            predictions[test_year]['Round_'+str(r)] = prob
+            # Permutation Importance
             if year == validation_year-1:
-                # Permutation Importance
-                perm_importance = permutation_importance(voting_clf,
-                                                         X_test_full,
-                                                         y_test_full,
-                                                         n_repeats=10,
-                                                         scoring=precision_scorer, 
-                                                         random_state=0)
+                # Get Average Results
+                importance = np.mean(import_list_avg,axis=0)
                 # To DF
                 feature_names = X.columns
-                importances_mean = perm_importance.importances_mean
-                importances_std = perm_importance.importances_std
+                importances_mean =importance
                 importance_df = pd.DataFrame({
                     "Feature": feature_names,
                     "Importance Mean": importances_mean,
-                    "Importance Std": importances_std
                 })
                 importance_df = importance_df.sort_values(by="Importance Mean", ascending=False)
-                # Export
                 path = os.path.join(os.path.abspath(os.getcwd()), 'results/feature_importance/Round_'+str(r)+'.csv')
                 importance_df.to_csv(path,index=False)
-
-            # Get Precision, Store
-            prec = precision_score(y_test,
-                                   voting_clf.predict(X_test),
-                                   pos_label=1,
-                                   average='binary',
-                                   zero_division=0.0)
-            prec_list[r].append(prec)
-
-            # Store Probabilities
-            predictions[test_year]['Round_'+str(r)] = voting_clf.predict_proba(X_test)[:,1]
-
+        
         # Get Full Model
         voting_clf = ImbPipeline([
                         ('scaler', StandardScaler()),
