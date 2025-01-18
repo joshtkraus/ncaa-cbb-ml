@@ -1,3 +1,6 @@
+# Make Picks
+
+# Round 32
 def R32(picks_dict,rg,sd,tm):
     if str(sd) in ['1','16']:
         picks_dict[rg]['R32']['1'].append(tm)
@@ -17,6 +20,7 @@ def R32(picks_dict,rg,sd,tm):
         picks_dict[rg]['R32']['2'].append(tm)
     return picks_dict
 
+# Sweet 16
 def S16(picks_dict,rg,sd,tm):
     if str(sd) in ['1','16','8','9']:
         picks_dict[rg]['S16']['1'].append(tm)
@@ -28,6 +32,7 @@ def S16(picks_dict,rg,sd,tm):
         picks_dict[rg]['S16']['2'].append(tm)
     return picks_dict
 
+# Elite 8
 def E8(picks_dict,rg,sd,tm):
     if str(sd) in ['1','16','8','9','5','12','4','13']:
         picks_dict[rg]['E8']['Upper'].append(tm)
@@ -35,6 +40,7 @@ def E8(picks_dict,rg,sd,tm):
         picks_dict[rg]['E8']['Lower'].append(tm)
     return picks_dict
 
+# Create Picks
 def create_picks(team_data):
     # Libraries
     import pandas as pd
@@ -253,8 +259,9 @@ def create_picks(team_data):
                 i += 1
     return picks_dict
 
-# Calc Real Points
+# Calculate Real Points
 def real_Bracket(picks,real):
+    # Initialize
     point_totals = {'R32':10,
                     'S16':20,
                     'E8':40,
@@ -267,9 +274,9 @@ def real_Bracket(picks,real):
                 'F4':0,
                 'NCG':0,
                 'Winner':0}
-    # initialize total
     total = 0
-    # iterate through region, round, and picks
+
+    # Iterate through region, round, and picks
     for region in ['West','East','South','Midwest']:    
         for rd in ['R32','S16','E8','F4']:
             team_list = picks[region][rd]
@@ -299,6 +306,7 @@ def real_Bracket(picks,real):
         accuracy['Winner'] += 1
     return total, accuracy
 
+# Function to Make Picks & Calculate Points
 def predict_bracket(team_data, real_picks=None, calc_correct=True):
     # Make Picks
     picks = create_picks(team_data)

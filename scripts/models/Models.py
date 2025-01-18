@@ -44,24 +44,24 @@ def Logistic_Fit(team_data, r, validation_start=2016):
     )
     grid_search.fit(X, y)
 
-    # Get best parameters and precision
-    best_acc = 1 - (-1*grid_search.best_score_)
+    # Get best parameters and performance
+    best_perform = 1 - (-1*grid_search.best_score_)
     best_params = grid_search.best_params_
     
     # Remove prefix from tuned param
     best_params = dict(zip([key[5:] for key in best_params.keys()],best_params.values()))
 
-    # Export CV Results
+    # Export Validation Results
     path_dict = {2:'R32',
                  3:'S16',
                  4:'E8',
                  5:'F4',
                  6:'NCG',
                  7:'Winner'}
-    CV_df =  pd.DataFrame.from_dict(grid_search.cv_results_)
+    Val_df =  pd.DataFrame.from_dict(grid_search.cv_results_)
     path = os.path.join(os.path.abspath(os.getcwd()), 'results/models/'+path_dict[r]+'/Logistic.csv')
-    CV_df.to_csv(path,index=False)
-    return best_params, best_acc
+    Val_df.to_csv(path,index=False)
+    return best_params, best_perform
 
 def RF_Fit(team_data, r, validation_start=2016):
     # Libraries
@@ -110,24 +110,24 @@ def RF_Fit(team_data, r, validation_start=2016):
     )
     grid_search.fit(X, y)
 
-    # Get best parameters and precision
-    best_acc = 1 - (-1*grid_search.best_score_)
+    # Get best parameters and performance
+    best_perform = 1 - (-1*grid_search.best_score_)
     best_params = grid_search.best_params_
 
     # Remove prefix from tuned param
     best_params = dict(zip([key[5:] for key in best_params.keys()],best_params.values()))
 
-    # Export CV Results
+    # Export Validation Results
     path_dict = {2:'R32',
                  3:'S16',
                  4:'E8',
                  5:'F4',
                  6:'NCG',
                  7:'Winner'}
-    CV_df =  pd.DataFrame.from_dict(grid_search.cv_results_)
+    Val_df =  pd.DataFrame.from_dict(grid_search.cv_results_)
     path = os.path.join(os.path.abspath(os.getcwd()), 'results/models/'+path_dict[r]+'/RandomForest.csv')
-    CV_df.to_csv(path,index=False)
-    return best_params, best_acc
+    Val_df.to_csv(path,index=False)
+    return best_params, best_perform
 
 def GB_Fit(team_data, r, validation_start=2016):
     # Libraries
@@ -174,24 +174,24 @@ def GB_Fit(team_data, r, validation_start=2016):
     )
     grid_search.fit(X, y)
 
-    # Get best parameters and precision
-    best_acc = 1 - (-1*grid_search.best_score_)
+    # Get best parameters and performance
+    best_perform = 1 - (-1*grid_search.best_score_)
     best_params = grid_search.best_params_
 
     # Remove prefix from tuned param
     best_params = dict(zip([key[5:] for key in best_params.keys()],best_params.values()))
 
-    # Export CV Results
+    # Export Validation Results
     path_dict = {2:'R32',
                  3:'S16',
                  4:'E8',
                  5:'F4',
                  6:'NCG',
                  7:'Winner'}
-    CV_df =  pd.DataFrame.from_dict(grid_search.cv_results_)
+    Val_df =  pd.DataFrame.from_dict(grid_search.cv_results_)
     path = os.path.join(os.path.abspath(os.getcwd()), 'results/models/'+path_dict[r]+'/GradientBoosting.csv')
-    CV_df.to_csv(path,index=False)
-    return best_params, best_acc
+    Val_df.to_csv(path,index=False)
+    return best_params, best_perform
 
 def NN_Fit(team_data, r, validation_start=2016):
     # Libraries
@@ -241,20 +241,21 @@ def NN_Fit(team_data, r, validation_start=2016):
     )
     grid_search.fit(X, y)
 
-    # Get best parameters and precision
-    best_acc = 1 - (-1*grid_search.best_score_)
+    # Get best parameters and performance
+    best_perform = 1 - (-1*grid_search.best_score_)
     best_params = grid_search.best_params_
+
     # Remove prefix from tuned param
     best_params = dict(zip([key[5:] for key in best_params.keys()],best_params.values()))
 
-    # Export CV Results
+    # Export Validation Results
     path_dict = {2:'R32',
                  3:'S16',
                  4:'E8',
                  5:'F4',
                  6:'NCG',
                  7:'Winner'}
-    CV_df =  pd.DataFrame.from_dict(grid_search.cv_results_)
+    Val_df =  pd.DataFrame.from_dict(grid_search.cv_results_)
     path = os.path.join(os.path.abspath(os.getcwd()), 'results/models/'+path_dict[r]+'/NeuralNetwork.csv')
-    CV_df.to_csv(path,index=False)
-    return best_params, best_acc
+    Val_df.to_csv(path,index=False)
+    return best_params, best_perform

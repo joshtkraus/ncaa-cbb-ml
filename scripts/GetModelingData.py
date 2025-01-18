@@ -1,6 +1,4 @@
 # Libraries
-import sys
-sys.path.append('../scripts')
 import os
 import pandas as pd
 import json
@@ -8,6 +6,12 @@ from utils.NameCleaner_KP import clean_KP
 from utils.NameCleaner_SR import clean_SR
 from utils.NameCleaner_Results import clean_results
 from utils.GetSeedProb import calc_seed_prob
+
+# Year to Start Data At
+start_year = 2006
+
+# Run Web Scraper Ind
+scraper = False
 
 # Unit Tests
 def check_KP_join(summary, joined):
@@ -19,30 +23,33 @@ def check_data_join(data, SR, KP):
         print('Missing KP Teams: ',[team for team in KP['Team'].unique() if team not in SR['Team'].unique()])
         print('Missing SR Teams: ',[team for team in SR['Team'].unique() if team not in KP['Team'].unique()])
         raise ValueError('Data Loss in Join.')
-def check_results_naming(results_dict, SR, KP):
+def check_results_naming(results_dict, SR):
     # Iterate dict
     for year, regions in results_dict.items():
         for region, rounds in regions.items():
             if region not in ['NCG','Winner']:
                 for round, teams in rounds.items():
                     for i, team in enumerate(teams):
-                        if (team not in SR['Team'].values) | (team not in KP['Team'].values):
+                        if team not in SR['Team'].values:
                             raise ValueError('Team missing: '+team)
             elif region == 'NCG':   
                 for i, team in enumerate(rounds):
-                    if (team not in SR['Team'].values) | (team not in KP['Team'].values):
+                    if team not in SR['Team'].values:
                             raise ValueError('Team missing: '+team)
             else:
-                if (team not in SR['Team'].values) | (team not in KP['Team'].values):
+                if team not in SR['Team'].values:
                             raise ValueError('Team missing: '+team)
 
-# Run Web Scraper
-from scrapers import GetData_SR
+if scraper == True:
+    # Run Web Scraper
+    from scrapers import GetData_SR
 
 # Read Data
 SR = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), 'data/raw/sportsreference.csv'))
 with open(os.path.join(os.path.abspath(os.getcwd()), 'data/raw/results.json'), "r") as json_file:
     results = json.load(json_file)
+# Filter by Start Year
+SR_sub = SR[SR['Year']>=start_year]
 
 # Read KenPom Data
 # Teams who made play-in but lost
@@ -71,7 +78,7 @@ playin_dict = {
                 2002:['Alcorn St.']
                 }
 # List of years to include, excluding 2020
-years = list(range(2006, 2025))
+years = list(range(start_year, 2025))
 years.remove(2020)
 # Initialize
 KP = pd.DataFrame()
@@ -99,17 +106,18 @@ for year in years:
 
 # Clean Naming
 KP = clean_KP(KP)
+SR_sub = clean_SR(SR_sub)
 SR = clean_SR(SR)
 results = clean_results(results)
 # Join Dataframes
-data = SR.merge(KP, on=['Team','Year','Seed'])
+data = SR_sub.merge(KP, on=['Team','Year','Seed'])
 # Drop Any Duplicates or NAs Created
 data.drop_duplicates(inplace=True)
 data.dropna(inplace=True)
 
 # Unit Tests
-check_data_join(data, SR, KP)
-check_results_naming(results, SR, KP)
+check_data_join(data, SR_sub, KP)
+check_results_naming(results, SR)
 
 # Get Historical Seed Probabilities
 data[['R32_Actual_Full','S16_Actual_Full','E8_Actual_Full','F4_Actual_Full','NCG_Actual_Full','Winner_Actual_Full','First_Year']] = calc_seed_prob(data,lag=None,ind_col=True)

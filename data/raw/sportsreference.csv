@@ -1,4 +1,260 @@
 Year,Team,Conf,Round,Wins,Conf Tourney,Region,Seed
+2002,Maryland,ACC,7,26,0,South,1
+2002,Siena,MAAC,1,17,1,South,16
+2002,Wisconsin,Big Ten,2,18,0,South,8
+2002,St Johns Ny,Big East,1,20,0,South,9
+2002,Marquette,CUSA,1,26,0,South,5
+2002,Tulsa,WAC,2,26,0,South,12
+2002,Kentucky,SEC,3,20,0,South,4
+2002,Valparaiso,Mid-Cont,1,25,1,South,13
+2002,Texas Tech,Big 12,1,23,0,South,6
+2002,Southern Illinois,MVC,3,26,0,South,11
+2002,Georgia,SEC,2,21,0,South,3
+2002,Murray State,OVC,1,19,1,South,14
+2002,North Carolina State,ACC,2,22,0,South,7
+2002,Michigan State,Big Ten,1,19,0,South,10
+2002,Connecticut,Big East,4,24,1,South,2
+2002,Hampton,MEAC,1,26,1,South,15
+2002,Cincinnati,CUSA,2,30,1,East,1
+2002,Boston University,AEC,1,22,1,East,16
+2002,Ucla,Pac-10,3,19,0,East,8
+2002,Mississippi,SEC,1,20,0,East,9
+2002,Miami Fl,Big East,1,24,0,East,5
+2002,Missouri,Big 12,4,21,0,East,12
+2002,Ohio State,Big Ten,2,23,1,East,4
+2002,Davidson,Southern,1,21,1,East,13
+2002,Gonzaga,WCC,1,29,1,East,6
+2002,Wyoming,MWC,2,21,0,East,11
+2002,Arizona,Pac-10,3,22,1,East,3
+2002,California Santa Barbara,Big West,1,20,1,East,14
+2002,Xavier,A-10,2,25,1,East,7
+2002,Hawaii,WAC,1,27,1,East,10
+2002,Oklahoma,Big 12,5,27,1,East,2
+2002,Illinois Chicago,Horizon,1,20,1,East,15
+2002,Kansas,Big 12,5,29,0,Midwest,1
+2002,Holy Cross,Patriot,1,18,1,Midwest,16
+2002,Stanford,Pac-10,2,19,0,Midwest,8
+2002,Western Kentucky,Sun Belt,1,28,1,Midwest,9
+2002,Florida,SEC,1,22,0,Midwest,5
+2002,Creighton,MVC,2,22,1,Midwest,12
+2002,Illinois,Big Ten,3,24,0,Midwest,4
+2002,San Diego State,MWC,1,21,1,Midwest,13
+2002,Texas,Big 12,3,20,0,Midwest,6
+2002,Boston College,Big East,1,20,0,Midwest,11
+2002,Mississippi State,SEC,2,26,1,Midwest,3
+2002,Mcneese State,Southland,1,21,1,Midwest,14
+2002,Wake Forest,ACC,2,20,0,Midwest,7
+2002,Pepperdine,WCC,1,22,0,Midwest,10
+2002,Oregon,Pac-10,4,23,0,Midwest,2
+2002,Montana,Big Sky,1,16,1,Midwest,15
+2002,Duke,ACC,3,29,1,West,1
+2002,Winthrop,Big South,1,19,1,West,16
+2002,Notre Dame,Big East,2,21,0,West,8
+2002,Charlotte,CUSA,1,18,0,West,9
+2002,Indiana,Big Ten,6,20,0,West,5
+2002,Utah,MWC,1,21,0,West,12
+2002,Southern California,Pac-10,1,22,0,West,4
+2002,North Carolina Wilmington,CAA,2,22,1,West,13
+2002,California,Pac-10,2,22,0,West,6
+2002,Pennsylvania,Ivy,1,25,0,West,11
+2002,Pittsburgh,Big East,3,27,0,West,3
+2002,Central Connecticut State,NEC,1,27,1,West,14
+2002,Oklahoma State,Big 12,1,23,0,West,7
+2002,Kent State,MAC,4,27,1,West,10
+2002,Alabama,SEC,2,26,0,West,2
+2002,Florida Atlantic,A-Sun,1,19,1,West,15
+2003,Oklahoma,Big 12,4,24,1,Midwest,1
+2003,South Carolina State,MEAC,1,20,1,Midwest,16
+2003,California,Pac-10,2,21,0,Midwest,8
+2003,North Carolina State,ACC,1,18,0,Midwest,9
+2003,Mississippi State,SEC,1,21,0,Midwest,5
+2003,Butler,Horizon,3,25,0,Midwest,12
+2003,Louisville,CUSA,2,24,1,Midwest,4
+2003,Austin Peay,OVC,1,23,1,Midwest,13
+2003,Oklahoma State,Big 12,2,21,0,Midwest,6
+2003,Pennsylvania,Ivy,1,22,0,Midwest,11
+2003,Syracuse,Big East,7,24,0,Midwest,3
+2003,Manhattan,MAAC,1,23,1,Midwest,14
+2003,Saint Josephs,A-10,1,23,0,Midwest,7
+2003,Auburn,SEC,3,20,0,Midwest,10
+2003,Wake Forest,ACC,2,24,0,Midwest,2
+2003,East Tennessee State,Southern,1,20,1,Midwest,15
+2003,Arizona,Pac-10,4,25,0,East,1
+2003,Vermont,AEC,1,21,1,East,16
+2003,Cincinnati,CUSA,1,17,0,East,8
+2003,Gonzaga,WCC,2,23,0,East,9
+2003,Notre Dame,Big East,3,22,0,East,5
+2003,Milwaukee,Horizon,1,24,1,East,12
+2003,Illinois,Big Ten,2,24,1,East,4
+2003,Western Kentucky,Sun Belt,1,24,1,East,13
+2003,Creighton,MVC,1,29,1,East,6
+2003,Central Michigan,MAC,2,24,1,East,11
+2003,Duke,ACC,3,24,1,East,3
+2003,Colorado State,MWC,1,19,1,East,14
+2003,Memphis,CUSA,1,23,0,East,7
+2003,Arizona State,Pac-10,2,19,0,East,10
+2003,Kansas,Big 12,6,25,0,East,2
+2003,Utah State,Big West,1,24,1,East,15
+2003,Kentucky,SEC,4,29,1,West,1
+2003,Iupui,Mid-Cont,1,20,1,West,16
+2003,Oregon,Pac-10,1,23,1,West,8
+2003,Utah,MWC,2,24,0,West,9
+2003,Wisconsin,Big Ten,3,22,0,West,5
+2003,Weber State,Big Sky,1,26,1,West,12
+2003,Dayton,A-10,1,24,1,West,4
+2003,Tulsa,WAC,2,22,1,West,13
+2003,Missouri,Big 12,2,21,0,West,6
+2003,Southern Illinois,MVC,1,24,0,West,11
+2003,Marquette,CUSA,5,23,0,West,3
+2003,Holy Cross,Patriot,1,26,1,West,14
+2003,Indiana,Big Ten,2,20,0,West,7
+2003,Alabama,SEC,1,17,0,West,10
+2003,Pittsburgh,Big East,3,26,1,West,2
+2003,Wagner,NEC,1,21,1,West,15
+2003,Texas,Big 12,5,22,0,South,1
+2003,North Carolina Asheville,Big South,1,15,1,South,16
+2003,Louisiana State,SEC,1,21,0,South,8
+2003,Purdue,Big Ten,2,18,0,South,9
+2003,Connecticut,Big East,3,21,0,South,5
+2003,Brigham Young,MWC,1,23,0,South,12
+2003,Stanford,Pac-10,2,23,0,South,4
+2003,San Diego,WCC,1,18,1,South,13
+2003,Maryland,ACC,3,19,0,South,6
+2003,North Carolina Wilmington,CAA,1,24,1,South,11
+2003,Xavier,A-10,2,25,0,South,3
+2003,Troy,A-Sun,1,26,1,South,14
+2003,Michigan State,Big Ten,4,19,0,South,7
+2003,Colorado,Big 12,1,20,0,South,10
+2003,Florida,SEC,2,24,0,South,2
+2003,Sam Houston State,Southland,1,23,1,South,15
+2004,Duke,ACC,5,27,0,South,1
+2004,Alabama State,SWAC,1,16,1,South,16
+2004,Seton Hall,Big East,2,20,0,South,8
+2004,Arizona,Pac-10,1,20,0,South,9
+2004,Illinois,Big Ten,3,24,0,South,5
+2004,Murray State,OVC,1,28,1,South,12
+2004,Cincinnati,CUSA,2,24,1,South,4
+2004,East Tennessee State,Southern,1,27,1,South,13
+2004,North Carolina,ACC,2,18,0,South,6
+2004,Air Force,MWC,1,22,0,South,11
+2004,Texas,Big 12,3,23,0,South,3
+2004,Princeton,Ivy,1,20,0,South,14
+2004,Xavier,A-10,4,23,1,South,7
+2004,Louisville,CUSA,1,20,0,South,10
+2004,Mississippi State,SEC,2,25,0,South,2
+2004,Monmouth,NEC,1,21,1,South,15
+2004,Kentucky,SEC,2,26,1,West,1
+2004,Florida Am,MEAC,1,15,1,West,16
+2004,Washington,Pac-10,1,19,0,West,8
+2004,Alabama Birmingham,CUSA,3,20,0,West,9
+2004,Providence,Big East,1,20,0,West,5
+2004,Pacific,Big West,2,24,1,West,12
+2004,Kansas,Big 12,4,21,0,West,4
+2004,Illinois Chicago,Horizon,1,24,1,West,13
+2004,Boston College,Big East,2,23,0,West,6
+2004,Utah,MWC,1,24,1,West,11
+2004,Georgia Tech,ACC,6,23,0,West,3
+2004,Northern Iowa,MVC,1,21,1,West,14
+2004,Michigan State,Big Ten,1,18,0,West,7
+2004,Nevada,WAC,3,23,1,West,10
+2004,Gonzaga,WCC,2,27,1,West,2
+2004,Valparaiso,Mid-Cont,1,18,1,West,15
+2004,Saint Josephs,A-10,4,27,0,East,1
+2004,Liberty,Big South,1,18,1,East,16
+2004,Texas Tech,Big 12,2,22,0,East,8
+2004,Charlotte,CUSA,1,21,0,East,9
+2004,Florida,SEC,1,20,0,East,5
+2004,Manhattan,MAAC,2,24,1,East,12
+2004,Wake Forest,ACC,3,19,0,East,4
+2004,Virginia Commonwealth,CAA,1,23,1,East,13
+2004,Wisconsin,Big Ten,2,24,1,East,6
+2004,Richmond,A-10,1,20,0,East,11
+2004,Pittsburgh,Big East,3,29,0,East,3
+2004,Central Florida,A-Sun,1,25,1,East,14
+2004,Memphis,CUSA,2,21,0,East,7
+2004,South Carolina,SEC,1,23,0,East,10
+2004,Oklahoma State,Big 12,5,27,1,East,2
+2004,Eastern Washington,Big Sky,1,17,1,East,15
+2004,Stanford,Pac-10,2,29,1,Midwest,1
+2004,Texas San Antonio,Southland,1,19,1,Midwest,16
+2004,Alabama,SEC,4,17,0,Midwest,8
+2004,Southern Illinois,MVC,1,25,0,Midwest,9
+2004,Syracuse,Big East,3,21,0,Midwest,5
+2004,Brigham Young,MWC,1,21,0,Midwest,12
+2004,Maryland,ACC,2,19,1,Midwest,4
+2004,Texas El Paso,WAC,1,24,0,Midwest,13
+2004,Vanderbilt,SEC,3,21,0,Midwest,6
+2004,Western Michigan,MAC,1,26,1,Midwest,11
+2004,North Carolina State,ACC,2,20,0,Midwest,3
+2004,Louisiana Lafayette,Sun Belt,1,20,1,Midwest,14
+2004,Depaul,CUSA,2,21,0,Midwest,7
+2004,Dayton,A-10,1,24,0,Midwest,10
+2004,Connecticut,Big East,7,27,1,Midwest,2
+2004,Vermont,AEC,1,22,1,Midwest,15
+2005,North Carolina,ACC,7,27,0,South,1
+2005,Oakland,Mid-Cont,1,13,1,South,16
+2005,Minnesota,Big Ten,1,21,0,South,8
+2005,Iowa State,Big 12,2,18,0,South,9
+2005,Villanova,Big East,3,22,0,South,5
+2005,New Mexico,MWC,1,26,1,South,12
+2005,Florida,SEC,2,23,1,South,4
+2005,Ohio,MAC,1,21,1,South,13
+2005,Wisconsin,Big Ten,4,22,0,South,6
+2005,Northern Iowa,MVC,1,21,0,South,11
+2005,Kansas,Big 12,1,23,0,South,3
+2005,Bucknell,Patriot,2,22,1,South,14
+2005,Charlotte,CUSA,1,21,0,South,7
+2005,North Carolina State,ACC,3,19,0,South,10
+2005,Connecticut,Big East,2,22,0,South,2
+2005,Central Florida,A-Sun,1,24,1,South,15
+2005,Washington,Pac-10,3,27,1,East,1
+2005,Montana,Big Sky,1,18,1,East,16
+2005,Pacific,Big West,2,26,0,East,8
+2005,Pittsburgh,Big East,1,20,0,East,9
+2005,Georgia Tech,ACC,2,19,0,East,5
+2005,George Washington,A-10,1,22,1,East,12
+2005,Louisville,CUSA,5,29,1,East,4
+2005,Louisiana Lafayette,Sun Belt,1,20,1,East,13
+2005,Texas Tech,Big 12,3,20,0,East,6
+2005,Ucla,Pac-10,1,18,0,East,11
+2005,Gonzaga,WCC,2,25,1,East,3
+2005,Winthrop,Big South,1,27,1,East,14
+2005,West Virginia,Big East,4,21,0,East,7
+2005,Creighton,MVC,1,23,1,East,10
+2005,Wake Forest,ACC,2,26,0,East,2
+2005,Chattanooga,Southern,1,20,1,East,15
+2005,Duke,ACC,3,25,1,Midwest,1
+2005,Delaware State,MEAC,1,19,1,Midwest,16
+2005,Stanford,Pac-10,1,18,0,Midwest,8
+2005,Mississippi State,SEC,2,22,0,Midwest,9
+2005,Michigan State,Big Ten,5,22,0,Midwest,5
+2005,Old Dominion,CAA,1,28,1,Midwest,12
+2005,Syracuse,Big East,1,27,1,Midwest,4
+2005,Vermont,AEC,2,24,1,Midwest,13
+2005,Utah,MWC,3,27,0,Midwest,6
+2005,Texas El Paso,WAC,1,27,1,Midwest,11
+2005,Oklahoma,Big 12,2,24,0,Midwest,3
+2005,Niagara,MAAC,1,20,1,Midwest,14
+2005,Cincinnati,CUSA,2,24,0,Midwest,7
+2005,Iowa,Big Ten,1,21,0,Midwest,10
+2005,Kentucky,SEC,4,25,0,Midwest,2
+2005,Eastern Kentucky,OVC,1,22,1,Midwest,15
+2005,Illinois,Big Ten,6,32,1,West,1
+2005,Fairleigh Dickinson,NEC,1,20,1,West,16
+2005,Texas,Big 12,1,20,0,West,8
+2005,Nevada,WAC,2,24,0,West,9
+2005,Alabama,SEC,1,24,0,West,5
+2005,Milwaukee,Horizon,3,24,1,West,12
+2005,Boston College,Big East,2,24,0,West,4
+2005,Pennsylvania,Ivy,1,20,0,West,13
+2005,Louisiana State,SEC,1,20,0,West,6
+2005,Alabama Birmingham,CUSA,2,21,0,West,11
+2005,Arizona,Pac-10,4,27,0,West,3
+2005,Utah State,Big West,1,24,1,West,14
+2005,Southern Illinois,MVC,2,26,0,West,7
+2005,Saint Marys Ca,WCC,1,25,0,West,10
+2005,Oklahoma State,Big 12,3,24,1,West,2
+2005,Southeastern Louisiana,Southland,1,24,1,West,15
 2006,Villanova,Big East,4,25,0,Midwest,1
 2006,Monmouth,NEC,1,19,1,Midwest,16
 2006,Arizona,Pac-10,2,19,0,Midwest,8

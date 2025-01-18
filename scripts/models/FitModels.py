@@ -1,10 +1,8 @@
-def backwards_model(team_data, validation_start=2016):
+# Tune Models
+def train_models(team_data, validation_start=2017):
     print('Tuning Models...')
     # Libraries
     from models.Models import Logistic_Fit, RF_Fit, GB_Fit, NN_Fit
-    from sklearn.exceptions import ConvergenceWarning
-    from warnings import simplefilter
-    simplefilter('ignore', category=ConvergenceWarning)
     
     # Initialize
     best_params = {}
@@ -27,8 +25,8 @@ def backwards_model(team_data, validation_start=2016):
         print('Fitting NN...')
         best_params[r]['NN'],accs[r]['NN'] = NN_Fit(team_data,r,validation_start)
 
-        # Neg Log Loss
-        # Total
+        # Normalize Neg Brier Loss
+        # Total Loss
         total_loss = sum([accs[r]['Log'],accs[r]['RF'],accs[r]['GB'],accs[r]['NN']])
         # Normalize
         accs[r]['Log'] = accs[r]['Log'] / total_loss
@@ -38,12 +36,13 @@ def backwards_model(team_data, validation_start=2016):
 
     return best_params, accs
 
+# Combine Component Models
 def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=2013,validation_year=2017):
     print('Combining Models...')
     # Libraries
     import os
-    import pandas as pd
     import json
+    import pandas as pd
     from imblearn.pipeline import Pipeline as ImbPipeline
     from sklearn.preprocessing import StandardScaler
     from imblearn.over_sampling import BorderlineSMOTE
@@ -54,18 +53,18 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
     from sklearn.ensemble import VotingClassifier
     from sklearn.inspection import permutation_importance
     from models.utils.metrics import calculate_precision
+    from sklearn.metrics import precision_score, make_scorer
     from models.utils.DataProcessing import create_splits
     from models.utils.StandarizePredictions import standarize
     from models.utils.MakePicks import predict_bracket
-    from sklearn.exceptions import ConvergenceWarning
-    from warnings import simplefilter
-    simplefilter('ignore', category=ConvergenceWarning)
-    # Years
+
+    # Years to Backwards Test
     years = [*range(backwards_test-1,2024)]
     years.remove(2020)
 
     # Initialize
-    accs = {}
+    precision_scorer = make_scorer(precision_score, pos_label=1,average='binary',zero_division=0.0)
+    prec_list = {}
     models = {}
     predictions = {}
     for year in years:
@@ -81,7 +80,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
     # Iterate Rounds
     for r in range(2,8):
         # Initialize
-        accs[r] = []
+        prec_list[r] = []
 
         # Data Splits
         X, y = create_splits(team_data,r)
@@ -113,7 +112,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                     model_accs[r]['GB'],
                     model_accs[r]['NN']]
 
-            # Best Model w/ Elastic  et
+            # Create Voting Classifier
             voting_clf = ImbPipeline([
                             ('scaler', StandardScaler()),
                             ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=0)),
@@ -126,7 +125,6 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                                             ], voting='soft',weights=weights)) 
                         ])
             
-            # Cross Validation
             # Subset Testing Year
             X_test = X[team_data['Year']==test_year]
             y_test = y[team_data['Year']==test_year]
@@ -134,10 +132,15 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
             # Fit
             voting_clf.fit(X_train, y_train)
 
-            # If training year is one less that validation year
+            # If end of Training meets w/ Validation Set
             if year == validation_year-1:
-                # Feature Importance
-                perm_importance = permutation_importance(voting_clf, X_test_full, y_test_full, n_repeats=10, random_state=0)
+                # Permutation Importance
+                perm_importance = permutation_importance(voting_clf,
+                                                         X_test_full,
+                                                         y_test_full,
+                                                         n_repeats=10,
+                                                         scoring=precision_scorer, 
+                                                         random_state=0)
                 # To DF
                 feature_names = X.columns
                 importances_mean = perm_importance.importances_mean
@@ -152,9 +155,13 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                 path = os.path.join(os.path.abspath(os.getcwd()), 'results/feature_importance/Round_'+str(r)+'.csv')
                 importance_df.to_csv(path,index=False)
 
-            # Evaluate, store
-            accuracy = calculate_precision(y_test, voting_clf.predict(X_test))
-            accs[r].append(accuracy)
+            # Get Precision, Store
+            prec = precision_score(y_test,
+                                   voting_clf.predict(X_test),
+                                   pos_label=1,
+                                   average='binary',
+                                   zero_division=0.0)
+            prec_list[r].append(prec)
 
             # Store Probabilities
             predictions[test_year]['Round_'+str(r)] = voting_clf.predict_proba(X_test)[:,1]
@@ -220,4 +227,4 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
     accs_df.rename(columns={'index': 'Round'}, inplace=True)
     accs_df['Mean'] = accs_df.iloc[:, 1:].mean(axis=1)
     accs_df['Standard Deviation'] = accs_df.iloc[:, 1:-1].std(axis=1)
-    return models, accs, points_df, accs_df
+    return models, prec_list, points_df, accs_df

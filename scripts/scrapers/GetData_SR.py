@@ -44,19 +44,19 @@ def check_year_round_length_dict(picks_dict):
                     if len(teams) != 16:
                         raise ValueError(region + ' R64 Incorrect, # of Teams is: '+str(len(teams)))
 
-# Create empty DataFrames to store the data created in the for loop
+# Initialize
 seeddata = pd.DataFrame()
 bracket_data = {}
 
 # Years to scrape
-years = [*range(2006,2025)]
+years = [*range(2002,2025)]
 years.remove(2020)
 
 # All possible region names
 regions = ['east', 'west', 'midwest', 'south', 'southeast', 'southwest','minneapolis','atlanta',
             'oakland','washington','syracuse','albuquerque','austin','chicago','stlouis',
             'eastrutherford','phoenix']
-# Standardize
+# Standardize Region Naming
 regions_convert = {
                     2024:{'east':'West','west':'East','south':'South','midwest':'Midwest'},
                     2023:{'south':'West','east':'East','midwest':'South','west':'Midwest'},
@@ -84,12 +84,12 @@ regions_convert = {
 
 # Round Num to Name
 round_dict = {
-                1:'R64',
-                2:'R32',
-                3:'S16',
-                4:'E8',
-                5:'F4'
-                }
+    1:'R64',
+    2:'R32',
+    3:'S16',
+    4:'E8',
+    5:'F4'
+    }
 
 # SSL Context
 ssl_context = ssl.create_default_context(cafile=certifi.where())
