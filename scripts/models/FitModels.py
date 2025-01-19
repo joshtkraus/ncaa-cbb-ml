@@ -221,10 +221,19 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
         path = os.path.join(os.path.abspath(os.getcwd()), 'results/predictions/'+str(test_year)+'.csv')
         pred_df.to_csv(path,index=False)
 
+        # Get Expected Points
+        points_df = pred_df.copy()
+        points_df['R32'] = pred_df['R32']*10
+        points_df['S16'] = pred_df['R32']*10 + pred_df['S16']*20
+        points_df['E8'] = pred_df['R32']*10 + pred_df['S16']*20 + pred_df['E8']*40
+        points_df['F4'] = pred_df['R32']*10 + pred_df['S16']*20 + pred_df['E8']*40 + pred_df['F4']*80
+        points_df['NCG'] = pred_df['R32']*10 + pred_df['S16']*20 + pred_df['E8']*40 + pred_df['F4']*80 + pred_df['NCG']*160
+        points_df['Winner'] = pred_df['R32']*10 + pred_df['S16']*20 + pred_df['E8']*40 + pred_df['F4']*80 + pred_df['NCG']*160 + pred_df['Winner']*320
+
         # Make Picks
         pick_accs[test_year] = {}
         # Make Predictions
-        picks, point, acc = predict_bracket(pred_df,
+        picks, point, acc = predict_bracket(points_df,
                                             correct_picks[str(test_year)])
         # Save Predictions
         path = os.path.join(os.path.abspath(os.getcwd()), 'results/picks/'+str(test_year)+'.json')
