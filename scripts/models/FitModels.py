@@ -101,12 +101,6 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
             X_train = X[team_data['Year']<=year]
             y_train = y[team_data['Year']<=year]
 
-            # Tuned Models
-            log = LogisticRegression(**best_params[r]['Log'], random_state=0)
-            rf = RandomForestClassifier(**best_params[r]['RF'], random_state=0)
-            gb = GradientBoostingClassifier(**best_params[r]['GB'], random_state=0)
-            nn = MLPClassifier(**best_params[r]['NN'], random_state=0)
-
             # Model Weights
             weights = [model_accs[r]['Log'],
                     model_accs[r]['RF'],
@@ -125,6 +119,11 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
             prob_list_avg = []
             import_list_avg = []
             for state in range(0,max_iter):
+                # Tuned Models
+                log = LogisticRegression(**best_params[r]['Log'], random_state=state)
+                rf = RandomForestClassifier(**best_params[r]['RF'], random_state=state)
+                gb = GradientBoostingClassifier(**best_params[r]['GB'], random_state=state)
+                nn = MLPClassifier(**best_params[r]['NN'], random_state=state)
                 # Create Voting Classifier
                 voting_clf = ImbPipeline([
                                 ('scaler', StandardScaler()),
