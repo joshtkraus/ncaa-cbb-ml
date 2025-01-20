@@ -53,11 +53,14 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
     from sklearn.neural_network import MLPClassifier
     from sklearn.ensemble import VotingClassifier
     from sklearn.inspection import permutation_importance
-    from models.utils.metrics import calculate_precision
     from sklearn.metrics import precision_score, make_scorer
     from models.utils.DataProcessing import create_splits
     from models.utils.StandarizePredictions import standarize
     from models.utils.MakePicks import predict_bracket
+    from sklearn.calibration import CalibratedClassifierCV
+    from sklearn.metrics import brier_score_loss
+    import warnings
+    warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Years to Backwards Test
     years = [*range(backwards_test-1,2024)]
@@ -138,7 +141,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                             ])
 
                 # Fit
-                voting_clf.fit(X_train, y_train)
+                voting_clf.fit(X_train.to_numpy(), y_train.to_numpy())
 
                 # If end of Training meets w/ Validation Set
                 if year == validation_year-1:
@@ -150,15 +153,26 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                                                             scoring=precision_scorer, 
                                                             random_state=0)
                     import_list_avg.append(perm_importance.importances_mean)
-                    
+                
+                # Calibrate Probability
+                # Only Certain Rounds
+                if r in [2,3,4,5]:
+                    # Isotonic Regression
+                    clalibrate = CalibratedClassifierCV(estimator=voting_clf.named_steps['clf'], 
+                                                cv='prefit', 
+                                                method='isotonic')
+                    clalibrate.fit(X_test.to_numpy(), y_test.to_numpy())
+                    # Evaluate
+                    probs_sub = clalibrate.predict_proba(X_test.to_numpy())[:, 1]
+                else:
+                    probs_sub = voting_clf.predict_proba(X_test.to_numpy())[:, 1]
 
                 # Get Precision, Probabilities
                 prec_sub = precision_score(y_test,
-                                           voting_clf.predict(X_test),
+                                           [1 if prob >= 0.5 else 0 for prob in probs_sub],
                                            pos_label=1,
                                            average='binary',
                                            zero_division=0.0)
-                probs_sub = voting_clf.predict_proba(X_test)[:,1]
 
                 # Store
                 prec_list_avg.append(prec_sub)

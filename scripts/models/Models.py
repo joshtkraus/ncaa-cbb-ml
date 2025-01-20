@@ -9,6 +9,10 @@ def Logistic_Fit(team_data, r, validation_start=2016):
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
+    from sklearn.calibration import CalibratedClassifierCV
+    from sklearn.metrics import brier_score_loss
+    import warnings
+    warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Data Splits
     X, y = create_splits(team_data,r)
@@ -42,11 +46,23 @@ def Logistic_Fit(team_data, r, validation_start=2016):
         cv=PredefinedSplit(test_fold=team_data['Split'].values),
         n_jobs=-1
     )
-    grid_search.fit(X, y)
+    grid_search.fit(X.to_numpy(), y.to_numpy())
 
     # Get best parameters and performance
-    best_perform = 1 - (-1*grid_search.best_score_)
     best_params = grid_search.best_params_
+
+    # Calibrate Probability
+    # Validation Set
+    X_val = X[team_data['Split']==0]
+    y_val = y[team_data['Split']==0]
+    # Isotonic Regression
+    calibrate = CalibratedClassifierCV(estimator=grid_search.best_estimator_.named_steps['clf'], 
+                                              cv='prefit', 
+                                              method='isotonic')
+    calibrate.fit(X_val.to_numpy(), y_val.to_numpy())
+    # Evaluate
+    calibrate_y = calibrate.predict_proba(X_val.to_numpy())[:, 1]
+    best_perform = 1 - brier_score_loss(y_val, calibrate_y)
     
     # Remove prefix from tuned param
     best_params = dict(zip([key[5:] for key in best_params.keys()],best_params.values()))
@@ -74,6 +90,10 @@ def RF_Fit(team_data, r, validation_start=2016):
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
+    from sklearn.calibration import CalibratedClassifierCV
+    from sklearn.metrics import brier_score_loss
+    import warnings
+    warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Data Splits
     X, y = create_splits(team_data,r)
@@ -108,11 +128,23 @@ def RF_Fit(team_data, r, validation_start=2016):
         cv=PredefinedSplit(test_fold=team_data['Split'].values),
         n_jobs=-1
     )
-    grid_search.fit(X, y)
+    grid_search.fit(X.to_numpy(), y.to_numpy())
 
     # Get best parameters and performance
-    best_perform = 1 - (-1*grid_search.best_score_)
     best_params = grid_search.best_params_
+
+    # Calibrate Probability
+    # Validation Set
+    X_val = X[team_data['Split']==0]
+    y_val = y[team_data['Split']==0]
+    # Isotonic Regression
+    calibrate = CalibratedClassifierCV(estimator=grid_search.best_estimator_.named_steps['clf'], 
+                                              cv='prefit', 
+                                              method='isotonic')
+    calibrate.fit(X_val.to_numpy(), y_val.to_numpy())
+    # Evaluate
+    calibrate_y = calibrate.predict_proba(X_val.to_numpy())[:, 1]
+    best_perform = 1 - brier_score_loss(y_val, calibrate_y)
 
     # Remove prefix from tuned param
     best_params = dict(zip([key[5:] for key in best_params.keys()],best_params.values()))
@@ -140,6 +172,10 @@ def GB_Fit(team_data, r, validation_start=2016):
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
+    from sklearn.calibration import CalibratedClassifierCV
+    from sklearn.metrics import brier_score_loss
+    import warnings
+    warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Data Splits
     X, y = create_splits(team_data,r)
@@ -172,11 +208,23 @@ def GB_Fit(team_data, r, validation_start=2016):
         cv=PredefinedSplit(test_fold=team_data['Split'].values),
         n_jobs=-1
     )
-    grid_search.fit(X, y)
+    grid_search.fit(X.to_numpy(), y.to_numpy())
 
     # Get best parameters and performance
-    best_perform = 1 - (-1*grid_search.best_score_)
     best_params = grid_search.best_params_
+
+    # Calibrate Probability
+    # Validation Set
+    X_val = X[team_data['Split']==0]
+    y_val = y[team_data['Split']==0]
+    # Isotonic Regression
+    calibrate = CalibratedClassifierCV(estimator=grid_search.best_estimator_.named_steps['clf'], 
+                                              cv='prefit', 
+                                              method='isotonic')
+    calibrate.fit(X_val.to_numpy(), y_val.to_numpy())
+    # Evaluate
+    calibrate_y = calibrate.predict_proba(X_val.to_numpy())[:, 1]
+    best_perform = 1 - brier_score_loss(y_val, calibrate_y)
 
     # Remove prefix from tuned param
     best_params = dict(zip([key[5:] for key in best_params.keys()],best_params.values()))
@@ -204,6 +252,10 @@ def NN_Fit(team_data, r, validation_start=2016):
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
+    from sklearn.calibration import CalibratedClassifierCV
+    from sklearn.metrics import brier_score_loss
+    import warnings
+    warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Data Splits
     X, y = create_splits(team_data,r)
@@ -239,11 +291,23 @@ def NN_Fit(team_data, r, validation_start=2016):
         cv=PredefinedSplit(test_fold=team_data['Split'].values),
         n_jobs=-1
     )
-    grid_search.fit(X, y)
+    grid_search.fit(X.to_numpy(), y.to_numpy())
 
     # Get best parameters and performance
-    best_perform = 1 - (-1*grid_search.best_score_)
     best_params = grid_search.best_params_
+
+    # Calibrate Probability
+    # Validation Set
+    X_val = X[team_data['Split']==0]
+    y_val = y[team_data['Split']==0]
+    # Isotonic Regression
+    calibrate = CalibratedClassifierCV(estimator=grid_search.best_estimator_.named_steps['clf'], 
+                                              cv='prefit', 
+                                              method='isotonic')
+    calibrate.fit(X_val.to_numpy(), y_val.to_numpy())
+    # Evaluate
+    calibrate_y = calibrate.predict_proba(X_val.to_numpy())[:, 1]
+    best_perform = 1 - brier_score_loss(y_val, calibrate_y)
 
     # Remove prefix from tuned param
     best_params = dict(zip([key[5:] for key in best_params.keys()],best_params.values()))
