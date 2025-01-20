@@ -36,6 +36,45 @@ def train_models(team_data, validation_start=2017):
 
     return best_params, accs
 
+# To Plot Calibration Curves
+def save_calibration_curve(df_joined):
+    # Libraries
+    import os
+    from sklearn.calibration import calibration_curve
+    import matplotlib.pyplot as plt
+
+    # Map Round to Column Name
+    col_map = {
+        2:'Round_2',
+        3:'Round_3',
+        4:'Round_4',
+        5:'Round_5',
+        6:'Round_6',
+        7:'Round_7'
+    }
+
+    # Iterate Rounds
+    for r in [2,3,4,5,6,7]:
+        # Outcome
+        df_joined['Outcome'] = 0
+        df_joined.loc[df_joined['Round']==r,'Outcome'] = 1
+
+        # Calibration Curves
+        prob_true, prob_pred = calibration_curve(df_joined['Outcome'], df_joined[col_map[r]], pos_label=1, n_bins=8)
+
+        # Plot
+        plt.figure(figsize=(8, 6))
+        plt.plot(prob_pred, prob_true, marker='o', label='Calibration Curve')
+        plt.plot([0, 1], [0, 1], linestyle='--', color='gray', label='Perfect Calibration')
+        plt.xlabel('Predicted Probability')
+        plt.ylabel('True Probability')
+        plt.title('Calibration Curve: Round '+str(r))
+        plt.legend()
+        # Export
+        path = os.path.join(os.path.abspath(os.getcwd()), 'results/calibration_curves/Round_'+str(r)+'.png')
+        plt.savefig(path, bbox_inches='tight')
+        plt.close()
+
 # Combine Component Models
 def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=2013,validation_year=2017):
     print('Combining Models...')
@@ -58,9 +97,10 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
     from models.utils.StandarizePredictions import standarize
     from models.utils.MakePicks import predict_bracket
     from sklearn.calibration import CalibratedClassifierCV
-    from sklearn.metrics import brier_score_loss
     import warnings
     warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
+
+    calibrate = False
 
     # Years to Backwards Test
     years = [*range(backwards_test-1,2024)]
@@ -128,17 +168,32 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                 gb = GradientBoostingClassifier(**best_params[r]['GB'], random_state=state)
                 nn = MLPClassifier(**best_params[r]['NN'], random_state=state)
                 # Create Voting Classifier
-                voting_clf = ImbPipeline([
-                                ('scaler', StandardScaler()),
-                                ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=state)),
-                                ('tomek', TomekLinks(sampling_strategy='not minority')),
-                                ('clf', VotingClassifier(estimators=[
-                                                    ('lr', log),
-                                                    ('rf', rf),
-                                                    ('gb', gb),
-                                                    ('mlp', nn),
-                                                ], voting='soft',weights=weights)) 
-                            ])
+                if calibrate == True:
+                    voting_clf = ImbPipeline([
+                                    ('scaler', StandardScaler()),
+                                    ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=state)),
+                                    ('tomek', TomekLinks(sampling_strategy='not minority')),
+                                    ('clf', CalibratedClassifierCV(estimator=VotingClassifier(estimators=[
+                                                                                    ('lr', log),
+                                                                                    ('rf', rf),
+                                                                                    ('gb', gb),
+                                                                                    ('mlp', nn),
+                                                                                ], voting='soft',weights=weights),
+                                                                    cv=5,
+                                                                    method='isotonic'))
+                                ])
+                else:
+                    voting_clf = ImbPipeline([
+                                    ('scaler', StandardScaler()),
+                                    ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=state)),
+                                    ('tomek', TomekLinks(sampling_strategy='not minority')),
+                                    ('clf', VotingClassifier(estimators=[
+                                                                            ('lr', log),
+                                                                            ('rf', rf),
+                                                                            ('gb', gb),
+                                                                            ('mlp', nn),
+                                                                        ], voting='soft',weights=weights))
+                                ])
 
                 # Fit
                 voting_clf.fit(X_train.to_numpy(), y_train.to_numpy())
@@ -153,30 +208,20 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                                                             scoring=precision_scorer, 
                                                             random_state=0)
                     import_list_avg.append(perm_importance.importances_mean)
-                
-                # Calibrate Probability
-                # Only Certain Rounds
-                if r in [2,3,4,5]:
-                    # Isotonic Regression
-                    clalibrate = CalibratedClassifierCV(estimator=voting_clf.named_steps['clf'], 
-                                                cv='prefit', 
-                                                method='isotonic')
-                    clalibrate.fit(X_test.to_numpy(), y_test.to_numpy())
-                    # Evaluate
-                    probs_sub = clalibrate.predict_proba(X_test.to_numpy())[:, 1]
-                else:
-                    probs_sub = voting_clf.predict_proba(X_test.to_numpy())[:, 1]
+
+                # Get Prediction
+                y_pred = voting_clf.predict_proba(X_test.to_numpy())[:, 1]
 
                 # Get Precision, Probabilities
                 prec_sub = precision_score(y_test,
-                                           [1 if prob >= 0.5 else 0 for prob in probs_sub],
+                                           [1 if prob >= 0.5 else 0 for prob in y_pred],
                                            pos_label=1,
                                            average='binary',
                                            zero_division=0.0)
 
                 # Store
                 prec_list_avg.append(prec_sub)
-                prob_list_avg.append(probs_sub)
+                prob_list_avg.append(y_pred)
             
             # Get Averaged Results
             prec = np.mean(prec_list_avg,axis=0)
@@ -203,17 +248,32 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                 importance_df.to_csv(path,index=False)
         
         # Get Full Model
-        voting_clf = ImbPipeline([
-                        ('scaler', StandardScaler()),
-                        ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=0)),
-                        ('tomek', TomekLinks(sampling_strategy='not minority')),
-                        ('clf', VotingClassifier(estimators=[
-                                            ('lr', log),
-                                            ('rf', rf),
-                                            ('gb', gb),
-                                            ('mlp', nn),
-                                        ], voting='soft',weights=weights)) 
-                    ])
+        if calibrate == True:
+            voting_clf = ImbPipeline([
+                            ('scaler', StandardScaler()),
+                            ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=state)),
+                            ('tomek', TomekLinks(sampling_strategy='not minority')),
+                            ('clf', CalibratedClassifierCV(estimator=VotingClassifier(estimators=[
+                                                                            ('lr', log),
+                                                                            ('rf', rf),
+                                                                            ('gb', gb),
+                                                                            ('mlp', nn),
+                                                                        ], voting='soft',weights=weights),
+                                                            cv=5,
+                                                            method='isotonic'))
+                        ])
+        else:
+            voting_clf = ImbPipeline([
+                            ('scaler', StandardScaler()),
+                            ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=state)),
+                            ('tomek', TomekLinks(sampling_strategy='not minority')),
+                            ('clf', VotingClassifier(estimators=[
+                                                                    ('lr', log),
+                                                                    ('rf', rf),
+                                                                    ('gb', gb),
+                                                                    ('mlp', nn),
+                                                                ], voting='soft',weights=weights))
+                        ])
         voting_clf.fit(X,y)
         models[r] = voting_clf
     
@@ -221,6 +281,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
     # Initialize
     points = {}
     pick_accs = {}
+    pred_raw = pd.DataFrame()
     # Iterate Years
     for year in years:
         if year == 2019:
@@ -229,6 +290,10 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
             test_year = year+1
         # To DF
         pred_df = pd.DataFrame.from_dict(predictions[test_year])
+        # Add Year
+        pred_df['Year'] = test_year
+        # Combine DF
+        pred_raw = pd.concat([pred_raw,pred_df],ignore_index=True)
         # Standardize
         pred_df = standarize(pred_df)
         # Export
@@ -261,6 +326,17 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
         pick_accs[test_year]['F4'] = acc['F4'] / 4
         pick_accs[test_year]['NCG'] = acc['NCG'] / 2
         pick_accs[test_year]['Winner'] = acc['Winner']
+
+    # Calibration Curves
+    # Read Historical Data
+    path = os.path.join(os.path.abspath(os.getcwd()), 'data/processed/data.csv')
+    historical = pd.read_csv(path)
+    # Join
+    df_joined = pred_raw.merge(historical,on=['Team','Seed','Region','Year'])
+    # Subset
+    df_joined = df_joined[['Year','Team','Seed','Region','Round','Round_2','Round_3','Round_4','Round_5','Round_6','Round_7']]
+    # Calibration Curve
+    save_calibration_curve(df_joined)
 
     # Create DFs
     # Points

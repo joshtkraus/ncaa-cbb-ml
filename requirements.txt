@@ -3,3 +3,4 @@ pandas == 2.2.3
 beautifulsoup4 == 4.12.3
 imbalanced-learn == 0.12.4
 scikit-learn == 1.5.0
+matplotlib == 3.10
