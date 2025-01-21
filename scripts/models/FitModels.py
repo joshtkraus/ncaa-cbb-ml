@@ -96,13 +96,21 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
     from models.utils.DataProcessing import create_splits
     from models.utils.StandarizePredictions import standarize
     from models.utils.MakePicks import predict_bracket
-    from sklearn.calibration import CalibratedClassifierCV
-    import warnings
-    warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
+    from sklearn.isotonic import IsotonicRegression
 
     # Years to Backwards Test
     years = [*range(backwards_test-1,2024)]
     years.remove(2020)
+
+    # Column Mapping
+    col_map = {
+        2:'R32_Actual_6',
+        3:'S16_Actual_6',
+        4:'E8_Actual_6',
+        5:'F4_Actual_6',
+        6:'NCG_Actual_6',
+        7:'Winner_Actual_6'
+    }
 
     # Initialize
     precision_scorer = make_scorer(precision_score, pos_label=1,average='binary',zero_division=0.0)
@@ -180,6 +188,16 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                 # Fit
                 voting_clf.fit(X_train.to_numpy(), y_train.to_numpy())
 
+                # Get Prediction
+                y_pred = voting_clf.predict_proba(X_test.to_numpy())[:, 1]
+
+                # Calibrate
+                iso_reg = IsotonicRegression(out_of_bounds='clip')
+                iso_reg.fit(y_pred, X_test[col_map[r]])
+
+                # Calibrated probabilities
+                y_pred_calibrated = iso_reg.transform(y_pred)
+
                 # If end of Training meets w/ Validation Set
                 if year == validation_year-1:
                     # Permutation Importance
@@ -191,19 +209,17 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                                                             random_state=0)
                     import_list_avg.append(perm_importance.importances_mean)
 
-                # Get Prediction
-                y_pred = voting_clf.predict_proba(X_test.to_numpy())[:, 1]
 
                 # Get Precision, Probabilities
                 prec_sub = precision_score(y_test,
-                                           [1 if prob >= 0.5 else 0 for prob in y_pred],
+                                           [1 if prob >= 0.5 else 0 for prob in y_pred_calibrated],
                                            pos_label=1,
                                            average='binary',
                                            zero_division=0.0)
 
                 # Store
                 prec_list_avg.append(prec_sub)
-                prob_list_avg.append(y_pred)
+                prob_list_avg.append(y_pred_calibrated)
             
             # Get Averaged Results
             prec = np.mean(prec_list_avg,axis=0)

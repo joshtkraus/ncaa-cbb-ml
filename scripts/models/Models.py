@@ -9,9 +9,6 @@ def Logistic_Fit(team_data, r, validation_start=2016):
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
-    from sklearn.calibration import CalibratedClassifierCV
-    import warnings
-    warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Data Splits
     X, y = create_splits(team_data,r)
@@ -34,10 +31,8 @@ def Logistic_Fit(team_data, r, validation_start=2016):
         ('scaler', StandardScaler()),
         ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=0)),
         ('tomek', TomekLinks(sampling_strategy='not minority')),
-        ('clf', CalibratedClassifierCV(estimator=LogisticRegression(random_state=0),
-                                        cv=5,
-                                        method='isotonic'))
-        
+        ('clf', LogisticRegression(random_state=0))
+      
     ])
 
     # Grid Search
@@ -80,9 +75,6 @@ def RF_Fit(team_data, r, validation_start=2016):
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
-    from sklearn.calibration import CalibratedClassifierCV
-    import warnings
-    warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Data Splits
     X, y = create_splits(team_data,r)
@@ -106,9 +98,7 @@ def RF_Fit(team_data, r, validation_start=2016):
         ('scaler', StandardScaler()),
         ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=0)),
         ('tomek', TomekLinks(sampling_strategy='not minority')),
-        ('clf', CalibratedClassifierCV(estimator=RandomForestClassifier(random_state=0),
-                                        cv=5,
-                                        method='isotonic'))
+        ('clf', RandomForestClassifier(random_state=0))
     ])
 
     # Grid Search
@@ -151,9 +141,6 @@ def GB_Fit(team_data, r, validation_start=2016):
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
-    from sklearn.calibration import CalibratedClassifierCV
-    import warnings
-    warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Data Splits
     X, y = create_splits(team_data,r)
@@ -175,9 +162,7 @@ def GB_Fit(team_data, r, validation_start=2016):
         ('scaler', StandardScaler()),
         ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=0)),
         ('tomek', TomekLinks(sampling_strategy='not minority')),
-        ('clf', CalibratedClassifierCV(estimator=GradientBoostingClassifier(random_state=0),
-                                        cv=5,
-                                        method='isotonic'))
+        ('clf', GradientBoostingClassifier(random_state=0))
     ])
 
     # Grid Search
@@ -220,9 +205,6 @@ def NN_Fit(team_data, r, validation_start=2016):
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
-    from sklearn.calibration import CalibratedClassifierCV
-    import warnings
-    warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Data Splits
     X, y = create_splits(team_data,r)
@@ -247,9 +229,7 @@ def NN_Fit(team_data, r, validation_start=2016):
         ('scaler', StandardScaler()),
         ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=0)),
         ('tomek', TomekLinks(sampling_strategy='not minority')),
-        ('clf', CalibratedClassifierCV(estimator=MLPClassifier(random_state=0),
-                                                cv=5,
-                                                method='isotonic'))
+        ('clf', MLPClassifier(random_state=0))
     ])
 
     # Grid Search
