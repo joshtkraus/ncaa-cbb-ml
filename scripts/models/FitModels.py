@@ -100,8 +100,6 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
     import warnings
     warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
-    calibrate = False
-
     # Years to Backwards Test
     years = [*range(backwards_test-1,2024)]
     years.remove(2020)
@@ -168,33 +166,17 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                 gb = GradientBoostingClassifier(**best_params[r]['GB'], random_state=state)
                 nn = MLPClassifier(**best_params[r]['NN'], random_state=state)
                 # Create Voting Classifier
-                if calibrate == True:
-                    voting_clf = ImbPipeline([
-                                    ('scaler', StandardScaler()),
-                                    ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=state)),
-                                    ('tomek', TomekLinks(sampling_strategy='not minority')),
-                                    ('clf', CalibratedClassifierCV(estimator=VotingClassifier(estimators=[
-                                                                                    ('lr', log),
-                                                                                    ('rf', rf),
-                                                                                    ('gb', gb),
-                                                                                    ('mlp', nn),
-                                                                                ], voting='soft',weights=weights),
-                                                                    cv=5,
-                                                                    method='isotonic'))
-                                ])
-                else:
-                    voting_clf = ImbPipeline([
-                                    ('scaler', StandardScaler()),
-                                    ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=state)),
-                                    ('tomek', TomekLinks(sampling_strategy='not minority')),
-                                    ('clf', VotingClassifier(estimators=[
-                                                                            ('lr', log),
-                                                                            ('rf', rf),
-                                                                            ('gb', gb),
-                                                                            ('mlp', nn),
-                                                                        ], voting='soft',weights=weights))
-                                ])
-
+                voting_clf = ImbPipeline([
+                                ('scaler', StandardScaler()),
+                                ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=state)),
+                                ('tomek', TomekLinks(sampling_strategy='not minority')),
+                                ('clf', VotingClassifier(estimators=[
+                                                                        ('lr', log),
+                                                                        ('rf', rf),
+                                                                        ('gb', gb),
+                                                                        ('mlp', nn),
+                                                                    ], voting='soft',weights=weights))
+                            ])
                 # Fit
                 voting_clf.fit(X_train.to_numpy(), y_train.to_numpy())
 
@@ -248,31 +230,16 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                 importance_df.to_csv(path,index=False)
         
         # Get Full Model
-        if calibrate == True:
-            voting_clf = ImbPipeline([
-                            ('scaler', StandardScaler()),
-                            ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=state)),
-                            ('tomek', TomekLinks(sampling_strategy='not minority')),
-                            ('clf', CalibratedClassifierCV(estimator=VotingClassifier(estimators=[
-                                                                            ('lr', log),
-                                                                            ('rf', rf),
-                                                                            ('gb', gb),
-                                                                            ('mlp', nn),
-                                                                        ], voting='soft',weights=weights),
-                                                            cv=5,
-                                                            method='isotonic'))
-                        ])
-        else:
-            voting_clf = ImbPipeline([
-                            ('scaler', StandardScaler()),
-                            ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=state)),
-                            ('tomek', TomekLinks(sampling_strategy='not minority')),
-                            ('clf', VotingClassifier(estimators=[
-                                                                    ('lr', log),
-                                                                    ('rf', rf),
-                                                                    ('gb', gb),
-                                                                    ('mlp', nn),
-                                                                ], voting='soft',weights=weights))
+        voting_clf = ImbPipeline([
+                        ('scaler', StandardScaler()),
+                        ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=state)),
+                        ('tomek', TomekLinks(sampling_strategy='not minority')),
+                        ('clf', VotingClassifier(estimators=[
+                                                                ('lr', log),
+                                                                ('rf', rf),
+                                                                ('gb', gb),
+                                                                ('mlp', nn),
+                                                            ], voting='soft',weights=weights))
                         ])
         voting_clf.fit(X,y)
         models[r] = voting_clf

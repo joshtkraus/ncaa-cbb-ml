@@ -10,8 +10,6 @@ def Logistic_Fit(team_data, r, validation_start=2016):
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
     from sklearn.calibration import CalibratedClassifierCV
-    from sklearn.metrics import make_scorer
-    from models.utils.custom_score import custom_brier_scorer
     import warnings
     warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
@@ -41,9 +39,6 @@ def Logistic_Fit(team_data, r, validation_start=2016):
                                         method='isotonic'))
         
     ])
-
-    # Custom Scorer
-    custom_scorer = make_scorer(custom_brier_scorer, greater_is_better=False, needs_proba=True)
 
     # Grid Search
     grid_search = GridSearchCV(
@@ -86,8 +81,6 @@ def RF_Fit(team_data, r, validation_start=2016):
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
     from sklearn.calibration import CalibratedClassifierCV
-    from sklearn.metrics import make_scorer
-    from models.utils.custom_score import custom_brier_scorer
     import warnings
     warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
@@ -117,9 +110,6 @@ def RF_Fit(team_data, r, validation_start=2016):
                                         cv=5,
                                         method='isotonic'))
     ])
-
-    # Custom Scorer
-    custom_scorer = make_scorer(custom_brier_scorer, greater_is_better=False, needs_proba=True)
 
     # Grid Search
     grid_search = GridSearchCV(
@@ -162,8 +152,6 @@ def GB_Fit(team_data, r, validation_start=2016):
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
     from sklearn.calibration import CalibratedClassifierCV
-    from sklearn.metrics import make_scorer
-    from models.utils.custom_score import custom_brier_scorer
     import warnings
     warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
@@ -191,9 +179,6 @@ def GB_Fit(team_data, r, validation_start=2016):
                                         cv=5,
                                         method='isotonic'))
     ])
-
-    # Custom Scorer
-    custom_scorer = make_scorer(custom_brier_scorer, greater_is_better=False, needs_proba=True)
 
     # Grid Search
     grid_search = GridSearchCV(
@@ -236,8 +221,6 @@ def NN_Fit(team_data, r, validation_start=2016):
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
     from sklearn.calibration import CalibratedClassifierCV
-    from sklearn.metrics import make_scorer
-    from models.utils.custom_score import custom_brier_scorer
     import warnings
     warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
@@ -268,9 +251,6 @@ def NN_Fit(team_data, r, validation_start=2016):
                                                 cv=5,
                                                 method='isotonic'))
     ])
-
-    # Custom Scorer
-    custom_scorer = make_scorer(custom_brier_scorer, greater_is_better=False, needs_proba=True)
 
     # Grid Search
     grid_search = GridSearchCV(
