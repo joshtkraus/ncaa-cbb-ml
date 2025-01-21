@@ -9,6 +9,8 @@ def Logistic_Fit(team_data, r, validation_start=2016):
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
+    import warnings
+    warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Data Splits
     X, y = create_splits(team_data,r)
@@ -75,6 +77,8 @@ def RF_Fit(team_data, r, validation_start=2016):
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
+    import warnings
+    warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Data Splits
     X, y = create_splits(team_data,r)
@@ -141,6 +145,8 @@ def GB_Fit(team_data, r, validation_start=2016):
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
+    import warnings
+    warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Data Splits
     X, y = create_splits(team_data,r)
@@ -205,6 +211,8 @@ def NN_Fit(team_data, r, validation_start=2016):
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
     from models.utils.DataProcessing import create_splits
+    import warnings
+    warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Data Splits
     X, y = create_splits(team_data,r)
