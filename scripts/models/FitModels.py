@@ -98,7 +98,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
     from models.utils.MakePicks import predict_bracket
     from sklearn.isotonic import IsotonicRegression
     import warnings
-    warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
+    warnings.simplefilter("ignore", UserWarning)
 
     # Years to Backwards Test
     years = [*range(backwards_test-1,2024)]
@@ -186,29 +186,27 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                                                                     ], voting='soft',weights=weights))
                             ])
                 # Fit
-                voting_clf.fit(X_train.to_numpy(), y_train.to_numpy())
+                voting_clf.fit(X_train, y_train)
 
                 # Get Prediction
-                y_pred = voting_clf.predict_proba(X_test.to_numpy())[:, 1]
+                y_pred = voting_clf.predict_proba(X_test)[:, 1]
 
                 # If not winner, calibrate probabilities
-                if r == 0:
+                if r in [0]:
                     # Calibrate
                     iso_reg = IsotonicRegression(out_of_bounds='clip')
                     iso_reg.fit(y_pred, X_test[col_map[r]])
                     y_pred = iso_reg.predict(y_pred)
 
-                # If end of Training meets w/ Validation Set
-                if year == validation_year-1:
-                    # Permutation Importance
-                    perm_importance = permutation_importance(voting_clf,
-                                                            X_test_full,
-                                                            y_test_full,
-                                                            n_repeats=10,
-                                                            scoring='neg_brier_score', 
-                                                            random_state=0,
-                                                            n_jobs=-1)
-                    import_list_avg.append(perm_importance.importances_mean)
+                # Permutation Importance
+                perm_importance = permutation_importance(voting_clf,
+                                                        X_test,
+                                                        y_test,
+                                                        n_repeats=1,
+                                                        scoring='neg_brier_score', 
+                                                        random_state=0,
+                                                        n_jobs=-1)
+                import_list_avg.append(perm_importance.importances_mean)
 
 
                 # Get Precision, Probabilities
