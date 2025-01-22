@@ -92,14 +92,13 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
     from sklearn.neural_network import MLPClassifier
     from sklearn.ensemble import VotingClassifier
     from sklearn.inspection import permutation_importance
-    from sklearn.metrics import precision_score, make_scorer
+    from sklearn.metrics import precision_score
     from models.utils.DataProcessing import create_splits
     from models.utils.StandarizePredictions import standarize
     from models.utils.MakePicks import predict_bracket
     from sklearn.isotonic import IsotonicRegression
     import warnings
     warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
-
 
     # Years to Backwards Test
     years = [*range(backwards_test-1,2024)]
@@ -110,12 +109,11 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
         2:'R32_Actual_6',
         3:'S16_Actual_6',
         4:'E8_Actual_6',
-        5:'F4_Actual_12',
-        6:'NCG_Actual_12'
+        5:'F4_Actual_6',
+        6:'NCG_Actual_6'
         }
 
     # Initialize
-    precision_scorer = make_scorer(precision_score, pos_label=1,average='binary',zero_division=0.0)
     prec_list = {}
     models = {}
     predictions = {}
@@ -194,7 +192,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                 y_pred = voting_clf.predict_proba(X_test.to_numpy())[:, 1]
 
                 # If not winner, calibrate probabilities
-                if r < 7:
+                if r == 0:
                     # Calibrate
                     iso_reg = IsotonicRegression(out_of_bounds='clip')
                     iso_reg.fit(y_pred, X_test[col_map[r]])
@@ -207,8 +205,9 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                                                             X_test_full,
                                                             y_test_full,
                                                             n_repeats=10,
-                                                            scoring=precision_scorer, 
-                                                            random_state=0)
+                                                            scoring='neg_brier_score', 
+                                                            random_state=0,
+                                                            n_jobs=-1)
                     import_list_avg.append(perm_importance.importances_mean)
 
 
