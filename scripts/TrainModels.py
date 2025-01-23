@@ -36,17 +36,17 @@ else:
     model_accs = {int(key): value for key, value in model_accs.items()}
 
 # Combine Models
-models, accs, points_df, accs_df = combine_model(teams,best_params,model_accs,results,backwards_test=2013,validation_year=2017)
+models, brier, points_df, accs_df = combine_model(teams,best_params,model_accs,results,backwards_test=2013,validation_year=2017)
 
 # Validation Results
 results = {}
-results['R32'] = np.mean(accs[2])
-results['S16'] = np.mean(accs[3])
-results['E8'] = np.mean(accs[4])
-results['F4'] = np.mean(accs[5])
-results['NCG'] = np.mean(accs[6])
-results['Winner'] = np.mean(accs[7])
-results_df = pd.DataFrame(list(results.items()), columns=['Round', 'Accuracy'])
+results['R32'] = np.mean(brier[2])
+results['S16'] = np.mean(brier[3])
+results['E8'] = np.mean(brier[4])
+results['F4'] = np.mean(brier[5])
+results['NCG'] = np.mean(brier[6])
+results['Winner'] = np.mean(brier[7])
+results_df = pd.DataFrame(list(results.items()), columns=['Round', 'Brier Score'])
 
 # Export
 
@@ -68,8 +68,8 @@ with open(path, 'w') as f:
     json.dump(model_accs, f)
     
 # Results
-# Model Accuracy
-path = os.path.join(os.path.abspath(os.getcwd()), 'results/model_accuracy.csv')
+# Model Performance
+path = os.path.join(os.path.abspath(os.getcwd()), 'results/model_performance.csv')
 results_df.to_csv(path,index=False)
 # Picks Accuracy
 path = os.path.join(os.path.abspath(os.getcwd()), 'results/picks_accuracy.csv')

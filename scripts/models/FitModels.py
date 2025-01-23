@@ -92,7 +92,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
     from sklearn.neural_network import MLPClassifier
     from sklearn.ensemble import VotingClassifier
     from sklearn.inspection import permutation_importance
-    from sklearn.metrics import precision_score
+    from sklearn.metrics import brier_score_loss
     from models.utils.DataProcessing import create_splits
     from models.utils.StandarizePredictions import standarize
     from models.utils.MakePicks import predict_bracket
@@ -114,7 +114,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
         }
 
     # Initialize
-    prec_list = {}
+    brier_list = {}
     models = {}
     predictions = {}
     for year in years:
@@ -130,14 +130,10 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
     # Iterate Rounds
     for r in range(2,8):
         # Initialize
-        prec_list[r] = []
+        brier_list[r] = []
 
         # Data Splits
         X, y = create_splits(team_data,r)
-
-        # Test Set for Permutation Importance
-        X_test_full = X[team_data['Year']>=validation_year]
-        y_test_full = y[team_data['Year']>=validation_year]
 
         # Iterate years
         for year in years:
@@ -164,7 +160,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
             # Max Iterations
             max_iter = 1
             # Initialize
-            prec_list_avg = []
+            brier_list_avg = []
             prob_list_avg = []
             import_list_avg = []
             for state in range(0,max_iter):
@@ -202,7 +198,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                 perm_importance = permutation_importance(voting_clf,
                                                         X_test,
                                                         y_test,
-                                                        n_repeats=1,
+                                                        n_repeats=100,
                                                         scoring='neg_brier_score', 
                                                         random_state=0,
                                                         n_jobs=-1)
@@ -210,23 +206,19 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
 
 
                 # Get Precision, Probabilities
-                prec_sub = precision_score(y_test,
-                                           [1 if prob >= 0.5 else 0 for prob in y_pred],
-                                           pos_label=1,
-                                           average='binary',
-                                           zero_division=0.0)
+                brier_sub = brier_score_loss(y_test,y_pred,pos_label=1)
 
                 # Store
-                prec_list_avg.append(prec_sub)
+                brier_list_avg.append(brier_sub)
                 prob_list_avg.append(y_pred)
             
             # Get Averaged Results
-            prec = np.mean(prec_list_avg,axis=0)
+            brier = np.mean(brier_list_avg,axis=0)
             prob = np.mean(prob_list_avg,axis=0)
 
             # Store Averaged Results
             # Precision
-            prec_list[r].append(prec)
+            brier_list[r].append(brier)
             # Predictions
             predictions[test_year]['Round_'+str(r)] = prob
             # Permutation Importance
@@ -330,4 +322,4 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
     accs_df.rename(columns={'index': 'Round'}, inplace=True)
     accs_df['Mean'] = accs_df.iloc[:, 1:].mean(axis=1)
     accs_df['Standard Deviation'] = accs_df.iloc[:, 1:-1].std(axis=1)
-    return models, prec_list, points_df, accs_df
+    return models, brier_list, points_df, accs_df
