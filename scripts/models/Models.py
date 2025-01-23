@@ -1,4 +1,4 @@
-def Logistic_Fit(team_data, r, validation_start=2016):    
+def Logistic_Fit(team_data, r, best_features=None, validation_start=2016):    
     # Libraries
     import pandas as pd
     import os
@@ -13,11 +13,15 @@ def Logistic_Fit(team_data, r, validation_start=2016):
     warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Data Splits
-    X, y = create_splits(team_data,r)
+    if best_features != None:
+        X, y = create_splits(team_data,r,best_features)
+    else:
+        X, y = create_splits(team_data,r)
 
     # Create Training/Valdation Splits
-    team_data['Split'] = -1
-    team_data.loc[team_data['Year']>=validation_start,'Split'] = 0
+    team_data_copy = team_data.copy()
+    team_data_copy['Split'] = -1
+    team_data_copy.loc[team_data_copy['Year']>=validation_start,'Split'] = 0
 
     # Parameter grid
     param_grid = {
@@ -42,7 +46,7 @@ def Logistic_Fit(team_data, r, validation_start=2016):
         pipeline,
         param_grid,
         scoring='neg_brier_score',
-        cv=PredefinedSplit(test_fold=team_data['Split'].values),
+        cv=PredefinedSplit(test_fold=team_data_copy['Split'].values),
         n_jobs=-1
     )
     grid_search.fit(X.to_numpy(), y.to_numpy())
@@ -66,7 +70,7 @@ def Logistic_Fit(team_data, r, validation_start=2016):
     Val_df.to_csv(path,index=False)
     return best_params, best_perform
 
-def RF_Fit(team_data, r, validation_start=2016):
+def RF_Fit(team_data, r, best_features=None,validation_start=2016):
     # Libraries
     import pandas as pd
     import os
@@ -81,11 +85,15 @@ def RF_Fit(team_data, r, validation_start=2016):
     warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Data Splits
-    X, y = create_splits(team_data,r)
+    if best_features != None:
+        X, y = create_splits(team_data,r,best_features)
+    else:
+        X, y = create_splits(team_data,r)
 
     # Create Training/Valdation Splits
-    team_data['Split'] = -1
-    team_data.loc[team_data['Year']>=validation_start,'Split'] = 0
+    team_data_copy = team_data.copy()
+    team_data_copy['Split'] = -1
+    team_data_copy.loc[team_data_copy['Year']>=validation_start,'Split'] = 0
 
     # Parameter grid
     param_grid = {
@@ -110,7 +118,7 @@ def RF_Fit(team_data, r, validation_start=2016):
         pipeline,
         param_grid,
         scoring='neg_brier_score',
-        cv=PredefinedSplit(test_fold=team_data['Split'].values),
+        cv=PredefinedSplit(test_fold=team_data_copy['Split'].values),
         n_jobs=-1
     )
     grid_search.fit(X.to_numpy(), y.to_numpy())
@@ -134,7 +142,7 @@ def RF_Fit(team_data, r, validation_start=2016):
     Val_df.to_csv(path,index=False)
     return best_params, best_perform
 
-def GB_Fit(team_data, r, validation_start=2016):
+def GB_Fit(team_data, r, best_features=None,validation_start=2016):
     # Libraries
     import pandas as pd
     import os
@@ -149,11 +157,15 @@ def GB_Fit(team_data, r, validation_start=2016):
     warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Data Splits
-    X, y = create_splits(team_data,r)
+    if best_features != None:
+        X, y = create_splits(team_data,r,best_features)
+    else:
+        X, y = create_splits(team_data,r)
 
     # Create Training/Valdation Splits
-    team_data['Split'] = -1
-    team_data.loc[team_data['Year']>=validation_start,'Split'] = 0
+    team_data_copy = team_data.copy()
+    team_data_copy['Split'] = -1
+    team_data_copy.loc[team_data_copy['Year']>=validation_start,'Split'] = 0
 
     # Parameter grid
     param_grid = {
@@ -176,7 +188,7 @@ def GB_Fit(team_data, r, validation_start=2016):
         pipeline,
         param_grid,
         scoring='neg_brier_score',
-        cv=PredefinedSplit(test_fold=team_data['Split'].values),
+        cv=PredefinedSplit(test_fold=team_data_copy['Split'].values),
         n_jobs=-1
     )
     grid_search.fit(X.to_numpy(), y.to_numpy())
@@ -200,7 +212,7 @@ def GB_Fit(team_data, r, validation_start=2016):
     Val_df.to_csv(path,index=False)
     return best_params, best_perform
 
-def NN_Fit(team_data, r, validation_start=2016):
+def NN_Fit(team_data, r, best_features=None, validation_start=2016):
     # Libraries
     import pandas as pd
     import os
@@ -215,11 +227,15 @@ def NN_Fit(team_data, r, validation_start=2016):
     warnings.filterwarnings("ignore", message="X has feature names, but StandardScaler was fitted without feature names")
 
     # Data Splits
-    X, y = create_splits(team_data,r)
+    if best_features != None:
+        X, y = create_splits(team_data,r,best_features)
+    else:
+        X, y = create_splits(team_data,r)
 
     # Create Training/Valdation Splits
-    team_data['Split'] = -1
-    team_data.loc[team_data['Year']>=validation_start,'Split'] = 0
+    team_data_copy = team_data.copy()
+    team_data_copy['Split'] = -1
+    team_data_copy.loc[team_data_copy['Year']>=validation_start,'Split'] = 0
 
     # Parameter grid
     param_grid = {
@@ -245,7 +261,7 @@ def NN_Fit(team_data, r, validation_start=2016):
         pipeline,
         param_grid,
         scoring='neg_brier_score',
-        cv=PredefinedSplit(test_fold=team_data['Split'].values),
+        cv=PredefinedSplit(test_fold=team_data_copy['Split'].values),
         n_jobs=-1
     )
     grid_search.fit(X.to_numpy(), y.to_numpy())

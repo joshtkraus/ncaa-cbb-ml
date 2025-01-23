@@ -1,5 +1,5 @@
 # Tune Models
-def train_models(team_data, validation_start=2017):
+def train_models(team_data, best_features=None, validation_start=2017):
     print('Tuning Models...')
     # Libraries
     from models.Models import Logistic_Fit, RF_Fit, GB_Fit, NN_Fit
@@ -15,15 +15,26 @@ def train_models(team_data, validation_start=2017):
         best_params[r] = {}
         accs[r] = {}
 
-        # Fit Models
-        print('Fitting Logistic...')
-        best_params[r]['Log'],accs[r]['Log'] = Logistic_Fit(team_data,r,validation_start)
-        print('Fitting RF...')
-        best_params[r]['RF'],accs[r]['RF'] = RF_Fit(team_data,r,validation_start)
-        print('Fitting GB...')
-        best_params[r]['GB'],accs[r]['GB'] = GB_Fit(team_data,r,validation_start)
-        print('Fitting NN...')
-        best_params[r]['NN'],accs[r]['NN'] = NN_Fit(team_data,r,validation_start)
+        if best_features != None:
+            # Fit Models
+            print('Fitting Logistic...')
+            best_params[r]['Log'],accs[r]['Log'] = Logistic_Fit(team_data,r,best_features[r],validation_start)
+            print('Fitting RF...')
+            best_params[r]['RF'],accs[r]['RF'] = RF_Fit(team_data,r,best_features[r],validation_start)
+            print('Fitting GB...')
+            best_params[r]['GB'],accs[r]['GB'] = GB_Fit(team_data,r,best_features[r],validation_start)
+            print('Fitting NN...')
+            best_params[r]['NN'],accs[r]['NN'] = NN_Fit(team_data,r,best_features[r],validation_start)
+        else:
+            # Fit Models
+            print('Fitting Logistic...')
+            best_params[r]['Log'],accs[r]['Log'] = Logistic_Fit(team_data,r,validation_start=validation_start)
+            print('Fitting RF...')
+            best_params[r]['RF'],accs[r]['RF'] = RF_Fit(team_data,r,validation_start=validation_start)
+            print('Fitting GB...')
+            best_params[r]['GB'],accs[r]['GB'] = GB_Fit(team_data,r,validation_start=validation_start)
+            print('Fitting NN...')
+            best_params[r]['NN'],accs[r]['NN'] = NN_Fit(team_data,r,validation_start=validation_start)
 
         # Normalize Neg Brier Loss
         # Total Loss
@@ -35,6 +46,111 @@ def train_models(team_data, validation_start=2017):
         accs[r]['NN'] = accs[r]['NN'] / total_loss
 
     return best_params, accs
+
+# Feature Selection
+def feature_selection(team_data,best_params,model_accs,validation_start):
+    print('Feature Selection...')
+     # Libraries
+    import numpy as np
+    import pandas as pd
+    from imblearn.pipeline import Pipeline as ImbPipeline
+    from sklearn.preprocessing import StandardScaler
+    from imblearn.over_sampling import BorderlineSMOTE
+    from imblearn.under_sampling import TomekLinks
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.ensemble import VotingClassifier
+    from sklearn.model_selection import cross_val_score, PredefinedSplit
+    from models.utils.DataProcessing import create_splits
+
+    # Initialize
+    best_features = {}
+
+    # Iterate Rounds
+    for r in range(2,8):
+        print('Round '+str(r))
+        # Create Splits
+        X, y = create_splits(team_data,r)
+
+        # Create Training/Valdation Splits
+        team_data_copy = team_data.copy()
+        team_data_copy['Split'] = -1
+        team_data_copy.loc[team_data_copy['Year']>=validation_start,'Split'] = 0
+
+         # Model Weights
+        weights = [model_accs[r]['Log'],
+                model_accs[r]['RF'],
+                model_accs[r]['GB'],
+                model_accs[r]['NN']]
+        
+        # Tuned Models
+        log = LogisticRegression(**best_params[r]['Log'], random_state=0)
+        rf = RandomForestClassifier(**best_params[r]['RF'], random_state=0)
+        gb = GradientBoostingClassifier(**best_params[r]['GB'], random_state=0)
+        nn = MLPClassifier(**best_params[r]['NN'], random_state=0)
+        # Create Voting Classifier
+        voting_clf = ImbPipeline([
+                        ('scaler', StandardScaler()),
+                        ('smote', BorderlineSMOTE(sampling_strategy='not majority', random_state=0)),
+                        ('tomek', TomekLinks(sampling_strategy='not minority')),
+                        ('clf', VotingClassifier(estimators=[
+                                                                ('lr', log),
+                                                                ('rf', rf),
+                                                                ('gb', gb),
+                                                                ('mlp', nn),
+                                                            ], voting='soft',weights=weights))
+                    ])
+        
+        # Initialize
+        selected_features = []
+        remaining_features = list(X.columns)
+        best_score = float('-inf')
+        improved = True
+
+        while improved:
+            improved = False
+            # Forward Selection
+            best_addition = None
+            for feature in remaining_features:
+                candidate_features = selected_features + [feature]
+                score = np.mean(cross_val_score(voting_clf, 
+                                                X[candidate_features], 
+                                                y, 
+                                                cv=PredefinedSplit(test_fold=team_data_copy['Split'].values), 
+                                                scoring='neg_brier_score'))
+                if score > best_score:
+                    best_score = score
+                    best_addition = feature
+                    improved = True
+            if best_addition:
+                selected_features.append(best_addition)
+                remaining_features.remove(best_addition)
+
+            # Backward Elimination
+            if len(selected_features) > 1:
+                best_removal = None
+                for feature in selected_features:
+                    candidate_features = [f for f in selected_features if f != feature]
+                    score = np.mean(cross_val_score(voting_clf, 
+                                                    X[candidate_features], 
+                                                    y,
+                                                    cv=PredefinedSplit(test_fold=team_data_copy['Split'].values), 
+                                                    scoring='neg_brier_score'))
+                    if score > best_score:
+                        best_score = score
+                        best_removal = feature
+                        improved = True
+
+                if best_removal:
+                    selected_features.remove(best_removal)
+                    remaining_features.append(best_removal)
+        
+        # Store
+        best_features[r] = selected_features
+
+    return best_features
+
 
 # To Plot Calibration Curves
 def save_calibration_curve(df_joined):
@@ -76,7 +192,7 @@ def save_calibration_curve(df_joined):
         plt.close()
 
 # Combine Component Models
-def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=2013,validation_year=2017):
+def combine_model(team_data,best_params,model_accs,correct_picks,best_features,backwards_test=2013,validation_year=2017):
     print('Combining Models...')
     # Libraries
     import os
@@ -106,11 +222,12 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
 
     # Column Mapping
     col_map = {
-        2:'R32_Actual_6',
-        3:'S16_Actual_6',
-        4:'E8_Actual_6',
-        5:'F4_Actual_6',
-        6:'NCG_Actual_6'
+        2:'R32_Actual_Full',
+        3:'S16_Actual_Full',
+        4:'E8_Actual_Full',
+        5:'F4_Actual_12',
+        6:'NCG_Actual_Full',
+        7:'Winner_Actual_Full'
         }
 
     # Initialize
@@ -133,7 +250,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
         brier_list[r] = []
 
         # Data Splits
-        X, y = create_splits(team_data,r)
+        X, y = create_splits(team_data,r,best_features[r])
 
         # Iterate years
         for year in years:
@@ -187,7 +304,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,backwards_test=
                 # Get Prediction
                 y_pred = voting_clf.predict_proba(X_test)[:, 1]
 
-                # If not winner, calibrate probabilities
+                # Calibrate probabilities
                 if r in [0]:
                     # Calibrate
                     iso_reg = IsotonicRegression(out_of_bounds='clip')

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import joblib
 import json
-from models.FitModels import train_models, combine_model
+from models.FitModels import train_models, combine_model, feature_selection
 
 # Tune Models Indicator
 tune = True
@@ -22,8 +22,20 @@ with open(bracket_path, "r") as json_file:
 
 if tune == True:
     # Tune Component Models
-    best_params, model_accs = train_models(teams, validation_start=2017)
+    best_params, model_accs = train_models(team_data=teams, validation_start=2017)
+    # Perform Feature Selection
+    best_features = feature_selection(teams,best_params,model_accs,validation_start=2017)
+    # Export
+    # Best Features
+    path = os.path.join(os.path.abspath(os.getcwd()), 'models/best_features.json')
+    with open(path, 'w') as f:
+        json.dump(best_features, f)
 else:
+    # Best Features
+    path = os.path.join(os.path.abspath(os.getcwd()), 'models/best_features.json')
+    with open(path, "r") as json_file:
+        best_features = json.load(json_file)
+    best_features = {int(key): value for key, value in best_features.items()}
     # Tuned Params
     path = os.path.join(os.path.abspath(os.getcwd()), 'models/tuned_params.json')
     with open(path, "r") as json_file:
@@ -35,8 +47,22 @@ else:
         model_accs = json.load(json_file)
     model_accs = {int(key): value for key, value in model_accs.items()}
 
+# Retune After Selection Fetures
+if tune == True:
+    # Tune Component Models
+    best_params, model_accs = train_models(teams, best_features, validation_start=2017)
+    # Export
+    # Parameters
+    path = os.path.join(os.path.abspath(os.getcwd()), 'models/tuned_params.json')
+    with open(path, 'w') as f:
+        json.dump(best_params, f)
+    # Weights
+    path = os.path.join(os.path.abspath(os.getcwd()), 'models/tuned_weights.json')
+    with open(path, 'w') as f:
+        json.dump(model_accs, f)
+
 # Combine Models
-models, brier, points_df, accs_df = combine_model(teams,best_params,model_accs,results,backwards_test=2013,validation_year=2017)
+models, brier, points_df, accs_df = combine_model(teams,best_params,model_accs,results,best_features,backwards_test=2013,validation_year=2017)
 
 # Validation Results
 results = {}
@@ -49,25 +75,12 @@ results['Winner'] = np.mean(brier[7])
 results_df = pd.DataFrame(list(results.items()), columns=['Round', 'Brier Score'])
 
 # Export
-
 # Models
 for r in [7,6,5,4,3,2]:
     # Path
     path = os.path.join(os.path.abspath(os.getcwd()), 'models/model_'+str(r)+'.pkl')
     # Save
     joblib.dump(models[r], path) 
-
-# Parameters
-path = os.path.join(os.path.abspath(os.getcwd()), 'models/tuned_params.json')
-with open(path, 'w') as f:
-    json.dump(best_params, f)
-
-# Weights
-path = os.path.join(os.path.abspath(os.getcwd()), 'models/tuned_weights.json')
-with open(path, 'w') as f:
-    json.dump(model_accs, f)
-    
-# Results
 # Model Performance
 path = os.path.join(os.path.abspath(os.getcwd()), 'results/model_performance.csv')
 results_df.to_csv(path,index=False)
