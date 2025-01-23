@@ -10,11 +10,22 @@ def create_splits(team_data,r):
 
     # Cols to Drop
     round_drops_pre = {
-        2:['Team','Round'],
+        2:['Team','Round','Year','First_Year','Region',
+           'Tempo','RankTempo','AdjTempo','Def_3',
+           'RankOff_1','RankDef_1','Def_1','Off_2',
+           'Winner_Actual_Full','Winner_Actual_6'],
         3:['Team','Round'],
         4:['Team','Round'],
-        5:['Team','Round'],
-        6:['Team','Round'],
+        5:['Team','Round','Year','First_Year',
+           'Tempo','DE','RankAdjTempo','AdjTempo',
+           'Off_3','RankOff_3','Off_2','RankDef_1','RankDef_2','Def_3',
+            'R32_Actual_Full','R32_Actual_6',
+           'F4_Actual_Full','F4_Actual_6',
+           'Winner_Actual_Full','Winner_Actual_12','Winner_Actual_6'],
+        6:['Team','Round','Year','First_Year','Conf Tourney',
+           'RankOff_1','RankOff_2',
+           'S16_Actual_12',
+           'F4_Actual_6'],
         7:['Team','Round'],
     }
     # Drop Cols
@@ -32,11 +43,22 @@ def create_splits(team_data,r):
     
     # Drop Any Unwanted Dummy Cols
     round_drops_post = {
-        2:[],
-        3:[],
+        2:['Conf_MEAC','Conf_Mid-Cont','Conf_Pac-10','Conf_Southland','Conf_ACC','Conf_Big 12','Conf_MAC',
+           'Conf_CUSA','Conf_MAAC','Conf_Big South','Conf_SWAC','Conf_A-Sun','Conf_Sun Belt','Conf_Big West',
+           'Conf_CAA','Conf_Big Sky','Conf_OVC','Conf_Summit','Conf_NEC','Conf_Big East','Conf_WCC',
+           'Conf_AAC','Conf_A-10','Conf_Horizon','Conf_Ivy'],
+      3:[],
         4:[],
-        5:[],
-        6:[],
+        5:['Conf_Pac-12','Conf_Southland','Conf_Pac-10','Conf_Pac-10','Conf_MEAC','Conf_MAC','Conf_Patriot',
+           'Conf_CUSA','Conf_Big Sky','Conf_Big West','Conf_Sun Belt','Conf_A-Sun','Conf_AEC','Conf_Summit',
+           'Conf_WAC','Conf_MAAC','Conf_Big Ten','Conf_MVC','Conf_CAA','Conf_Big East','Conf_Ivy','Conf_NEC',
+            'Conf_AAC','Conf_OVC','Conf_MWC','Conf_Big South','Conf_SWAC','Conf_Southern','Conf_Big 12',
+           'Region_West'],
+        6:['Conf_CUSA','Conf_MVC','Conf_Southland','Conf_MEAC','Conf_Mid-Cont','Conf_Pac-10','Conf_MAC',
+           'Conf_Big West','Conf_Summit','Conf_Big Sky','Conf_CAA','Conf_Sun Belt','Conf_A-Sun',
+           'Conf_WAC','Conf_Patriot','Conf_MAAC','Conf_SWAC','Conf_Southern','Conf_Ivy','Conf_NEC','Conf_AEC',
+            'Conf_Big South','Conf_OVC','Conf_AAC','Conf_MWC',
+           'Region_East','Region_South'],
         7:[]
         }
     data_sub = data_sub.drop(columns=round_drops_post[r])
@@ -95,7 +117,7 @@ def create_splits(team_data,r):
     round_drops_pre = {
         2:['Team','Round','Year','First_Year','Region','Wins',
            'Tempo','RankTempo','AdjTempo','DE','RankAdjTempo',
-           'Def_3','RankOff_1','RankDef_1','Def_1','Off_2','Off_1','RankDef_3','Def_2','RankOff_3','RankOff_2'
+           'Def_3','RankOff_1','RankDef_1','Def_1','Off_2','Off_1','RankDef_3','Def_2','RankOff_3','RankOff_2',
            'Winner_Actual_Full','Winner_Actual_12','Winner_Actual_6'],
         3:['Team','Round','Year','First_Year',
            'AdjDE',
@@ -116,9 +138,9 @@ def create_splits(team_data,r):
            'S16_Actual_12',
            'F4_Actual_6'],
         7:['Team','Round','Year','First_Year',
-           'OE','RankDE','DE','AdjDE','RankOE',
-           'Off_1','Def_3','Off_2','RankDef_2','RankDef_3','RankOff_2','RankOff_1',
-           'R32_Actual_Full','R32_Actual_6',
+           'OE','RankDE',
+           'Off_1','Def_3','Off_2','RankDef_2','RankDef_3','RankOff_2',
+           'R32_Actual_Full',
            'E8_Actual_Full'],
     }
     round_drops_post = {
@@ -156,7 +178,7 @@ def create_splits(team_data,r):
     round_drops_pre = {
         2:['Team','Round','Year','First_Year','Region','Wins','Conf Tourney',
            'Tempo','RankTempo','AdjTempo','DE','RankAdjTempo','RankOE',
-           'Def_3','RankOff_1','RankDef_1','Def_1','Off_2','Off_1','RankDef_3','Def_2','RankOff_3','RankOff_2'
+           'Def_3','RankOff_1','RankDef_1','Def_1','Off_2','Off_1','RankDef_3','Def_2','RankOff_3','RankOff_2',
            'Off_3',
            'F4_Actual_6',
            'NCG_Actual_Full',
@@ -189,10 +211,10 @@ def create_splits(team_data,r):
            'S16_Actual_12',
            'F4_Actual_6'],
         7:['Team','Round','Year','First_Year','Seed',
-           'OE','RankDE','DE','AdjDE','RankOE','RankAdjDE','DE',
-           'Off_1','Def_3','Off_2','RankDef_2','RankDef_3','RankOff_2','RankOff_1','Off_3','Def_1',
-           'RankOff_3','Def_2','RankDef_1',
-           'R32_Actual_Full','R32_Actual_12','R32_Actual_6',
+           'OE','RankDE','RankAdjDE',
+           'Off_1','Def_3','Off_2','RankDef_2','RankDef_3','RankOff_2','Off_3','Def_1',
+           'RankOff_3',
+           'R32_Actual_Full',
            'S16_Actual_6',
            'E8_Actual_Full'],
     }
@@ -227,14 +249,14 @@ def create_splits(team_data,r):
             'Conf_Southland','Conf_OVC','Conf_Big Sky','Conf_Sun Belt','Conf_Big West','Conf_Summit',
             'Conf_A-Sun','Conf_Southern','Conf_CAA','Conf_MAC','Conf_AAC','Conf_MWC','Conf_A-10','Conf_Big East',
             'Conf_Big 12','Conf_Big Ten',
-           'Region_East','Region_West','Region_South']
+           'Region_East']
         }
     
     # > 0.00075
     round_drops_pre = {
         2:['Team','Round','Year','First_Year','Region','Wins','Conf Tourney',
            'Tempo','RankTempo','AdjTempo','DE','RankAdjTempo','RankOE',
-           'Def_3','RankOff_1','RankDef_1','Def_1','Off_2','Off_1','RankDef_3','Def_2','RankOff_3','RankOff_2'
+           'Def_3','RankOff_1','RankDef_1','Def_1','Off_2','Off_1','RankDef_3','Def_2','RankOff_3','RankOff_2',
            'Off_3',
            'E8_Actual_12',
            'F4_Actual_6',
@@ -269,10 +291,10 @@ def create_splits(team_data,r):
            'S16_Actual_12','S16_Actual_6',
            'F4_Actual_6'],
         7:['Team','Round','Year','First_Year','Seed',
-           'OE','RankDE','DE','AdjDE','RankOE','RankAdjDE','DE','RankAdjOE','RankAdjEM',
-           'Off_1','Def_3','Off_2','RankDef_2','RankDef_3','RankOff_2','RankOff_1','Off_3','Def_1',
-           'RankOff_3','Def_2','RankDef_1',
-           'R32_Actual_Full','R32_Actual_12','R32_Actual_6',
+           'OE','RankDE','RankAdjDE','RankAdjOE','RankAdjEM',
+           'Off_1','Def_3','Off_2','RankDef_2','RankDef_3','RankOff_2','Off_3','Def_1',
+           'RankOff_3',
+           'R32_Actual_Full',
            'S16_Actual_6',
            'E8_Actual_Full'],
     }
@@ -307,14 +329,14 @@ def create_splits(team_data,r):
             'Conf_Southland','Conf_OVC','Conf_Big Sky','Conf_Sun Belt','Conf_Big West','Conf_Summit',
             'Conf_A-Sun','Conf_Southern','Conf_CAA','Conf_MAC','Conf_AAC','Conf_MWC','Conf_A-10','Conf_Big East',
             'Conf_Big 12','Conf_Big Ten',
-           'Region_East','Region_West','Region_South']
+           'Region_East']
         }
     
     # > 0.001
     round_drops_pre = {
         2:['Team','Round','Year','First_Year','Region','Wins','Conf Tourney',
            'Tempo','RankTempo','AdjTempo','DE','RankAdjTempo','RankOE',
-           'Def_3','RankOff_1','RankDef_1','Def_1','Off_2','Off_1','RankDef_3','Def_2','RankOff_3','RankOff_2'
+           'Def_3','RankOff_1','RankDef_1','Def_1','Off_2','Off_1','RankDef_3','Def_2','RankOff_3','RankOff_2',
            'Off_3',
            'S16_Actual_12',
            'E8_Actual_12',
@@ -351,10 +373,10 @@ def create_splits(team_data,r):
            'S16_Actual_12','S16_Actual_6',
            'F4_Actual_Full','F4_Actual_6'],
         7:['Team','Round','Year','First_Year','Seed',
-           'OE','RankDE','DE','AdjDE','RankOE','RankAdjDE','DE','RankAdjOE','RankAdjEM','AdjEM',
-           'Off_1','Def_3','Off_2','RankDef_2','RankDef_3','RankOff_2','RankOff_1','Off_3','Def_1',
-           'RankOff_3','Def_2','RankDef_1',
-           'R32_Actual_Full','R32_Actual_12','R32_Actual_6',
+           'OE','RankDE','RankAdjDE','RankAdjOE','RankAdjEM','AdjEM',
+           'Off_1','Def_3','Off_2','RankDef_2','RankDef_3','RankOff_2','Off_3','Def_1',
+           'RankOff_3',
+           'R32_Actual_Full',
            'S16_Actual_Full','S16_Actual_6',
            'E8_Actual_Full','E8_Actual_12',
            'Winner_Actual_12'],
@@ -392,15 +414,15 @@ def create_splits(team_data,r):
            'Conf_NEC','Conf_Big South','Conf_Horizon','Conf_MVC','Conf_MEAC','Conf_Pac-10','Conf_Mid-Cont',
             'Conf_Southland','Conf_OVC','Conf_Big Sky','Conf_Sun Belt','Conf_Big West','Conf_Summit',
             'Conf_A-Sun','Conf_Southern','Conf_CAA','Conf_MAC','Conf_AAC','Conf_MWC','Conf_A-10','Conf_Big East',
-            'Conf_Big 12','Conf_Big Ten','Conf_SEC',
-           'Region_East','Region_West','Region_South']
+            'Conf_Big 12','Conf_Big Ten',
+           'Region_East']
         }
     
     # > 0.002
     round_drops_pre = {
         2:['Team','Round','Year','First_Year','Region','Wins','Conf Tourney',
            'Tempo','RankTempo','AdjTempo','DE','RankAdjTempo','RankOE','OE','AdjDE',
-           'Def_3','RankOff_1','RankDef_1','Def_1','Off_2','Off_1','RankDef_3','Def_2','RankOff_3','RankOff_2'
+           'Def_3','RankOff_1','RankDef_1','Def_1','Off_2','Off_1','RankDef_3','Def_2','RankOff_3','RankOff_2',
            'Off_3',
            'R32_Actual_Full','R32_Actual_12',
            'S16_Actual_Full','S16_Actual_12','S16_Actual_6',
@@ -413,7 +435,7 @@ def create_splits(team_data,r):
            'Def_2','Def_1','RankDef_2','Off_1','RankDef_1','RankOff_1',
            'R32_Actual_Full','R32_Actual_12','R32_Actual_6',
            'S16_Actual_Full','S16_Actual_12',
-           'E8_Actual_Full','E8_Actual_12','E8_Actual_6,'
+           'E8_Actual_Full','E8_Actual_12','E8_Actual_6',
            'F4_Actual_Full','F4_Actual_12','F4_Actual_6',
            'NCG_Actual_Full','NCG_Actual_12','NCG_Actual_6',
            'Winner_Actual_Full','Winner_Actual_12','Winner_Actual_6'],
@@ -445,12 +467,12 @@ def create_splits(team_data,r):
            'F4_Actual_Full','F4_Actual_12','F4_Actual_6',
            'NCG_Actual_Full','NCG_Actual_12',
            'Winner_Actual_Full','Winner_Actual_12','Winner_Actual_6'],
-        7:['Team','Round','Year','First_Year','Seed','Conf Tourney','Region',
-           'OE','RankDE','DE','AdjDE','RankOE','RankAdjDE','DE','RankAdjOE','RankAdjEM','AdjEM',
+        7:['Team','Round','Year','First_Year','Seed',
+           'OE','RankDE','RankAdjDE','RankAdjOE','RankAdjEM','AdjEM',
            'AdjTempo','RankAdjTempo','AdjOE',
-           'Off_1','Def_3','Off_2','RankDef_2','RankDef_3','RankOff_2','RankOff_1','Off_3','Def_1',
-           'RankOff_3','Def_2','RankDef_1','RankDef_3',
-           'R32_Actual_Full','R32_Actual_12','R32_Actual_6',
+           'Off_1','Def_3','Off_2','RankDef_2','RankDef_3','RankOff_2','Off_3','Def_1',
+           'RankOff_3','RankDef_3',
+           'R32_Actual_Full',
            'S16_Actual_Full','S16_Actual_12','S16_Actual_6',
            'E8_Actual_Full','E8_Actual_12',
            'F4_Actual_Full','F4_Actual_12',
@@ -490,14 +512,15 @@ def create_splits(team_data,r):
            'Conf_NEC','Conf_Big South','Conf_Horizon','Conf_MVC','Conf_MEAC','Conf_Pac-10','Conf_Mid-Cont',
             'Conf_Southland','Conf_OVC','Conf_Big Sky','Conf_Sun Belt','Conf_Big West','Conf_Summit',
             'Conf_A-Sun','Conf_Southern','Conf_CAA','Conf_MAC','Conf_AAC','Conf_MWC','Conf_A-10','Conf_Big East',
-            'Conf_Big 12','Conf_Big Ten','Conf_SEC']
+            'Conf_Big 12','Conf_Big Ten',
+            'Region_East']
         }
     
     # > 0.003
     round_drops_pre = {
         2:['Team','Round','Year','First_Year','Region','Wins','Conf Tourney',
            'Tempo','RankTempo','AdjTempo','DE','RankAdjTempo','RankOE','OE','AdjDE',
-           'Def_3','RankOff_1','RankDef_1','Def_1','Off_2','Off_1','RankDef_3','Def_2','RankOff_3','RankOff_2'
+           'Def_3','RankOff_1','RankDef_1','Def_1','Off_2','Off_1','RankDef_3','Def_2','RankOff_3','RankOff_2',
            'Off_3',
            'R32_Actual_Full','R32_Actual_12',
            'S16_Actual_Full','S16_Actual_12','S16_Actual_6',
@@ -512,7 +535,7 @@ def create_splits(team_data,r):
            'Off_2','RankOff_3',
            'R32_Actual_Full','R32_Actual_12','R32_Actual_6',
            'S16_Actual_Full','S16_Actual_12',
-           'E8_Actual_Full','E8_Actual_12','E8_Actual_6,'
+           'E8_Actual_Full','E8_Actual_12','E8_Actual_6',
            'F4_Actual_Full','F4_Actual_12','F4_Actual_6',
            'NCG_Actual_Full','NCG_Actual_12','NCG_Actual_6',
            'Winner_Actual_Full','Winner_Actual_12','Winner_Actual_6'],
@@ -522,7 +545,7 @@ def create_splits(team_data,r):
            'Off_3','Off_2','Def_2','RankDef_3','Def_3','RankOff_3','RankDef_2','Def_1','RankOff_1',
            'RankDef_1','RankOff_2','Off_1',
            'R32_Actual_Full','R32_Actual_12','R32_Actual_6',
-           'S16_Actual_Full','S16_Actual_12','S16_Actual_6,'
+           'S16_Actual_Full','S16_Actual_12','S16_Actual_6',
            'E8_Actual_Full','E8_Actual_12',
            'F4_Actual_Full','F4_Actual_6',
            'NCG_Actual_Full','NCG_Actual_12','NCG_Actual_6',
@@ -547,12 +570,12 @@ def create_splits(team_data,r):
            'F4_Actual_Full','F4_Actual_12','F4_Actual_6',
            'NCG_Actual_Full','NCG_Actual_12',
            'Winner_Actual_Full','Winner_Actual_12','Winner_Actual_6'],
-        7:['Team','Round','Year','First_Year','Seed','Conf Tourney','Wins','Region',
-           'OE','RankDE','DE','AdjDE','RankOE','RankAdjDE','DE','RankAdjOE','RankAdjEM','AdjEM',
+        7:['Team','Round','Year','First_Year','Seed',
+           'OE','RankDE','RankAdjDE','RankAdjOE','RankAdjEM','AdjEM',
            'AdjTempo','RankAdjTempo','AdjOE',
-           'Off_1','Def_3','Off_2','RankDef_2','RankDef_3','RankOff_2','RankOff_1','Off_3','Def_1',
-           'RankOff_3','Def_2','RankDef_1','RankDef_3',
-           'R32_Actual_Full','R32_Actual_12','R32_Actual_6',
+           'Off_1','Def_3','Off_2','RankDef_2','RankDef_3','RankOff_2','Off_3','Def_1',
+           'RankOff_3','RankDef_3',
+           'R32_Actual_Full',
            'S16_Actual_Full','S16_Actual_12','S16_Actual_6',
            'E8_Actual_Full','E8_Actual_12',
            'F4_Actual_Full','F4_Actual_12','F4_Actual_6',
@@ -591,5 +614,6 @@ def create_splits(team_data,r):
            'Conf_NEC','Conf_Big South','Conf_Horizon','Conf_MVC','Conf_MEAC','Conf_Pac-10','Conf_Mid-Cont',
             'Conf_Southland','Conf_OVC','Conf_Big Sky','Conf_Sun Belt','Conf_Big West','Conf_Summit',
             'Conf_A-Sun','Conf_Southern','Conf_CAA','Conf_MAC','Conf_AAC','Conf_MWC','Conf_A-10','Conf_Big East',
-            'Conf_Big 12','Conf_Big Ten','Conf_SEC']
+            'Conf_Big 12','Conf_Big Ten',
+            'Region_East']
         }

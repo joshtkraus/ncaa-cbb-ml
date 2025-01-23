@@ -22,7 +22,7 @@ def Logistic_Fit(team_data, r, validation_start=2016):
     # Parameter grid
     param_grid = {
         'clf__max_iter': [10000],
-        'clf__C': [0.0001, 0.001, 0.01, 0.05, 0.1, 0.5, 1],
+        'clf__C': [0.0001, 0.001, 0.01, 0.05, 0.1, 0.5, 1, 2, 5],
         'clf__solver': ['saga'],
         'clf__penalty': ['elasticnet'],
         'clf__l1_ratio':[0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0]

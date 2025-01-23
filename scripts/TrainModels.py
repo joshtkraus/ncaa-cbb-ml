@@ -7,7 +7,7 @@ import json
 from models.FitModels import train_models, combine_model
 
 # Tune Models Indicator
-tune = False
+tune = True
 
 # Data Paths
 data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/processed/data.csv')
