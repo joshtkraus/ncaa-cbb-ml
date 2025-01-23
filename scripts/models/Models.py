@@ -45,7 +45,7 @@ def Logistic_Fit(team_data, r, best_features=None, validation_start=2016):
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
-        scoring='neg_brier_score',
+        scoring='neg_log_loss',
         cv=PredefinedSplit(test_fold=team_data_copy['Split'].values),
         n_jobs=-1
     )
@@ -117,7 +117,7 @@ def RF_Fit(team_data, r, best_features=None,validation_start=2016):
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
-        scoring='neg_brier_score',
+        scoring='neg_log_loss',
         cv=PredefinedSplit(test_fold=team_data_copy['Split'].values),
         n_jobs=-1
     )
@@ -187,7 +187,7 @@ def GB_Fit(team_data, r, best_features=None,validation_start=2016):
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
-        scoring='neg_brier_score',
+        scoring='neg_log_loss',
         cv=PredefinedSplit(test_fold=team_data_copy['Split'].values),
         n_jobs=-1
     )
@@ -260,7 +260,7 @@ def NN_Fit(team_data, r, best_features=None, validation_start=2016):
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
-        scoring='neg_brier_score',
+        scoring='neg_log_loss',
         cv=PredefinedSplit(test_fold=team_data_copy['Split'].values),
         n_jobs=-1
     )

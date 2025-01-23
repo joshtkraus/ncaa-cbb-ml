@@ -118,7 +118,7 @@ def feature_selection(team_data,best_params,model_accs,validation_start):
                                                 X[candidate_features], 
                                                 y, 
                                                 cv=PredefinedSplit(test_fold=team_data_copy['Split'].values), 
-                                                scoring='neg_brier_score'))
+                                                scoring='neg_log_loss'))
                 if score > best_score:
                     best_score = score
                     best_addition = feature
@@ -136,7 +136,7 @@ def feature_selection(team_data,best_params,model_accs,validation_start):
                                                     X[candidate_features], 
                                                     y,
                                                     cv=PredefinedSplit(test_fold=team_data_copy['Split'].values), 
-                                                    scoring='neg_brier_score'))
+                                                    scoring='neg_log_loss'))
                     if score > best_score:
                         best_score = score
                         best_removal = feature
@@ -208,7 +208,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,best_features,b
     from sklearn.neural_network import MLPClassifier
     from sklearn.ensemble import VotingClassifier
     from sklearn.inspection import permutation_importance
-    from sklearn.metrics import brier_score_loss
+    from sklearn.metrics import log_loss
     from models.utils.DataProcessing import create_splits
     from models.utils.StandarizePredictions import standarize
     from models.utils.MakePicks import predict_bracket
@@ -316,14 +316,14 @@ def combine_model(team_data,best_params,model_accs,correct_picks,best_features,b
                                                         X_test,
                                                         y_test,
                                                         n_repeats=100,
-                                                        scoring='neg_brier_score', 
+                                                        scoring='neg_log_loss', 
                                                         random_state=0,
                                                         n_jobs=-1)
                 import_list_avg.append(perm_importance.importances_mean)
 
 
                 # Get Precision, Probabilities
-                brier_sub = brier_score_loss(y_test,y_pred,pos_label=1)
+                brier_sub = log_loss(y_test,y_pred)
 
                 # Store
                 brier_list_avg.append(brier_sub)
