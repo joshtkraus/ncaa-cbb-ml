@@ -1,5 +1,6 @@
 def Logistic_Fit(team_data, r, best_features=None, validation_start=2016):    
     # Libraries
+    import numpy as np
     import pandas as pd
     import os
     from sklearn.preprocessing import StandardScaler
@@ -53,7 +54,7 @@ def Logistic_Fit(team_data, r, best_features=None, validation_start=2016):
 
     # Get best parameters and performance
     best_params = grid_search.best_params_
-    best_perform = 1 - (-1*grid_search.best_score_)
+    best_perform = np.exp(grid_search.best_score_)
     
     # Remove prefix from tuned param
     best_params = dict(zip([key[5:] for key in best_params.keys()],best_params.values()))
@@ -72,6 +73,7 @@ def Logistic_Fit(team_data, r, best_features=None, validation_start=2016):
 
 def RF_Fit(team_data, r, best_features=None,validation_start=2016):
     # Libraries
+    import numpy as np
     import pandas as pd
     import os
     from sklearn.preprocessing import StandardScaler
@@ -125,7 +127,7 @@ def RF_Fit(team_data, r, best_features=None,validation_start=2016):
 
     # Get best parameters and performance
     best_params = grid_search.best_params_
-    best_perform = 1 - (-1*grid_search.best_score_)
+    best_perform = np.exp(grid_search.best_score_)
 
     # Remove prefix from tuned param
     best_params = dict(zip([key[5:] for key in best_params.keys()],best_params.values()))
@@ -144,6 +146,7 @@ def RF_Fit(team_data, r, best_features=None,validation_start=2016):
 
 def GB_Fit(team_data, r, best_features=None,validation_start=2016):
     # Libraries
+    import numpy as np
     import pandas as pd
     import os
     from sklearn.preprocessing import StandardScaler
@@ -195,7 +198,7 @@ def GB_Fit(team_data, r, best_features=None,validation_start=2016):
 
     # Get best parameters and performance
     best_params = grid_search.best_params_
-    best_perform = 1 - (-1*grid_search.best_score_)
+    best_perform = np.exp(grid_search.best_score_)
 
     # Remove prefix from tuned param
     best_params = dict(zip([key[5:] for key in best_params.keys()],best_params.values()))
@@ -214,6 +217,7 @@ def GB_Fit(team_data, r, best_features=None,validation_start=2016):
 
 def NN_Fit(team_data, r, best_features=None, validation_start=2016):
     # Libraries
+    import numpy as np
     import pandas as pd
     import os
     from sklearn.preprocessing import StandardScaler
@@ -268,7 +272,7 @@ def NN_Fit(team_data, r, best_features=None, validation_start=2016):
 
     # Get best parameters and performance
     best_params = grid_search.best_params_
-    best_perform = 1 - (-1*grid_search.best_score_)
+    best_perform = np.exp(grid_search.best_score_)
 
     # Remove prefix from tuned param
     best_params = dict(zip([key[5:] for key in best_params.keys()],best_params.values()))
