@@ -22,9 +22,9 @@ with open(bracket_path, "r") as json_file:
 
 if tune == True:
     # Tune Component Models
-    best_params, model_accs = train_models(team_data=teams, validation_start=2017)
+    best_params, model_accs = train_models(team_data=teams)
     # Perform Feature Selection
-    best_features = feature_selection(teams,best_params,model_accs,validation_start=2017)
+    best_features = feature_selection(teams,best_params,model_accs)
     # Export
     # Best Features
     path = os.path.join(os.path.abspath(os.getcwd()), 'models/best_features.json')
@@ -50,7 +50,7 @@ else:
 # Retune After Selection Fetures
 if tune == True:
     # Tune Component Models
-    best_params, model_accs = train_models(teams, best_features, validation_start=2017)
+    best_params, model_accs = train_models(teams, best_features)
     # Export
     # Parameters
     path = os.path.join(os.path.abspath(os.getcwd()), 'models/tuned_params.json')
@@ -62,17 +62,17 @@ if tune == True:
         json.dump(model_accs, f)
 
 # Combine Models
-models, brier, points_df, accs_df = combine_model(teams,best_params,model_accs,results,best_features,backwards_test=2013,validation_year=2017)
+models, log, points_df, accs_df = combine_model(teams,best_params,model_accs,results,best_features,backwards_test=2013,validation_year=2017)
 
 # Validation Results
 results = {}
-results['R32'] = np.mean(brier[2])
-results['S16'] = np.mean(brier[3])
-results['E8'] = np.mean(brier[4])
-results['F4'] = np.mean(brier[5])
-results['NCG'] = np.mean(brier[6])
-results['Winner'] = np.mean(brier[7])
-results_df = pd.DataFrame(list(results.items()), columns=['Round', 'Brier Score'])
+results['R32'] = np.mean(log[2])
+results['S16'] = np.mean(log[3])
+results['E8'] = np.mean(log[4])
+results['F4'] = np.mean(log[5])
+results['NCG'] = np.mean(log[6])
+results['Winner'] = np.mean(log[7])
+results_df = pd.DataFrame(list(results.items()), columns=['Round', 'Log Loss'])
 
 # Export
 # Models
