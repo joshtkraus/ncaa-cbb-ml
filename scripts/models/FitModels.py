@@ -130,7 +130,7 @@ def feature_selection(team_data,best_params,model_accs):
                                                 X[candidate_features], 
                                                 y, 
                                                 cv=custom_cv, 
-                                                scoring='neg_log_loss'))
+                                                scoring='average_precision'))
                 if score > best_score:
                     best_score = score
                     best_addition = feature
@@ -148,7 +148,7 @@ def feature_selection(team_data,best_params,model_accs):
                                                     X[candidate_features], 
                                                     y,
                                                     cv=custom_cv, 
-                                                    scoring='neg_log_loss'))
+                                                    scoring='average_precision'))
                     if score > best_score:
                         best_score = score
                         best_removal = feature
@@ -220,7 +220,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,best_features,b
     from sklearn.neural_network import MLPClassifier
     from sklearn.ensemble import VotingClassifier
     from sklearn.inspection import permutation_importance
-    from sklearn.metrics import log_loss
+    from sklearn.metrics import average_precision_score
     from models.utils.DataProcessing import create_splits
     from models.utils.StandarizePredictions import standarize
     from models.utils.MakePicks import predict_bracket
@@ -329,14 +329,14 @@ def combine_model(team_data,best_params,model_accs,correct_picks,best_features,b
                                                         X_test,
                                                         y_test,
                                                         n_repeats=100,
-                                                        scoring='neg_log_loss', 
+                                                        scoring='average_precision', 
                                                         random_state=0,
                                                         n_jobs=-1)
                 import_list_avg.append(perm_importance.importances_mean)
 
 
                 # Get Log Loss
-                log_sub = log_loss(y_test,y_pred)
+                log_sub = average_precision_score(y_test,y_pred)
 
                 # Store
                 log_list_avg.append(log_sub)
