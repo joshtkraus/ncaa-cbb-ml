@@ -54,7 +54,7 @@ def Logistic_Fit(team_data, r, best_features=None):
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
-        scoring='average_precision',
+        scoring='neg_log_loss',
         cv=custom_cv,
         n_jobs=-1
     )
@@ -136,7 +136,7 @@ def RF_Fit(team_data, r, best_features=None):
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
-        scoring='average_precision',
+        scoring='neg_log_loss',
         cv=custom_cv,
         n_jobs=-1
     )
@@ -216,7 +216,7 @@ def GB_Fit(team_data, r, best_features=None):
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
-        scoring='average_precision',
+        scoring='neg_log_loss',
         cv=custom_cv,
         n_jobs=-1
     )
@@ -311,7 +311,7 @@ def NN_Fit(team_data, r, best_features=None):
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
-        scoring='average_precision',
+        scoring='neg_log_loss',
         cv=custom_cv,
         n_jobs=-1
     )
