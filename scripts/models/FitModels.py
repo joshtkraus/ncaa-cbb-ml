@@ -234,12 +234,8 @@ def combine_model(team_data,best_params,model_accs,correct_picks,best_features,b
 
     # Column Mapping
     col_map = {
-        2:'R32_Actual_Full',
-        3:'S16_Actual_Full',
-        4:'E8_Actual_Full',
-        5:'F4_Actual_12',
+        3:'S16_Actual_12',
         6:'NCG_Actual_Full',
-        7:'Winner_Actual_Full'
         }
 
     # Initialize
@@ -274,6 +270,10 @@ def combine_model(team_data,best_params,model_accs,correct_picks,best_features,b
             # Create Splits
             X_train = X[team_data['Year']<=year]
             y_train = y[team_data['Year']<=year]
+
+            # Calibration Col
+            if r in [3,6]:
+                y_calib = team_data.loc[team_data['Year']==test_year,col_map[r]]
 
             # Model Weights
             weights = [model_accs[r]['Log'],
@@ -318,10 +318,10 @@ def combine_model(team_data,best_params,model_accs,correct_picks,best_features,b
                 y_pred = voting_clf.predict_proba(X_test)[:, 1]
 
                 # Calibrate probabilities
-                if r in [0]:
+                if r in [3,6]:
                     # Calibrate
                     iso_reg = IsotonicRegression(out_of_bounds='clip')
-                    iso_reg.fit(y_pred, X_test[col_map[r]])
+                    iso_reg.fit(y_pred, y_calib)
                     y_pred = iso_reg.predict(y_pred)
 
                 # Permutation Importance
