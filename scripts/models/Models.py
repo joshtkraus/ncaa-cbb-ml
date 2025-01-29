@@ -50,7 +50,7 @@ def Logistic_Fit(team_data, r, best_features=None):
     ])
 
     # Grid Search
-    custom_cv = custom_time_series_split(1152, 5, 704, 192, 64)
+    custom_cv = custom_time_series_split(1088, 5, 640, 192, 64)
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
@@ -132,7 +132,7 @@ def RF_Fit(team_data, r, best_features=None):
     ])
 
     # Grid Search
-    custom_cv = custom_time_series_split(1152, 5, 704, 192, 64)
+    custom_cv = custom_time_series_split(1088, 5, 640, 192, 64)
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
@@ -212,7 +212,7 @@ def GB_Fit(team_data, r, best_features=None):
     ])
 
     # Grid Search
-    custom_cv = custom_time_series_split(1152, 5, 704, 192, 64)
+    custom_cv = custom_time_series_split(1088, 5, 640, 192, 64)
     grid_search = GridSearchCV(
         pipeline,
         param_grid,
@@ -307,7 +307,7 @@ def NN_Fit(team_data, r, best_features=None):
     ])
 
     # Grid Search
-    custom_cv = custom_time_series_split(1152, 5, 704, 192, 64)
+    custom_cv = custom_time_series_split(1088, 5, 640, 192, 64)
     grid_search = GridSearchCV(
         pipeline,
         param_grid,

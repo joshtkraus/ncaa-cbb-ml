@@ -81,7 +81,7 @@ def feature_selection(team_data,best_params,model_accs):
 
     # Initialize
     best_features = {}
-    custom_cv = list(custom_time_series_split(1152, 5, 704, 192, 64))
+    custom_cv = list(custom_time_series_split(1088, 5, 640, 192, 64))
 
     # Iterate Rounds
     for r in range(2,8):
@@ -318,7 +318,7 @@ def combine_model(team_data,best_params,model_accs,correct_picks,best_features,b
                 y_pred = voting_clf.predict_proba(X_test)[:, 1]
 
                 # Calibrate probabilities
-                if r in [3,6]:
+                if r in [0]:
                     # Calibrate
                     iso_reg = IsotonicRegression(out_of_bounds='clip')
                     iso_reg.fit(y_pred, y_calib)

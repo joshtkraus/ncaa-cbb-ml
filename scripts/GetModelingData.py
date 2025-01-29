@@ -8,7 +8,7 @@ from utils.NameCleaner_Results import clean_results
 from utils.GetSeedProb import calc_seed_prob
 
 # Year to Start Data At
-start_year = 2006
+start_year = 2007
 
 # Run Web Scraper Ind
 scraper = False
@@ -87,18 +87,20 @@ for year in years:
     # Read data
     summary_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/raw/KP/summary/{year}.csv'), index_col=False)
     points_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/raw/KP/points/{year}.csv'), index_col=False)
-    # Standardize Column Ordering
-    summary_temp = summary_temp[['Season','TeamName','Tempo','RankTempo','AdjTempo','RankAdjTempo','OE','RankOE','AdjOE','RankAdjOE','DE','RankDE','AdjDE','RankAdjDE','AdjEM','RankAdjEM','seed']]
-    points_temp = points_temp[['Season','TeamName','Off_1','RankOff_1','Off_2','RankOff_2','Off_3','RankOff_3','Def_1','RankDef_1','Def_2','RankDef_2','Def_3','RankDef_3']]
+    roster_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/raw/KP/roster/{year}.csv'), index_col=False)
     # Rename Columns
     summary_temp.columns = ['Year','Team','Tempo','RankTempo','AdjTempo','RankAdjTempo','OE','RankOE','AdjOE','RankAdjOE','DE','RankDE','AdjDE','RankAdjDE','AdjEM','RankAdjEM','Seed']
     points_temp.columns = ['Year','Team','Off_1','RankOff_1','Off_2','RankOff_2','Off_3','RankOff_3','Def_1','RankDef_1','Def_2','RankDef_2','Def_3','RankDef_3']
+    roster_temp.columns = ['Year','Team','Size','SizeRank','Hgt5','Hgt5Rank','Hgt4','Hgt4Rank','Hgt3','Hgt3Rank','Hgt2','Hgt2Rank','Hgt1','Hgt1Rank','HgtEff','HgtEffRank',
+                            'Exp','ExpRank','Bench','BenchRank','Pts5','Pts5Rank','Pts4','Pts4Rank','Pts3','Pts3Rank','Pts2','Pts2Rank','Pts1','Pts1Rank','OR5','OR5Rank',
+                            'OR4','OR4Rank','OR3','OR3Rank','OR2','OR2Rank','OR1','OR1Rank','DR5','DR5Rank','DR4','DR4Rank','DR3','DR3Rank','DR2','DR2Rank','DR1','DR1Rank']
     # Drop Non-Tournament Teams
     summary_temp = summary_temp.dropna(subset=['Seed'])
     # Drop Teams who Lost in Play-In
     summary_temp = summary_temp[~summary_temp['Team'].isin(playin_dict[year])]
     # Join
     temp_join = summary_temp.merge(points_temp, on=['Year','Team'])
+    temp_join = temp_join.merge(roster_temp, on=['Year','Team'])
     # Unit Test
     check_KP_join(summary_temp, temp_join)
     # Append
