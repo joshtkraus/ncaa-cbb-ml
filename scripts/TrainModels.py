@@ -4,10 +4,12 @@ import numpy as np
 import pandas as pd
 import joblib
 import json
-from models.FitModels import train_models, combine_model, feature_selection
+from models.utils.ModelPipeline import feature_selection
+from models.FitModels import train_models, combine_model
 
 # Tune Models Indicator
 tune = True
+tune_upset = True
 
 # Data Paths
 data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/processed/data.csv')
@@ -46,8 +48,12 @@ else:
     with open(path, "r") as json_file:
         model_accs = json.load(json_file)
     model_accs = {int(key): value for key, value in model_accs.items()}
+    # Upset Parameters
+    path = os.path.join(os.path.abspath(os.getcwd()), 'models/upset_parameters.json')
+    with open(path, "r") as json_file:
+        upset_parameters = json.load(json_file)
 
-# Retune After Selection Fetures
+# Retune After Selecting Features
 if tune == True:
     # Tune Component Models
     best_params, model_accs = train_models(teams, best_features)
@@ -62,17 +68,34 @@ if tune == True:
         json.dump(model_accs, f)
 
 # Combine Models
-models, log, points_df, accs_df = combine_model(teams,best_params,model_accs,results,best_features,backwards_test=2013,validation_year=2017)
+if tune_upset == True:
+    models, upset_parameters, prec = combine_model(teams,
+                                                    best_params,
+                                                    model_accs,
+                                                    results,
+                                                    best_features,
+                                                    backwards_year=2013,
+                                                    validation_year=2017)
+else:
+    models, upset_parameters, prec = combine_model(teams,
+                                                    best_params,
+                                                    model_accs,
+                                                    results,
+                                                    best_features,
+                                                    backwards_year=2013,
+                                                    validation_year=2017,
+                                                    upset_parameters=upset_parameters,
+                                                    tune=False)
 
 # Validation Results
 results = {}
-results['R32'] = np.mean(log[2])
-results['S16'] = np.mean(log[3])
-results['E8'] = np.mean(log[4])
-results['F4'] = np.mean(log[5])
-results['NCG'] = np.mean(log[6])
-results['Winner'] = np.mean(log[7])
-results_df = pd.DataFrame(list(results.items()), columns=['Round', 'Log Loss'])
+results['R32'] = np.mean(prec[2])
+results['S16'] = np.mean(prec[3])
+results['E8'] = np.mean(prec[4])
+results['F4'] = np.mean(prec[5])
+results['NCG'] = np.mean(prec[6])
+results['Winner'] = np.mean(prec[7])
+results_df = pd.DataFrame(list(results.items()), columns=['Round', 'Average Precision'])
 
 # Export
 # Models
@@ -81,12 +104,10 @@ for r in [7,6,5,4,3,2]:
     path = os.path.join(os.path.abspath(os.getcwd()), 'models/model_'+str(r)+'.pkl')
     # Save
     joblib.dump(models[r], path) 
+# Upset Parameters
+path = os.path.join(os.path.abspath(os.getcwd()), 'models/upset_parameters.json')
+with open(path, 'w') as f:
+    json.dump(upset_parameters, f)
 # Model Performance
-path = os.path.join(os.path.abspath(os.getcwd()), 'results/model_performance.csv')
+path = os.path.join(os.path.abspath(os.getcwd()), 'results/backwards_test/model_performance.csv')
 results_df.to_csv(path,index=False)
-# Picks Accuracy
-path = os.path.join(os.path.abspath(os.getcwd()), 'results/picks_accuracy.csv')
-accs_df.to_csv(path,index=False)
-# Picks Points
-path = os.path.join(os.path.abspath(os.getcwd()), 'results/picks_points.csv')
-points_df.to_csv(path,index=False)
