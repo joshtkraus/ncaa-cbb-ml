@@ -84,9 +84,6 @@ def Logistic_Fit(team_data, r, best_features=None):
     model_params = {key: value for key, value in best_params.items() if key not in ['k_neighbors']}
     smote_params = {key: value for key, value in best_params.items() if key in ['k_neighbors']}
 
-    # Check Hyperparameter Limits
-    check_hyperparameters(alpha[r],model_params,'C')
-
     # Export Validation Results
     path_dict = {2:'R32',
                  3:'S16',
@@ -179,12 +176,6 @@ def RF_Fit(team_data, r, best_features=None):
     model_params = {key: value for key, value in best_params.items() if key not in ['k_neighbors']}
     smote_params = {key: value for key, value in best_params.items() if key in ['k_neighbors']}
 
-    # Check Hyperparameter Limits
-    check_hyperparameters(n_estimators[r],model_params,'n_estimators')
-    check_hyperparameters(min_samples_split[r],model_params,'min_samples_split')
-    check_hyperparameters(min_samples_leaf,model_params,'min_samples_leaf')
-    check_hyperparameters(max_depth[r],model_params,'max_depth')
-
     # Export Validation Results
     path_dict = {2:'R32',
                  3:'S16',
@@ -275,12 +266,6 @@ def GB_Fit(team_data, r, best_features=None):
     model_params = {key: value for key, value in best_params.items() if key not in ['k_neighbors']}
     smote_params = {key: value for key, value in best_params.items() if key in ['k_neighbors']}
 
-    # Check Hyperparameter Limits
-    check_hyperparameters(n_estimators[r],model_params,'n_estimators')
-    check_hyperparameters(min_samples_split[r],model_params,'min_samples_split')
-    check_hyperparameters(min_samples_leaf,model_params,'min_samples_leaf')
-    check_hyperparameters(max_depth[r],model_params,'max_depth')
-
     # Export Validation Results
     path_dict = {2:'R32',
                  3:'S16',
@@ -370,10 +355,6 @@ def NN_Fit(team_data, r, best_features=None):
     # Filter Parameters
     model_params = {key: value for key, value in best_params.items() if key not in ['k_neighbors']}
     smote_params = {key: value for key, value in best_params.items() if key in ['k_neighbors']}
-
-    # Check Hyperparameter Limits
-    check_hyperparameters(hidden_layer_size[r],model_params,'hidden_layer_sizes')
-    check_hyperparameters(alpha[r],model_params,'alpha')
 
     # Export Validation Results
     path_dict = {2:'R32',

@@ -2,6 +2,7 @@
 import os
 import pandas as pd
 import json
+from scrapers.GetData_SR import run_scraper
 from utils.NameCleaner_KP import clean_KP
 from utils.NameCleaner_SR import clean_SR
 from utils.NameCleaner_Results import clean_results
@@ -42,7 +43,7 @@ def check_results_naming(results_dict, SR):
 
 if scraper == True:
     # Run Web Scraper
-    from scrapers import GetData_SR
+    run_scraper()
 
 # Read Data
 SR = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), 'data/raw/sportsreference.csv'))
