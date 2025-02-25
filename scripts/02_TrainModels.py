@@ -1,0 +1,30 @@
+import multiprocessing as mp
+
+def run():
+    # Libraries
+    import os
+    import pandas as pd
+    from models.FitModels import train_models
+    from models.VotingClassifier import tune_clf
+
+    # Load
+    data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/processed/data.csv')
+    data = pd.read_csv(data_path)
+
+    # Tune Models (Pre-Feature Selection)
+    split_dict = {
+        2: 0.8,
+        3: 0.8,
+        4: 0.7,
+        5: 0.7,
+        6: 0.6,
+        7: 0.6
+    }
+    train_models(data, split_dict)
+
+    # Tune Voting Classifier
+    tune_clf(data, split_dict)
+
+if __name__ == '__main__':
+    mp.freeze_support()
+    run()
