@@ -11,7 +11,7 @@ def run():
     data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/processed/data.csv')
     data = pd.read_csv(data_path)
 
-    # Tune Models (Pre-Feature Selection)
+    # Tune Models
     split_dict = {
         2: 0.8,
         3: 0.8,

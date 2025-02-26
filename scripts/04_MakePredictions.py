@@ -20,93 +20,89 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 # Year to Start Data At
 year = 2024
 
-# # Unit Tests
-# def check_KP_join(summary, joined):
-#      if len(summary) != len(joined):
-#           print('Missing Summary Teams: ',[team for team in summary['Team'].unique() if team not in joined['Team'].unique()])
-#           raise ValueError('Data Loss in Join.')
-# def check_data_join(data, SR, KP):
-#     if len(SR) != len(data):
-#         print('Missing KP Teams: ',[team for team in KP['Team'].unique() if team not in SR['Team'].unique()])
-#         print('Missing SR Teams: ',[team for team in SR['Team'].unique() if team not in KP['Team'].unique()])
-#         raise ValueError('Data Loss in Join.')
-# def check_results_naming(results_dict, SR):
-#     # Iterate dict
-#     for year, regions in results_dict.items():
-#         for region, rounds in regions.items():
-#             if region not in ['NCG','Winner']:
-#                 for round, teams in rounds.items():
-#                     for i, team in enumerate(teams):
-#                         if team not in SR['Team'].values:
-#                             raise ValueError('Team missing: '+team)
-#             elif region == 'NCG':   
-#                 for i, team in enumerate(rounds):
-#                     if team not in SR['Team'].values:
-#                             raise ValueError('Team missing: '+team)
-#             else:
-#                 if team not in SR['Team'].values:
-#                             raise ValueError('Team missing: '+team)
+# Unit Tests
+def check_KP_join(summary, joined):
+     if len(summary) != len(joined):
+          print('Missing Summary Teams: ',[team for team in summary['Team'].unique() if team not in joined['Team'].unique()])
+          raise ValueError('Data Loss in Join.')
+def check_data_join(data, SR, KP):
+    if len(SR) != len(data):
+        print('Missing KP Teams: ',[team for team in KP['Team'].unique() if team not in SR['Team'].unique()])
+        print('Missing SR Teams: ',[team for team in SR['Team'].unique() if team not in KP['Team'].unique()])
+        raise ValueError('Data Loss in Join.')
+def check_results_naming(results_dict, SR):
+    # Iterate dict
+    for year, regions in results_dict.items():
+        for region, rounds in regions.items():
+            if region not in ['NCG','Winner']:
+                for round, teams in rounds.items():
+                    for i, team in enumerate(teams):
+                        if team not in SR['Team'].values:
+                            raise ValueError('Team missing: '+team)
+            elif region == 'NCG':   
+                for i, team in enumerate(rounds):
+                    if team not in SR['Team'].values:
+                            raise ValueError('Team missing: '+team)
+            else:
+                if team not in SR['Team'].values:
+                            raise ValueError('Team missing: '+team)
 
-# # Get SR Data
-# SR = run_scraper(years=[year],
-#                 export=False)
+# Get SR Data
+SR = run_scraper(years=[year],
+                export=False)
 
-# # Read KenPom Data
-# # Teams who made play-in but lost
-# playin_dict = {
-#                 2024:['Howard','Virginia','Montana St.','Boise St.'],
-#                 }
-# # Read data
-# summary_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/KP/summary.csv'), index_col=False)
-# points_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/KP/points.csv'), index_col=False)
-# roster_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/KP/roster.csv'), index_col=False)
-# # Rename Columns
-# summary_temp.columns = ['Year','Team','Tempo','RankTempo','AdjTempo','RankAdjTempo','OE','RankOE','AdjOE','RankAdjOE','DE','RankDE','AdjDE','RankAdjDE','AdjEM','RankAdjEM','Seed']
-# points_temp.columns = ['Year','Team','Off_1','RankOff_1','Off_2','RankOff_2','Off_3','RankOff_3','Def_1','RankDef_1','Def_2','RankDef_2','Def_3','RankDef_3']
-# roster_temp.columns = ['Year','Team','Size','SizeRank','Hgt5','Hgt5Rank','Hgt4','Hgt4Rank','Hgt3','Hgt3Rank','Hgt2','Hgt2Rank','Hgt1','Hgt1Rank','HgtEff','HgtEffRank',
-#                         'Exp','ExpRank','Bench','BenchRank','Pts5','Pts5Rank','Pts4','Pts4Rank','Pts3','Pts3Rank','Pts2','Pts2Rank','Pts1','Pts1Rank','OR5','OR5Rank',
-#                         'OR4','OR4Rank','OR3','OR3Rank','OR2','OR2Rank','OR1','OR1Rank','DR5','DR5Rank','DR4','DR4Rank','DR3','DR3Rank','DR2','DR2Rank','DR1','DR1Rank']
-# # Drop Non-Tournament Teams
-# summary_temp = summary_temp.dropna(subset=['Seed'])
-# # Drop Teams who Lost in Play-In
-# summary_temp = summary_temp[~summary_temp['Team'].isin(playin_dict[year])]
-# # Join
-# KP = summary_temp.merge(points_temp, on=['Year','Team'])
-# KP = KP.merge(roster_temp, on=['Year','Team'])
-# # Unit Test
-# check_KP_join(summary_temp, KP)
+# Read KenPom Data
+# Teams who made play-in but lost
+playin_dict = {
+                2024:['Howard','Virginia','Montana St.','Boise St.'],
+                }
+# Read data
+summary_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/KP/summary.csv'), index_col=False)
+points_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/KP/points.csv'), index_col=False)
+roster_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/KP/roster.csv'), index_col=False)
+# Rename Columns
+summary_temp.columns = ['Year','Team','Tempo','RankTempo','AdjTempo','RankAdjTempo','OE','RankOE','AdjOE','RankAdjOE','DE','RankDE','AdjDE','RankAdjDE','AdjEM','RankAdjEM','Seed']
+points_temp.columns = ['Year','Team','Off_1','RankOff_1','Off_2','RankOff_2','Off_3','RankOff_3','Def_1','RankDef_1','Def_2','RankDef_2','Def_3','RankDef_3']
+roster_temp.columns = ['Year','Team','Size','SizeRank','Hgt5','Hgt5Rank','Hgt4','Hgt4Rank','Hgt3','Hgt3Rank','Hgt2','Hgt2Rank','Hgt1','Hgt1Rank','HgtEff','HgtEffRank',
+                        'Exp','ExpRank','Bench','BenchRank','Pts5','Pts5Rank','Pts4','Pts4Rank','Pts3','Pts3Rank','Pts2','Pts2Rank','Pts1','Pts1Rank','OR5','OR5Rank',
+                        'OR4','OR4Rank','OR3','OR3Rank','OR2','OR2Rank','OR1','OR1Rank','DR5','DR5Rank','DR4','DR4Rank','DR3','DR3Rank','DR2','DR2Rank','DR1','DR1Rank']
+# Drop Non-Tournament Teams
+summary_temp = summary_temp.dropna(subset=['Seed'])
+# Drop Teams who Lost in Play-In
+summary_temp = summary_temp[~summary_temp['Team'].isin(playin_dict[year])]
+# Join
+KP = summary_temp.merge(points_temp, on=['Year','Team'])
+KP = KP.merge(roster_temp, on=['Year','Team'])
+# Unit Test
+check_KP_join(summary_temp, KP)
 
-# # Clean Naming
-# KP = clean_KP(KP)
-# SR = clean_SR(SR)
-# # Join Dataframes
-# data = SR.merge(KP, on=['Team','Year','Seed'])
-# # Drop Any Duplicates or NAs Created
-# data.drop_duplicates(inplace=True)
-# data.dropna(inplace=True)
-
-# # Unit Tests
-# check_data_join(data, SR, KP)
+# Clean Naming
+KP = clean_KP(KP)
+SR = clean_SR(SR)
+# Join Dataframes
+data = SR.merge(KP, on=['Team','Year','Seed'])
+# Drop Any Duplicates or NAs Created
+data.drop_duplicates(inplace=True)
+data.dropna(inplace=True)
+# Unit Tests
+check_data_join(data, SR, KP)
 
 # Export Data
 # Get File Path
 data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/prediction/data.csv')
 # Export DF
-#data.to_csv(data_path,index=False)
+data.to_csv(data_path,index=False)
 
-data = pd.read_csv(data_path)
-
-# Get Modeling Data
+# Get Modeling Data (remove seed probs to recalculate)
 data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/processed/data.csv')
 modeling_data = pd.read_csv(data_path)
 modeling_data = modeling_data[modeling_data['Year']!=year]
-# Add Previous Year's Historical Probs to Current Year
 seed_probs = [
     'R32_Actual_Full','S16_Actual_Full','E8_Actual_Full','F4_Actual_Full','NCG_Actual_Full','Winner_Actual_Full','First_Year',
     'R32_Actual_12','S16_Actual_12','E8_Actual_12','F4_Actual_12','NCG_Actual_12','Winner_Actual_12',
     'R32_Actual_6','S16_Actual_6','E8_Actual_6','F4_Actual_6','NCG_Actual_6','Winner_Actual_6'
 ]
-data[seed_probs] = modeling_data.loc[modeling_data['Year']==year-1,seed_probs].values
+modeling_data.drop(columns=seed_probs,inplace=True)
 
 # Sort Columns
 data = data[modeling_data.columns]
@@ -114,6 +110,10 @@ data = data[modeling_data.columns]
 data = pd.concat([modeling_data,data], ignore_index=True)
 # Drop Any Duplicates
 data.drop_duplicates(inplace=True)
+# Get Historical Seed Probabilities
+data[['R32_Actual_Full','S16_Actual_Full','E8_Actual_Full','F4_Actual_Full','NCG_Actual_Full','Winner_Actual_Full','First_Year']] = calc_seed_prob(data,lag=None,ind_col=True)
+data[['R32_Actual_12','S16_Actual_12','E8_Actual_12','F4_Actual_12','NCG_Actual_12','Winner_Actual_12']] = calc_seed_prob(data,lag=12,ind_col=False)
+data[['R32_Actual_6','S16_Actual_6','E8_Actual_6','F4_Actual_6','NCG_Actual_6','Winner_Actual_6']] = calc_seed_prob(data,lag=6,ind_col=False)
 
 # Model Specifications
 # Parameters
