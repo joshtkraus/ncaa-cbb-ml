@@ -63,7 +63,7 @@ def standarize(df):
     df = df[['Team','Seed','Region','R32','S16','E8','F4','NCG','Winner']]
     return df
 
-def standardize_predict(years,predictions,correct_picks,pred_type='standard'):
+def standardize_predict(years,predictions,correct_picks):
     # Libraries
     import os
     import json
@@ -93,7 +93,7 @@ def standardize_predict(years,predictions,correct_picks,pred_type='standard'):
         # Standardize
         pred_df = standarize(pred_df)
         # Export
-        path = os.path.join(os.path.abspath(os.getcwd()), f'results/probabilities/{pred_type}/'+str(test_year)+'.csv')
+        path = os.path.join(os.path.abspath(os.getcwd()), f'results/probabilities/'+str(test_year)+'.csv')
         pred_df.to_csv(path,index=False)
         # Get Expected Points
         points_df = pred_df.copy()
@@ -109,7 +109,7 @@ def standardize_predict(years,predictions,correct_picks,pred_type='standard'):
         picks, point, acc = predict_bracket(points_df,
                                             correct_picks[str(test_year)])
         # Save Predictions
-        path = os.path.join(os.path.abspath(os.getcwd()), f'results/picks/{pred_type}/'+str(test_year)+'.json')
+        path = os.path.join(os.path.abspath(os.getcwd()), f'results/picks/'+str(test_year)+'.json')
         with open(path, 'w') as f:
             json.dump(picks, f)
         # Store

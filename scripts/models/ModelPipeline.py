@@ -1,9 +1,8 @@
 # Combine Component Models
-def combine_model(data,nn_params,gbm_params,weights,upset,correct_picks,nn_feat=None,gbm_feat=None,backwards_year=2013):
+def combine_model(data,nn_params,gbm_params,weights,correct_picks,nn_feat=None,gbm_feat=None,backwards_year=2013):
     print('Combining Models...')
     # Libraries
     import os
-    import copy
     from models.utils.DataProcessing import create_splits
     from models.utils.backwards_test import run_test
     from models.utils.StandarizePredictions import standardize_predict
@@ -23,7 +22,6 @@ def combine_model(data,nn_params,gbm_params,weights,upset,correct_picks,nn_feat=
         predictions[test_year]['Team'] = data.loc[data['Year']==test_year,'Team'].values
         predictions[test_year]['Seed'] = data.loc[data['Year']==test_year,'Seed'].values
         predictions[test_year]['Region'] = data.loc[data['Year']==test_year,'Region'].values
-    predictions_upset = copy.deepcopy(predictions)
 
     # Iterate Rounds
     for r in range(2,8):
@@ -36,7 +34,7 @@ def combine_model(data,nn_params,gbm_params,weights,upset,correct_picks,nn_feat=
         X_gbm, _, years_gbm = create_splits(data, r, train=False, best_features=gbm_feat, years_list=True)
 
         # Backwards Testing
-        predictions, predictions_upset = run_test(
+        predictions = run_test(
             data,
             X_SMTL_nn,
             y_SMTL_nn,
@@ -48,11 +46,9 @@ def combine_model(data,nn_params,gbm_params,weights,upset,correct_picks,nn_feat=
             nn_params[r],
             gbm_params[r],
             weights[r],
-            upset[r],
             years,
             r,
             predictions,
-            predictions_upset,
             years_SMTL_nn,
             years_nn,
             years_SMTL_gbm,
@@ -61,16 +57,11 @@ def combine_model(data,nn_params,gbm_params,weights,upset,correct_picks,nn_feat=
 
     # Standardize Predictions, Make Picks
     points_df, accs_df = standardize_predict(years,predictions,correct_picks,'standard')   
-    points_df_upset, accs_df_upset = standardize_predict(years,predictions_upset,correct_picks,'upset')    
  
     # Export
     # Picks Accuracy
     path = os.path.join(os.path.abspath(os.getcwd()), 'results/backwards_test/standard/picks_accuracy.csv')
-    path_upset = os.path.join(os.path.abspath(os.getcwd()), 'results/backwards_test/upset/picks_accuracy.csv')
     accs_df.to_csv(path,index=False)
-    accs_df_upset.to_csv(path_upset,index=False)
     # Picks Points
     path = os.path.join(os.path.abspath(os.getcwd()), 'results/backwards_test/standard/picks_points.csv')
-    path_upset = os.path.join(os.path.abspath(os.getcwd()), 'results/backwards_test/upset/picks_points.csv')
     points_df.to_csv(path,index=False)
-    points_df_upset.to_csv(path_upset,index=False)

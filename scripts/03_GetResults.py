@@ -32,11 +32,5 @@ with open(weights_path, "r") as json_file:
     weights = json.load(json_file)
 weights = {int(key): value for key, value in weights.items()}
 
-# Upset Parameters
-upset_path = os.path.join(os.path.abspath(os.getcwd()), 'models/upset_params.json')
-with open(upset_path, "r") as json_file:
-    upset = json.load(json_file)
-upset = {int(key): value for key, value in upset.items()}
-
 # Combine Models & Predict
-combine_model(data,nn_params,gbm_params,weights,upset,correct_picks,backwards_year=2013)
+combine_model(data,nn_params,gbm_params,weights,correct_picks,backwards_year=2013)
