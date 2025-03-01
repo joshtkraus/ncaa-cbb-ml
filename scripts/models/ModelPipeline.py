@@ -56,12 +56,12 @@ def combine_model(data,nn_params,gbm_params,weights,correct_picks,nn_feat=None,g
         )
 
     # Standardize Predictions, Make Picks
-    points_df, accs_df = standardize_predict(years,predictions,correct_picks,'standard')   
+    points_df, accs_df = standardize_predict(years,predictions,correct_picks)   
  
     # Export
     # Picks Accuracy
-    path = os.path.join(os.path.abspath(os.getcwd()), 'results/backwards_test/standard/picks_accuracy.csv')
+    path = os.path.join(os.path.abspath(os.getcwd()), 'results/backwards_test/picks_accuracy.csv')
     accs_df.to_csv(path,index=False)
     # Picks Points
-    path = os.path.join(os.path.abspath(os.getcwd()), 'results/backwards_test/standard/picks_points.csv')
+    path = os.path.join(os.path.abspath(os.getcwd()), 'results/backwards_test/picks_points.csv')
     points_df.to_csv(path,index=False)

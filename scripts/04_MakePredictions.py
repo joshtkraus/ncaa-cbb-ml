@@ -203,9 +203,9 @@ picks = predict_bracket(points_df, real_picks=None, calc_correct=False)
 
 # Export
 # Probabilities
-path = os.path.join(os.path.abspath(os.getcwd()), 'prediction/standard/probabilities.csv')
+path = os.path.join(os.path.abspath(os.getcwd()), 'prediction/probabilities.csv')
 pred_df.to_csv(path,index=False)
 # Picks
-path = os.path.join(os.path.abspath(os.getcwd()), 'prediction/standard/picks.json')
+path = os.path.join(os.path.abspath(os.getcwd()), 'prediction/picks.json')
 with open(path, 'w') as f:
     json.dump(picks, f)
