@@ -10,9 +10,11 @@ def run_test(
             nn_params,
             gbm_params,
             weights,
+            upset,
             years,
             r,
             predictions,
+            predictions_upset,
             years_SMTL_nn,
             years_nn,
             years_SMTL_gbm,
@@ -20,10 +22,12 @@ def run_test(
             ):
     # Libraries
     import numpy as np
+    import pandas as pd
     from models.utils.DataProcessing import create_splits
     from models.utils.nn import tuned_nn
     from models.utils.gbm import tuned_gbm
     import xgboost as xgb
+    from models.utils.upset_picks import create_upset_picks
 
     # Scaled Years
     full_years = [*range(data['Year'].min(),data['Year'].max()+1)]
@@ -60,10 +64,20 @@ def run_test(
         # GBM
         dtest = xgb.DMatrix(X_test_gbm)
         prob_gbm = gbm.predict(dtest)
-
         # Combine Probabilities
         y_pred = prob_nn * weights['NN'] + prob_gbm * weights['GBM']
         
         # Store Averaged Results
         predictions[test_year]['Round_'+str(r)] = y_pred
-    return predictions
+
+        # Create Upset Picks
+        prob_df = pd.DataFrame({
+            'Year':data.loc[data['Year']==test_year,'Year'],
+            'Region':data.loc[data['Year']==test_year,'Region'],
+            'Seed':data.loc[data['Year']==test_year,'Seed'],
+            'Prob':y_pred
+        })
+        upset_prob = create_upset_picks(prob_df, upset, r)
+        predictions_upset[test_year]['Round_'+str(r)] = upset_prob['Prob'].values
+
+    return predictions, predictions_upset

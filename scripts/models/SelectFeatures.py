@@ -1,6 +1,6 @@
 # Helper worker for each round
 def _tune_round(r, data, split_dict, nn_params, gbm_params, out_q):
-    from models.utils.feat_sel_optuna import feat_sel_nn, feat_sel_gbm
+    from models.utils.feat_sel import feat_sel_nn, feat_sel_gbm
 
     # Feature Selection
     nn_feat_r = feat_sel_nn(data, r, split_dict, nn_params[r])

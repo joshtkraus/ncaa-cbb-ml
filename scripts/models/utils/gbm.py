@@ -78,6 +78,8 @@ def tuned_gbm(params, X_train, y_train, X_val=None, y_val=None):
     import xgboost as xgb
     # Subset Params
     params_sub = {key: value for key, value in params.items() if key not in ['num_boost_round']}
+    params_sub['objective'] = 'binary:logistic'
+    params_sub['eval_metric'] = 'logloss'
 
     # Train the model
     dtrain = xgb.DMatrix(X_train, label=y_train)

@@ -26,7 +26,7 @@ def objective(trial, prob_nn, prob_gbm, y_val):
     # Objective
     w = trial.suggest_float('weight', 0, 1)
     combined_probs = w * prob_nn + (1 - w) * prob_gbm
-    return average_precision_score(y_val, combined_probs)
+    return -average_precision_score(y_val, combined_probs)
 
 
 def tune_weights(data, split_dict, nn_params, gbm_params, nn_feat=None, gbm_feat=None, n_trials=100):
@@ -65,7 +65,7 @@ def tune_weights(data, split_dict, nn_params, gbm_params, nn_feat=None, gbm_feat
         prob_nn, prob_gbm = get_pred(X_train_nn, X_train_gbm, X_val_nn, X_val_gbm, y_train_nn, y_train_gbm, y_val, nn_params[r], gbm_params[r])
 
         # Create & Optimize Study
-        study = optuna.create_study(direction='maximize')
+        study = optuna.create_study(direction='minimize')
         study.optimize(lambda trial: objective(trial, prob_nn, prob_gbm, y_val), 
                    n_trials=n_trials)
         

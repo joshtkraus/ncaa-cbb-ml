@@ -1,81 +1,219 @@
-# Feature Selection
-def get_score(data, r, cv, candidate_features, model_type, params):
+def set_seed(seed=23):
     import numpy as np
-    from sklearn.metrics import average_precision_score
-    from models.utils.DataProcessing import create_splits
-    from models.utils.nn import tuned_nn
-    from models.utils.gbm import tuned_gbm
-    import xgboost as xgb
+    import random
+    np.random.seed(seed)
+    random.seed(seed)
 
-    # Create Splits
-    X_SMTL, y_SMTL = create_splits(data, r, train=True, best_features=candidate_features)
-    X, y = create_splits(data, r, train=False, best_features=candidate_features)
+def create_model_nn(input_shape, params):
+    from tensorflow import keras
+    from tensorflow.keras import layers
+
+    set_seed()
+
+    # Create Model
+    model = keras.Sequential()
+    model.add(layers.Input(shape=(input_shape,)))
     
-    # Cross Validation
-    score_list = []
-    for train_idx, val_idx in cv:
-        # Data Splits
-        train_idx_SMTL = np.where((X_SMTL == X[train_idx[-1]]).all(axis=1))[0][0]
-        X_train, y_train = X_SMTL[:train_idx_SMTL+1], y_SMTL[:train_idx_SMTL+1]
-        X_val, y_val = X[val_idx], y[val_idx]
+    # Number of layers
+    num_layers = params['num_layers']
+    for i in range(num_layers):
+        num_units = params[f"units_{i}"]
+        activation = params[f"activation_{i}"]
 
-        # Create & Fit Model
-        if model_type == 'NN':
-            # Create Model
-            model = tuned_nn(params[r],
-                            X_train, y_train,
-                            X_val, y_val)
-            # Predict
-            pred_prob = model.predict(X_val, verbose=0)
-            pred = pred_prob > 0.5
-            pred = pred.astype(int).flatten()
-        else:
-            model = tuned_gbm(params[r],
-                                X_train, y_train,
-                                X_val, y_val)
-            # Predict
-            dval = xgb.DMatrix(X_val)
-            pred = model.predict(dval)
-        # Score
-        score_list.append(average_precision_score(y_val, pred))
-    # Average Score
-    return np.mean(score_list)
-
-def backwards_selection(data, model_type, params):
-     # Libraries
-    from models.utils.CV import custom_time_series_split
-    from models.utils.DataProcessing import get_modeling_cols
-
-    # Initialize
-    best_features = {}
-    cv = list(custom_time_series_split(1088, 5, 640, 192, 64))
-
-    # Iterate Rounds
-    for r in range(2,8):
-        print('Round '+str(r))
-
-        # Initialize
-        selected_features = get_modeling_cols(data)
-        best_score = float('-inf')
-        improved = True
-
-        while improved:
-            improved = False
-            best_removal = None
-            for feature in selected_features:
-                candidate_features = [f for f in selected_features if f != feature]
-
-                score = get_score(data, r, cv, candidate_features, model_type, params)
-
-                if score > best_score:
-                    best_score = score
-                    best_removal = feature
-                    improved = True
-
-            if best_removal:
-                selected_features.remove(best_removal)
+        model.add(layers.Dense(num_units, activation=activation))
         
-        # Store
-        best_features[r] = selected_features
+        # BatchNormalization
+        if params[f"batch_norm_{i}"]:
+            model.add(layers.BatchNormalization())
+        
+        # Dropout Rate
+        dropout_rate = params[f"dropout_{i}"]
+        model.add(layers.Dropout(dropout_rate))
+    
+    model.add(layers.Dense(1, activation="sigmoid"))
 
-    return best_features
+    return model    
+
+import tensorflow as tf
+class ClearMemory(tf.keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, logs=None):
+        import gc
+        gc.collect()
+def objective_nn(trial, X_train, X_val, y_train, y_val, params):
+    import numpy as np
+    from tensorflow import keras
+    from tensorflow.keras.optimizers.legacy import Adam, RMSprop, SGD
+    from tensorflow.keras import backend as K
+    from sklearn.metrics import average_precision_score
+    import gc
+
+    # Mask for Feature Selection
+    num_features = X_train.shape[1]
+    feature_mask = np.array([trial.suggest_categorical(f"feature_{i}", [0, 1]) for i in range(num_features)])
+    # Check that at least 1 feature selected
+    if feature_mask.sum() == 0:
+        # Penalty for removing all features
+        return float("inf")
+    # Feature Selection
+    X_train_sel = X_train[:, feature_mask == 1]
+    X_val_sel = X_val[:, feature_mask == 1]
+
+    # Create Model
+    model = create_model_nn(X_train_sel.shape[1], params)
+    optimizer_dict = {"adam": Adam, "rmsprop": RMSprop, "sgd": SGD}
+    model.compile(optimizer=optimizer_dict[params['optimizer']](learning_rate=params['learning_rate']),
+                loss="binary_crossentropy",
+                metrics=["Precision"])
+    
+     # Early Stopping & Pruning
+    early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss',
+                                                    patience=5,
+                                                    restore_best_weights=True)
+
+    # Fit
+    model.fit(
+        X_train_sel, y_train,
+        validation_data=(X_val_sel, y_val),
+        epochs=50,
+        batch_size=params['batch_size'],
+        callbacks=[early_stopping, ClearMemory()],
+        verbose=0
+    )
+    pred_prob = model.predict(X_val_sel, verbose=0)
+    pred = pred_prob > 0.5
+    pred = pred.astype(int).flatten()
+
+    # Clear Memory
+    K.clear_session()
+    gc.collect()
+    del model
+
+    return -average_precision_score(y_val, pred)
+
+def objective_gbm(trial, X_train, X_val, y_train, y_val, params):
+    import numpy as np
+    import xgboost as xgb
+    from sklearn.metrics import average_precision_score
+    set_seed()
+
+    # Mask for Feature Selection
+    num_features = X_train.shape[1]
+    feature_mask = np.array([trial.suggest_categorical(f"feature_{i}", [0, 1]) for i in range(num_features)])
+    # Check that at least 1 feature selected
+    if feature_mask.sum() == 0:
+        # Penalty for removing all features
+        return float("inf")
+    # Feature Selection
+    X_train_sel = X_train[:, feature_mask == 1]
+    X_val_sel = X_val[:, feature_mask == 1]
+    
+    # Subset Params
+    params_sub = {key: value for key, value in params.items() if key not in ['num_boost_round']}
+    # Train the model
+    dtrain = xgb.DMatrix(X_train_sel, label=y_train)
+    dval = xgb.DMatrix(X_val_sel, label=y_val)
+    model = xgb.train(
+        params_sub, 
+        dtrain, 
+        num_boost_round=params['num_boost_round'],
+        evals=[(dval, "validation")],
+        early_stopping_rounds=10,
+        verbose_eval=False,
+    )
+    pred = model.predict(dval)
+    return -average_precision_score(y_val, pred)
+
+def feat_sel_nn(data, r, split_dict, params, n_trials=300):
+    import os
+    import numpy as np
+    from models.utils.DataProcessing import create_splits, get_modeling_cols
+    import optuna
+    from optuna.visualization import plot_optimization_history
+    from itertools import compress
+    import tensorflow as tf
+
+    # Supress Logging
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+    # Set Memory Allocation
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
+
+    # Columns
+    features = get_modeling_cols(data)
+    
+    # Create Data
+    X_SMTL, y_SMTL = create_splits(data, r, train=True)
+    X, y = create_splits(data, r, train=False)
+
+    # Data Splits
+    split_idx = int(split_dict[r] * len(X))
+    split_idx_SMTL = np.where((X_SMTL == X[split_idx]).all(axis=1))[0][0]
+    X_train, X_val = X_SMTL[:split_idx_SMTL], X[split_idx:]
+    y_train, y_val = y_SMTL[:split_idx_SMTL], y[split_idx:]
+
+    # Tuning
+    study = optuna.create_study(
+        study_name=f"feature_selection_nn_round_{r}",
+        direction="minimize",
+        sampler=optuna.samplers.TPESampler(seed=23)
+    )
+    study.optimize(lambda trial: objective_nn(trial, X_train, X_val, y_train, y_val, params), 
+                   n_trials=n_trials,
+                   gc_after_trial=True)
+    
+    # Save Plot
+    fig = plot_optimization_history(study)
+    path = os.path.join(os.path.abspath(os.getcwd()), f"results/models/feat_sel/nn/round_{r}.png")
+    fig.write_image(path)
+    
+    # Get Selected Columns
+    best_mask = [study.best_params[f"feature_{i}"] for i in range(X.shape[1])]
+    selected_features = list(compress(features, best_mask))
+    return selected_features
+
+def feat_sel_gbm(data, r, split_dict, params, n_trials=600):
+    import os
+    import numpy as np
+    from models.utils.DataProcessing import create_splits, get_modeling_cols
+    import optuna
+    from optuna.visualization import plot_optimization_history
+    from itertools import compress
+
+    # Supress Logging
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+    
+    # Columns
+    features = get_modeling_cols(data)
+    
+    # Create Data
+    X_SMTL, y_SMTL = create_splits(data, r, train=True)
+    X, y = create_splits(data, r, train=False)
+
+    # Data Splits
+    split_idx = int(split_dict[r] * len(X))
+    split_idx_SMTL = np.where((X_SMTL == X[split_idx]).all(axis=1))[0][0]
+    X_train, X_val = X_SMTL[:split_idx_SMTL], X[split_idx:]
+    y_train, y_val = y_SMTL[:split_idx_SMTL], y[split_idx:]
+
+    # Tuning
+    study = optuna.create_study(
+        study_name=f"feature_selection_gbm_round_{r}",
+        direction="minimize",
+        sampler=optuna.samplers.TPESampler(seed=23)
+    )
+    study.optimize(lambda trial: objective_gbm(trial, X_train, X_val, y_train, y_val, params), 
+                   n_trials=n_trials,
+                   gc_after_trial=True)
+    
+    # Save Plot
+    fig = plot_optimization_history(study)
+    path = os.path.join(os.path.abspath(os.getcwd()), f"results/models/feat_sel/gbm/round_{r}.png")
+    fig.write_image(path)
+    
+    # Get Selected Columns
+    best_mask = [study.best_params[f"feature_{i}"] for i in range(X.shape[1])]
+    selected_features = list(compress(features, best_mask))
+    return selected_features

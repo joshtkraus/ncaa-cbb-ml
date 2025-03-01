@@ -15,8 +15,8 @@ def tune_clf(data, split_dict, nn_feat=None, gbm_feat=None):
     # GBM
     gbm_path = os.path.join(os.path.abspath(os.getcwd()), 'models/pre_fs/gbm.json')
     with open(gbm_path, "r") as json_file:
-        gb_params = json.load(json_file)
-    gbm_params = {int(key): value for key, value in gb_params.items()}
+        gbm_params = json.load(json_file)
+    gbm_params = {int(key): value for key, value in gbm_params.items()}
 
     # Get Weights
     weights = tune_weights(data, split_dict, nn_params, gbm_params, nn_feat, gbm_feat)

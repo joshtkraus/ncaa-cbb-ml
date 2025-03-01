@@ -6,6 +6,7 @@ def run():
     import pandas as pd
     from models.FitModels import train_models
     from models.VotingClassifier import tune_clf
+    from models.UpsetParameters import tune_upset
 
     # Load
     data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/processed/data.csv')
@@ -13,17 +14,20 @@ def run():
 
     # Tune Models
     split_dict = {
-        2: 0.8,
-        3: 0.8,
-        4: 0.7,
-        5: 0.7,
-        6: 0.6,
-        7: 0.6
+        2: 0.8236,
+        3: 0.8236,
+        4: 0.7059,
+        5: 0.7059,
+        6: 0.5883,
+        7: 0.5883
     }
-    train_models(data, split_dict)
+    #train_models(data, split_dict)
 
     # Tune Voting Classifier
     tune_clf(data, split_dict)
+
+    # Tune Upset Parameters
+    tune_upset(data, split_dict)
 
 if __name__ == '__main__':
     mp.freeze_support()

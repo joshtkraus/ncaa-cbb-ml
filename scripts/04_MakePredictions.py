@@ -13,6 +13,7 @@ from models.utils.gbm import tuned_gbm
 import xgboost as xgb
 from models.utils.StandarizePredictions import standarize
 from models.utils.MakePicks import predict_bracket
+from models.utils.upset_picks import create_upset_picks
 
 # Logging
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
@@ -20,78 +21,80 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 # Year to Start Data At
 year = 2024
 
-# Unit Tests
-def check_KP_join(summary, joined):
-     if len(summary) != len(joined):
-          print('Missing Summary Teams: ',[team for team in summary['Team'].unique() if team not in joined['Team'].unique()])
-          raise ValueError('Data Loss in Join.')
-def check_data_join(data, SR, KP):
-    if len(SR) != len(data):
-        print('Missing KP Teams: ',[team for team in KP['Team'].unique() if team not in SR['Team'].unique()])
-        print('Missing SR Teams: ',[team for team in SR['Team'].unique() if team not in KP['Team'].unique()])
-        raise ValueError('Data Loss in Join.')
-def check_results_naming(results_dict, SR):
-    # Iterate dict
-    for year, regions in results_dict.items():
-        for region, rounds in regions.items():
-            if region not in ['NCG','Winner']:
-                for round, teams in rounds.items():
-                    for i, team in enumerate(teams):
-                        if team not in SR['Team'].values:
-                            raise ValueError('Team missing: '+team)
-            elif region == 'NCG':   
-                for i, team in enumerate(rounds):
-                    if team not in SR['Team'].values:
-                            raise ValueError('Team missing: '+team)
-            else:
-                if team not in SR['Team'].values:
-                            raise ValueError('Team missing: '+team)
+# # Unit Tests
+# def check_KP_join(summary, joined):
+#      if len(summary) != len(joined):
+#           print('Missing Summary Teams: ',[team for team in summary['Team'].unique() if team not in joined['Team'].unique()])
+#           raise ValueError('Data Loss in Join.')
+# def check_data_join(data, SR, KP):
+#     if len(SR) != len(data):
+#         print('Missing KP Teams: ',[team for team in KP['Team'].unique() if team not in SR['Team'].unique()])
+#         print('Missing SR Teams: ',[team for team in SR['Team'].unique() if team not in KP['Team'].unique()])
+#         raise ValueError('Data Loss in Join.')
+# def check_results_naming(results_dict, SR):
+#     # Iterate dict
+#     for year, regions in results_dict.items():
+#         for region, rounds in regions.items():
+#             if region not in ['NCG','Winner']:
+#                 for round, teams in rounds.items():
+#                     for i, team in enumerate(teams):
+#                         if team not in SR['Team'].values:
+#                             raise ValueError('Team missing: '+team)
+#             elif region == 'NCG':   
+#                 for i, team in enumerate(rounds):
+#                     if team not in SR['Team'].values:
+#                             raise ValueError('Team missing: '+team)
+#             else:
+#                 if team not in SR['Team'].values:
+#                             raise ValueError('Team missing: '+team)
 
-# Get SR Data
-SR = run_scraper(years=[year],
-                export=False)
+# # Get SR Data
+# SR = run_scraper(years=[year],
+#                 export=False)
 
-# Read KenPom Data
-# Teams who made play-in but lost
-playin_dict = {
-                2024:['Howard','Virginia','Montana St.','Boise St.'],
-                }
-# Read data
-summary_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/KP/summary.csv'), index_col=False)
-points_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/KP/points.csv'), index_col=False)
-roster_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/KP/roster.csv'), index_col=False)
-# Rename Columns
-summary_temp.columns = ['Year','Team','Tempo','RankTempo','AdjTempo','RankAdjTempo','OE','RankOE','AdjOE','RankAdjOE','DE','RankDE','AdjDE','RankAdjDE','AdjEM','RankAdjEM','Seed']
-points_temp.columns = ['Year','Team','Off_1','RankOff_1','Off_2','RankOff_2','Off_3','RankOff_3','Def_1','RankDef_1','Def_2','RankDef_2','Def_3','RankDef_3']
-roster_temp.columns = ['Year','Team','Size','SizeRank','Hgt5','Hgt5Rank','Hgt4','Hgt4Rank','Hgt3','Hgt3Rank','Hgt2','Hgt2Rank','Hgt1','Hgt1Rank','HgtEff','HgtEffRank',
-                        'Exp','ExpRank','Bench','BenchRank','Pts5','Pts5Rank','Pts4','Pts4Rank','Pts3','Pts3Rank','Pts2','Pts2Rank','Pts1','Pts1Rank','OR5','OR5Rank',
-                        'OR4','OR4Rank','OR3','OR3Rank','OR2','OR2Rank','OR1','OR1Rank','DR5','DR5Rank','DR4','DR4Rank','DR3','DR3Rank','DR2','DR2Rank','DR1','DR1Rank']
-# Drop Non-Tournament Teams
-summary_temp = summary_temp.dropna(subset=['Seed'])
-# Drop Teams who Lost in Play-In
-summary_temp = summary_temp[~summary_temp['Team'].isin(playin_dict[year])]
-# Join
-KP = summary_temp.merge(points_temp, on=['Year','Team'])
-KP = KP.merge(roster_temp, on=['Year','Team'])
-# Unit Test
-check_KP_join(summary_temp, KP)
+# # Read KenPom Data
+# # Teams who made play-in but lost
+# playin_dict = {
+#                 2024:['Howard','Virginia','Montana St.','Boise St.'],
+#                 }
+# # Read data
+# summary_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/KP/summary.csv'), index_col=False)
+# points_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/KP/points.csv'), index_col=False)
+# roster_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/KP/roster.csv'), index_col=False)
+# # Rename Columns
+# summary_temp.columns = ['Year','Team','Tempo','RankTempo','AdjTempo','RankAdjTempo','OE','RankOE','AdjOE','RankAdjOE','DE','RankDE','AdjDE','RankAdjDE','AdjEM','RankAdjEM','Seed']
+# points_temp.columns = ['Year','Team','Off_1','RankOff_1','Off_2','RankOff_2','Off_3','RankOff_3','Def_1','RankDef_1','Def_2','RankDef_2','Def_3','RankDef_3']
+# roster_temp.columns = ['Year','Team','Size','SizeRank','Hgt5','Hgt5Rank','Hgt4','Hgt4Rank','Hgt3','Hgt3Rank','Hgt2','Hgt2Rank','Hgt1','Hgt1Rank','HgtEff','HgtEffRank',
+#                         'Exp','ExpRank','Bench','BenchRank','Pts5','Pts5Rank','Pts4','Pts4Rank','Pts3','Pts3Rank','Pts2','Pts2Rank','Pts1','Pts1Rank','OR5','OR5Rank',
+#                         'OR4','OR4Rank','OR3','OR3Rank','OR2','OR2Rank','OR1','OR1Rank','DR5','DR5Rank','DR4','DR4Rank','DR3','DR3Rank','DR2','DR2Rank','DR1','DR1Rank']
+# # Drop Non-Tournament Teams
+# summary_temp = summary_temp.dropna(subset=['Seed'])
+# # Drop Teams who Lost in Play-In
+# summary_temp = summary_temp[~summary_temp['Team'].isin(playin_dict[year])]
+# # Join
+# KP = summary_temp.merge(points_temp, on=['Year','Team'])
+# KP = KP.merge(roster_temp, on=['Year','Team'])
+# # Unit Test
+# check_KP_join(summary_temp, KP)
 
-# Clean Naming
-KP = clean_KP(KP)
-SR = clean_SR(SR)
-# Join Dataframes
-data = SR.merge(KP, on=['Team','Year','Seed'])
-# Drop Any Duplicates or NAs Created
-data.drop_duplicates(inplace=True)
-data.dropna(inplace=True)
-# Unit Tests
-check_data_join(data, SR, KP)
+# # Clean Naming
+# KP = clean_KP(KP)
+# SR = clean_SR(SR)
+# # Join Dataframes
+# data = SR.merge(KP, on=['Team','Year','Seed'])
+# # Drop Any Duplicates or NAs Created
+# data.drop_duplicates(inplace=True)
+# data.dropna(inplace=True)
+# # Unit Tests
+# check_data_join(data, SR, KP)
 
 # Export Data
 # Get File Path
 data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/prediction/data.csv')
 # Export DF
-data.to_csv(data_path,index=False)
+#data.to_csv(data_path,index=False)
+
+data = pd.read_csv(data_path)
 
 # Get Modeling Data (remove seed probs to recalculate)
 data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/processed/data.csv')
@@ -127,14 +130,20 @@ gbm_path = os.path.join(os.path.abspath(os.getcwd()), 'models/pre_fs/gbm.json')
 with open(gbm_path, "r") as json_file:
     gbm_params = json.load(json_file)
 gbm_params = {int(key): value for key, value in gbm_params.items()}
-# Tuned Weights
+# Weights
 weights_path = os.path.join(os.path.abspath(os.getcwd()), 'models/weights.json')
 with open(weights_path, "r") as json_file:
     weights = json.load(json_file)
 weights = {int(key): value for key, value in weights.items()}
+# Upset Parameters
+upset_path = os.path.join(os.path.abspath(os.getcwd()), 'models/upset_params.json')
+with open(upset_path, "r") as json_file:
+    upset = json.load(json_file)
+upset = {int(key): value for key, value in upset.items()}
 
 # Make Picks
 predictions = {}
+predictions_upset = {}
 for r in range(2,8):
     # Get Years
     # Scaled Years
@@ -177,34 +186,66 @@ for r in range(2,8):
     y_pred = prob_nn * weights[r]['NN'] + prob_gbm * weights[r]['GBM']
     predictions['Round_'+str(r)] = y_pred
 
+     # Create Upset Picks
+    prob_df = pd.DataFrame({
+        'Year':data.loc[data['Year']==year,'Year'],
+        'Region':data.loc[data['Year']==year,'Region'],
+        'Seed':data.loc[data['Year']==year,'Seed'],
+        'Prob':y_pred
+    })
+    upset_prob = create_upset_picks(prob_df, upset[r], r)
+    predictions_upset['Round_'+str(r)] = upset_prob['Prob'].values
+
 # To DF
+# Standard
 predictions['Team'] = data.loc[data['Year']==year,'Team'].values
 predictions['Seed'] = data.loc[data['Year']==year,'Seed'].values
 predictions['Region'] = data.loc[data['Year']==year,'Region'].values
 pred_df = pd.DataFrame.from_dict(predictions)
 pred_df = pred_df[['Team','Seed','Region','Round_2','Round_3','Round_4','Round_5','Round_6','Round_7']]
+# Upset
+predictions_upset['Team'] = data.loc[data['Year']==year,'Team'].values
+predictions_upset['Seed'] = data.loc[data['Year']==year,'Seed'].values
+predictions_upset['Region'] = data.loc[data['Year']==year,'Region'].values
+pred_df_upset = pd.DataFrame.from_dict(predictions_upset)
+pred_df_upset = pred_df_upset[['Team','Seed','Region','Round_2','Round_3','Round_4','Round_5','Round_6','Round_7']]
 
 # Standardize
 pred_df = standarize(pred_df)
+pred_df_upset = standarize(pred_df_upset)
 
 # Get Expected Points
-# Regular
+# Standard
 points_df = pred_df.copy()
-points_df['R32'] = pred_df['R32'] * 10
-points_df['S16'] = points_df['R32'] + pred_df['S16'] * 20
-points_df['E8'] = points_df['S16'] + pred_df['E8'] * 40
-points_df['F4'] = points_df['E8'] + pred_df['F4'] * 80
-points_df['NCG'] = points_df['F4'] + pred_df['NCG'] * 160
-points_df['Winner'] = points_df['NCG'] + pred_df['Winner'] * 320
+points_df['R32'] = points_df['R32'] * 10
+points_df['S16'] = points_df['R32'] + points_df['S16'] * 20
+points_df['E8'] = points_df['S16'] + points_df['E8'] * 40
+points_df['F4'] = points_df['E8'] + points_df['F4'] * 80
+points_df['NCG'] = points_df['F4'] + points_df['NCG'] * 160
+points_df['Winner'] = points_df['NCG'] + points_df['Winner'] * 320
+# Upset
+points_df_upset = pred_df_upset.copy()
+points_df_upset['R32'] = points_df_upset['R32'] * 10
+points_df_upset['S16'] = points_df_upset['R32'] + points_df_upset['S16'] * 20
+points_df_upset['E8'] = points_df_upset['S16'] + points_df_upset['E8'] * 40
+points_df_upset['F4'] = points_df_upset['E8'] + points_df_upset['F4'] * 80
+points_df_upset['NCG'] = points_df_upset['F4'] + points_df_upset['NCG'] * 160
+points_df_upset['Winner'] = points_df_upset['NCG'] + points_df_upset['Winner'] * 320
 
 # Get Picks
 picks = predict_bracket(points_df, real_picks=None, calc_correct=False)
+picks_upset = predict_bracket(points_df_upset, real_picks=None, calc_correct=False)
 
 # Export
 # Probabilities
-path = os.path.join(os.path.abspath(os.getcwd()), 'prediction/probabilities.csv')
+path = os.path.join(os.path.abspath(os.getcwd()), 'prediction/standard/probabilities.csv')
 pred_df.to_csv(path,index=False)
+path_upset = os.path.join(os.path.abspath(os.getcwd()), 'prediction/upset/probabilities.csv')
+pred_df_upset.to_csv(path,index=False)
 # Picks
-path = os.path.join(os.path.abspath(os.getcwd()), 'prediction/picks.json')
+path = os.path.join(os.path.abspath(os.getcwd()), 'prediction/standard/picks.json')
 with open(path, 'w') as f:
     json.dump(picks, f)
+path_upset = os.path.join(os.path.abspath(os.getcwd()), 'prediction/upset/picks.json')
+with open(path_upset, 'w') as f:
+    json.dump(picks_upset, f)
