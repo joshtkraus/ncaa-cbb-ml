@@ -101,7 +101,7 @@ def run_scraper(years=None, export=True):
     for year in years:
         print(year)
         # Sleep
-        time.sleep(5)
+        time.sleep(10)
         # Open url
         year_url = "https://www.sports-reference.com/cbb/postseason/{}-ncaa.html".format(year)
         year_url_req = Request(year_url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -166,7 +166,7 @@ def run_scraper(years=None, export=True):
                         links = link.get('href')
                         if links.startswith('/cbb/s') == True:
                             # Sleep
-                            time.sleep(5)
+                            time.sleep(10)
                             # Open url, get data
                             team_url = 'https://www.sports-reference.com' + links
                             team_html = urlopen(team_url, context=ssl_context)

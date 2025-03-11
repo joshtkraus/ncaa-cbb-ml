@@ -55,8 +55,8 @@ def calc_seed_prob(df, lag=None, ind_col=True):
         S16['S16_Actual_'+suffix] = S16['S16_Actual_'+suffix] / total
         E8['E8_Actual_'+suffix] = E8['E8_Actual_'+suffix] / total
         F4['F4_Actual_'+suffix] = F4['F4_Actual_'+suffix] / total
-        NCG['NCG_Actual_'+suffix] = NCG['NCG_Actual_'+suffix] / total
-        Winner['Winner_Actual_'+suffix] = Winner['Winner_Actual_'+suffix] / total
+        NCG['NCG_Actual_'+suffix] = NCG['NCG_Actual_'+suffix] / (total / 2)
+        Winner['Winner_Actual_'+suffix] = Winner['Winner_Actual_'+suffix] / (total / 4)
         # Append
         R32_Full.append(R32)
         S16_Full.append(S16)
