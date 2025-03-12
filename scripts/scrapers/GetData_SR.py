@@ -38,6 +38,7 @@ def run_scraper(years=None, export=True):
     import pandas as pd
     import ssl
     import certifi
+    import requests
     from urllib.request import urlopen, Request
     from bs4 import BeautifulSoup
     import re
@@ -48,6 +49,11 @@ def run_scraper(years=None, export=True):
     # Initialize
     seeddata = pd.DataFrame()
     bracket_data = {}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com"
+    }
 
     # Years to scrape
     if years == None:
@@ -101,11 +107,12 @@ def run_scraper(years=None, export=True):
     for year in years:
         print(year)
         # Sleep
-        time.sleep(10)
+        time.sleep(5)
         # Open url
         year_url = "https://www.sports-reference.com/cbb/postseason/{}-ncaa.html".format(year)
-        year_url_req = Request(year_url, headers={'User-Agent': 'Mozilla/5.0'})
-        year_html = urlopen(year_url_req, context=ssl_context).read()
+        # year_url_req = Request(year_url, headers={"User-Agent": "Mozilla/5.0"})
+        # year_html = urlopen(year_url_req, context=ssl_context).read()
+        year_html = requests.get(year_url, headers=headers).text
         # Parse html
         year_soup = BeautifulSoup(year_html, features='html.parser')
 
@@ -166,10 +173,12 @@ def run_scraper(years=None, export=True):
                         links = link.get('href')
                         if links.startswith('/cbb/s') == True:
                             # Sleep
-                            time.sleep(10)
+                            time.sleep(5)
                             # Open url, get data
                             team_url = 'https://www.sports-reference.com' + links
-                            team_html = urlopen(team_url, context=ssl_context)
+                            # team_url_req = Request(team_url, headers=headers)
+                            # team_html = urlopen(team_url_req, context=ssl_context).read()
+                            team_html = requests.get(team_url, headers=headers).text
                             team_soup = BeautifulSoup(team_html, features='html.parser')
 
                             # Create a dictionary to store scraped data

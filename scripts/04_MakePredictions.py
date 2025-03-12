@@ -87,12 +87,6 @@ data.dropna(inplace=True)
 # Unit Tests
 check_data_join(data, SR, KP)
 
-# Export Data
-# Get File Path
-data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/prediction/data.csv')
-# Export DF
-data.to_csv(data_path,index=False)
-
 # Get Modeling Data (remove seed probs to recalculate)
 data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/processed/data.csv')
 modeling_data = pd.read_csv(data_path)
@@ -114,6 +108,12 @@ data.drop_duplicates(inplace=True)
 data[['R32_Actual_Full','S16_Actual_Full','E8_Actual_Full','F4_Actual_Full','NCG_Actual_Full','Winner_Actual_Full','First_Year']] = calc_seed_prob(data,lag=None,ind_col=True)
 data[['R32_Actual_12','S16_Actual_12','E8_Actual_12','F4_Actual_12','NCG_Actual_12','Winner_Actual_12']] = calc_seed_prob(data,lag=12,ind_col=False)
 data[['R32_Actual_6','S16_Actual_6','E8_Actual_6','F4_Actual_6','NCG_Actual_6','Winner_Actual_6']] = calc_seed_prob(data,lag=6,ind_col=False)
+
+# Export Data
+# Get File Path
+data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/prediction/data.csv')
+# Export DF
+data.to_csv(data_path,index=False)
 
 # Model Specifications
 # Parameters
