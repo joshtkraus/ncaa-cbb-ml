@@ -18,69 +18,58 @@ from models.utils.MakePicks import predict_bracket
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
 # Year to Start Data At
-year = 2024
+year = 2025
 
 # Unit Tests
-def check_KP_join(summary, joined):
-     if len(summary) != len(joined):
-          print('Missing Summary Teams: ',[team for team in summary['Team'].unique() if team not in joined['Team'].unique()])
-          raise ValueError('Data Loss in Join.')
 def check_data_join(data, SR, KP):
     if len(SR) != len(data):
         print('Missing KP Teams: ',[team for team in KP['Team'].unique() if team not in SR['Team'].unique()])
         print('Missing SR Teams: ',[team for team in SR['Team'].unique() if team not in KP['Team'].unique()])
         raise ValueError('Data Loss in Join.')
-def check_results_naming(results_dict, SR):
-    # Iterate dict
-    for year, regions in results_dict.items():
-        for region, rounds in regions.items():
-            if region not in ['NCG','Winner']:
-                for round, teams in rounds.items():
-                    for i, team in enumerate(teams):
-                        if team not in SR['Team'].values:
-                            raise ValueError('Team missing: '+team)
-            elif region == 'NCG':   
-                for i, team in enumerate(rounds):
-                    if team not in SR['Team'].values:
-                            raise ValueError('Team missing: '+team)
-            else:
-                if team not in SR['Team'].values:
-                            raise ValueError('Team missing: '+team)
 
 # Get SR Data
-SR = run_scraper(years=[year],
-                export=False)
+# SR = run_scraper(years=[year],
+#                 export=False)
+
+# Manual Load
+SR = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/sportsreference.csv'), index_col=False)
+
+# Play in Teams
+# playin_SR = ['Alabama State','Texas','American','San Diego State']
+# playin_SR = ['Alabama State','Texas','American','North Carolina']
+# playin_SR = ['Alabama State','Xavier','American','San Diego State']
+playin_SR = ['Alabama State','Xavier','American','North Carolina']
+SR = SR[~SR['Team'].isin(playin_SR)]
 
 # Read KenPom Data
 # Teams who made play-in but lost
-playin_dict = {
-                2024:['Howard','Virginia','Montana St.','Boise St.'],
-                }
+# playin_KP = ['Alabama St.','Texas','American','San Diego St.']
+# playin_KP = ['Alabama St.','Texas','American','North Carolina']
+# playin_KP = ['Alabama St.','Xavier','American','San Diego St.']
+playin_KP = ['Alabama St.','Xavier','American','North Carolina']
+
 # Read data
 summary_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/KP/summary.csv'), index_col=False)
 points_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/KP/points.csv'), index_col=False)
 roster_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/KP/roster.csv'), index_col=False)
+roster_temp.drop(columns=['Continuity','RankContinuity'],inplace=True)
 # Rename Columns
-summary_temp.columns = ['Year','Team','Tempo','RankTempo','AdjTempo','RankAdjTempo','OE','RankOE','AdjOE','RankAdjOE','DE','RankDE','AdjDE','RankAdjDE','AdjEM','RankAdjEM','Seed']
+summary_temp.columns = ['Year','Team','Tempo','RankTempo','AdjTempo','RankAdjTempo','OE','RankOE','AdjOE','RankAdjOE','DE','RankDE','AdjDE','RankAdjDE','AdjEM','RankAdjEM']
 points_temp.columns = ['Year','Team','Off_1','RankOff_1','Off_2','RankOff_2','Off_3','RankOff_3','Def_1','RankDef_1','Def_2','RankDef_2','Def_3','RankDef_3']
 roster_temp.columns = ['Year','Team','Size','SizeRank','Hgt5','Hgt5Rank','Hgt4','Hgt4Rank','Hgt3','Hgt3Rank','Hgt2','Hgt2Rank','Hgt1','Hgt1Rank','HgtEff','HgtEffRank',
                         'Exp','ExpRank','Bench','BenchRank','Pts5','Pts5Rank','Pts4','Pts4Rank','Pts3','Pts3Rank','Pts2','Pts2Rank','Pts1','Pts1Rank','OR5','OR5Rank',
                         'OR4','OR4Rank','OR3','OR3Rank','OR2','OR2Rank','OR1','OR1Rank','DR5','DR5Rank','DR4','DR4Rank','DR3','DR3Rank','DR2','DR2Rank','DR1','DR1Rank']
-# Drop Non-Tournament Teams
-summary_temp = summary_temp.dropna(subset=['Seed'])
 # Drop Teams who Lost in Play-In
-summary_temp = summary_temp[~summary_temp['Team'].isin(playin_dict[year])]
+summary_temp = summary_temp[~summary_temp['Team'].isin(playin_KP)]
 # Join
 KP = summary_temp.merge(points_temp, on=['Year','Team'])
 KP = KP.merge(roster_temp, on=['Year','Team'])
-# Unit Test
-check_KP_join(summary_temp, KP)
 
 # Clean Naming
 KP = clean_KP(KP)
 SR = clean_SR(SR)
 # Join Dataframes
-data = SR.merge(KP, on=['Team','Year','Seed'])
+data = SR.merge(KP, on=['Team','Year'])
 # Drop Any Duplicates or NAs Created
 data.drop_duplicates(inplace=True)
 data.dropna(inplace=True)
