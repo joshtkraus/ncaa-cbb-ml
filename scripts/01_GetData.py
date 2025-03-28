@@ -7,6 +7,7 @@ from utils.NameCleaner_KP import clean_KP
 from utils.NameCleaner_SR import clean_SR
 from utils.NameCleaner_Results import clean_results
 from utils.GetSeedProb import calc_seed_prob
+from utils.GroupedMetrics import get_grouped_metrics
 
 # Year to Start Data At
 start_year = 2007
@@ -126,6 +127,9 @@ check_results_naming(results, SR)
 data[['R32_Actual_Full','S16_Actual_Full','E8_Actual_Full','F4_Actual_Full','NCG_Actual_Full','Winner_Actual_Full','First_Year']] = calc_seed_prob(data,lag=None,ind_col=True)
 data[['R32_Actual_12','S16_Actual_12','E8_Actual_12','F4_Actual_12','NCG_Actual_12','Winner_Actual_12']] = calc_seed_prob(data,lag=12,ind_col=False)
 data[['R32_Actual_6','S16_Actual_6','E8_Actual_6','F4_Actual_6','NCG_Actual_6','Winner_Actual_6']] = calc_seed_prob(data,lag=6,ind_col=False)
+
+# Get Grouped Metrics
+data = get_grouped_metrics(data)
 
 # Export Data
 # Get File Path

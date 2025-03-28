@@ -32,6 +32,7 @@ def clean_names(team):
     team = re.sub(r'Ucla', 'UCLA', team)
     team = re.sub(r'Miami Fl', 'Miami FL', team)
     team = re.sub(r'Mcneese State', 'McNeese', team)
+    team = re.sub(r'McNeese State', 'McNeese', team)
     team = re.sub(r'Iupui', 'IUPUI', team)
     team = re.sub(r'Depaul', 'DePaul', team)
     team = re.sub(r'Miami Oh', 'Miami OH', team)

@@ -1,5 +1,7 @@
 # Function to Clean Team Names in KP DF
 def clean_KP(df):
+    import pandas as pd
+    pd.options.mode.chained_assignment = None
     df.loc[:, 'Team'] = df['Team'].str.replace('^St\.', 'Saint',regex=True)
     df.loc[:, 'Team'] = df['Team'].str.replace("Mount St. Mary's", "Mount Saint Mary's",regex=False)
     df.loc[:, 'Team'] = df['Team'].str.replace('St\.', 'State',regex=True)
@@ -21,4 +23,5 @@ def clean_KP(df):
     df.loc[:, 'Team'] = df['Team'].str.replace('LIU Brooklyn', 'Long Island',regex=False)
     df.loc[:, 'Team'] = df['Team'].str.replace('Southern Miss', 'Southern Mississippi',regex=False)
     df.loc[:, 'Team'] = df['Team'].str.replace('Nebraska Omaha', 'Omaha',regex=False)
+    df.loc[:, 'Team'] = df['Team'].str.replace('McNeese State', 'McNeese',regex=False)
     return df

@@ -22,15 +22,19 @@ def get_pred(X_train_nn, X_train_gbm, X_val_nn, X_val_gbm, y_train_nn, y_train_g
 def objective(trial, prob_nn, prob_gbm, y_val):
     # Libraries
     from sklearn.metrics import average_precision_score
+    from sklearn.metrics import log_loss
+    from sklearn.metrics import brier_score_loss
 
     # Objective
     w = trial.suggest_float('weight', 0, 1)
     combined_probs = w * prob_nn + (1 - w) * prob_gbm
-    return -average_precision_score(y_val, combined_probs)
+    #return -average_precision_score(y_val, combined_probs)
+    #return log_loss(y_val, combined_probs)
+    return brier_score_loss(y_val, combined_probs)
 
 
 def tune_weights(data, split_dict, nn_params, gbm_params, nn_feat=None, gbm_feat=None, n_trials=100):
-     # Libraries
+    # Libraries
     import numpy as np
     from models.utils.DataProcessing import create_splits
     import optuna

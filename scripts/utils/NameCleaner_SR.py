@@ -1,5 +1,7 @@
 # Function to Clean Team Names in SR DF
 def clean_SR(df):
+    import pandas as pd
+    pd.options.mode.chained_assignment = None
     df.loc[:, 'Team'] = df['Team'].str.replace('Mount St Marys', "Mount Saint Mary's",regex=False)
     df.loc[:, 'Team'] = df['Team'].str.replace('^St ', 'Saint ',regex=True)
     df.loc[:, 'Team'] = df['Team'].str.replace('Saint Marys Ca', "Saint Mary's",regex=False)
@@ -31,6 +33,7 @@ def clean_SR(df):
     df.loc[:, 'Team'] = df['Team'].str.replace('Ucla', 'UCLA',regex=False)
     df.loc[:, 'Team'] = df['Team'].str.replace('Miami Fl', 'Miami FL',regex=False)
     df.loc[:, 'Team'] = df['Team'].str.replace('Mcneese State', 'McNeese',regex=False)
+    df.loc[:, 'Team'] = df['Team'].str.replace('McNeese State', 'McNeese',regex=False)
     df.loc[:, 'Team'] = df['Team'].str.replace('Iupui', 'IUPUI',regex=False)
     df.loc[:, 'Team'] = df['Team'].str.replace('Depaul', 'DePaul',regex=False)
     df.loc[:, 'Team'] = df['Team'].str.replace('Miami Oh', 'Miami OH',regex=False)

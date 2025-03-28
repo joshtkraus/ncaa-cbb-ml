@@ -13,6 +13,9 @@ from models.utils.gbm import tuned_gbm
 import xgboost as xgb
 from models.utils.StandarizePredictions import standarize
 from models.utils.MakePicks import predict_bracket
+from utils.GroupedMetrics import get_grouped_metrics
+
+run_scraper = False
 
 # Logging
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
@@ -28,25 +31,19 @@ def check_data_join(data, SR, KP):
         raise ValueError('Data Loss in Join.')
 
 # Get SR Data
-# SR = run_scraper(years=[year],
-#                 export=False)
-
-# Manual Load
-SR = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/sportsreference.csv'), index_col=False)
+if run_scraper == True:
+    SR = run_scraper(years=[year],
+                    export=False)
+else:
+    SR = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/sportsreference.csv'), index_col=False)
 
 # Play in Teams
-# playin_SR = ['Alabama State','Texas','American','San Diego State']
-# playin_SR = ['Alabama State','Texas','American','North Carolina']
-# playin_SR = ['Alabama State','Xavier','American','San Diego State']
-playin_SR = ['Alabama State','Xavier','American','North Carolina']
+playin_SR = ['Saint Francis Pa','Texas','American','San Diego State']
 SR = SR[~SR['Team'].isin(playin_SR)]
 
 # Read KenPom Data
 # Teams who made play-in but lost
-# playin_KP = ['Alabama St.','Texas','American','San Diego St.']
-# playin_KP = ['Alabama St.','Texas','American','North Carolina']
-# playin_KP = ['Alabama St.','Xavier','American','San Diego St.']
-playin_KP = ['Alabama St.','Xavier','American','North Carolina']
+playin_KP = ['Saint Francis','Texas','American','San Diego St.']
 
 # Read data
 summary_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/KP/summary.csv'), index_col=False)
@@ -80,12 +77,8 @@ check_data_join(data, SR, KP)
 data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/processed/data.csv')
 modeling_data = pd.read_csv(data_path)
 modeling_data = modeling_data[modeling_data['Year']!=year]
-seed_probs = [
-    'R32_Actual_Full','S16_Actual_Full','E8_Actual_Full','F4_Actual_Full','NCG_Actual_Full','Winner_Actual_Full','First_Year',
-    'R32_Actual_12','S16_Actual_12','E8_Actual_12','F4_Actual_12','NCG_Actual_12','Winner_Actual_12',
-    'R32_Actual_6','S16_Actual_6','E8_Actual_6','F4_Actual_6','NCG_Actual_6','Winner_Actual_6'
-]
-modeling_data.drop(columns=seed_probs,inplace=True)
+modeling_data = modeling_data.loc[:,~modeling_data.columns.str.startswith(('R32_','S16_','E8_','F4_','NCG_','Winner_'))]
+modeling_data.drop(columns=['First_Year'],inplace=True)
 
 # Sort Columns
 data = data[modeling_data.columns]
@@ -93,10 +86,14 @@ data = data[modeling_data.columns]
 data = pd.concat([modeling_data,data], ignore_index=True)
 # Drop Any Duplicates
 data.drop_duplicates(inplace=True)
+
 # Get Historical Seed Probabilities
 data[['R32_Actual_Full','S16_Actual_Full','E8_Actual_Full','F4_Actual_Full','NCG_Actual_Full','Winner_Actual_Full','First_Year']] = calc_seed_prob(data,lag=None,ind_col=True)
 data[['R32_Actual_12','S16_Actual_12','E8_Actual_12','F4_Actual_12','NCG_Actual_12','Winner_Actual_12']] = calc_seed_prob(data,lag=12,ind_col=False)
 data[['R32_Actual_6','S16_Actual_6','E8_Actual_6','F4_Actual_6','NCG_Actual_6','Winner_Actual_6']] = calc_seed_prob(data,lag=6,ind_col=False)
+
+# Get Grouped Metrics
+data = get_grouped_metrics(data)
 
 # Export Data
 # Get File Path
@@ -107,12 +104,12 @@ data.to_csv(data_path,index=False)
 # Model Specifications
 # Parameters
 # NN
-nn_path = os.path.join(os.path.abspath(os.getcwd()), 'models/pre_fs/nn.json')
+nn_path = os.path.join(os.path.abspath(os.getcwd()), 'models/components/nn.json')
 with open(nn_path, "r") as json_file:
     nn_params = json.load(json_file)
 nn_params = {int(key): value for key, value in nn_params.items()}
 # GBM
-gbm_path = os.path.join(os.path.abspath(os.getcwd()), 'models/pre_fs/gbm.json')
+gbm_path = os.path.join(os.path.abspath(os.getcwd()), 'models/components/gbm.json')
 with open(gbm_path, "r") as json_file:
     gbm_params = json.load(json_file)
 gbm_params = {int(key): value for key, value in gbm_params.items()}

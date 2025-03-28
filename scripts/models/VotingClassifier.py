@@ -8,12 +8,12 @@ def tune_clf(data, split_dict, nn_feat=None, gbm_feat=None):
 
     # Load Params
     # NN
-    nn_path = os.path.join(os.path.abspath(os.getcwd()), 'models/pre_fs/nn.json')
+    nn_path = os.path.join(os.path.abspath(os.getcwd()), 'models/components/nn.json')
     with open(nn_path, "r") as json_file:
         nn_params = json.load(json_file)
     nn_params = {int(key): value for key, value in nn_params.items()}
     # GBM
-    gbm_path = os.path.join(os.path.abspath(os.getcwd()), 'models/pre_fs/gbm.json')
+    gbm_path = os.path.join(os.path.abspath(os.getcwd()), 'models/components/gbm.json')
     with open(gbm_path, "r") as json_file:
         gbm_params = json.load(json_file)
     gbm_params = {int(key): value for key, value in gbm_params.items()}
