@@ -1,4 +1,4 @@
-# NCAA College Basketball Tournmanet Predictive Modeling
+# NCAA College Basketball Tournament Predictive Modeling
 
 ## Overview
 This project aims to build a predictive model for selecting winners in the NCAA Men's Basketball Tournament. A common approach is to predict the likelihood that *Team X* defeats *Team Y* and use these probabilities iteratively to determine the winner of each matchup. However, this method overlooks a critical aspect of traditional tournament scoring: **the points awarded for a correct pick double in each subsequent round**. This means that correctly picking the national champion is worth **32 times** as many points as selecting a single Round of 64 winner.
