@@ -29,7 +29,7 @@ def create_splits(data,r,train,best_features=None,years_list=False,get_features=
    y = data_sub['Outcome']
 
    if get_features == True:
-      return list(data_sub.columns)
+      return list(X.columns)
    else:
       # If Best Features, get col indicies
       if best_features != None:

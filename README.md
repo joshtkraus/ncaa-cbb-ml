@@ -44,7 +44,7 @@ Year | Points
 Overall, this method typically finishes in the top 90% of brackets, and has correctly selected the winner 73% of the time.
 
 ## Set-Up
-Below are basic commands to create your virtual environement: 
+Below are basic commands to create your virtual environement:  
 python3 -m venv .venv  
 source .venv/bin/activate  
 pip install -r requirements.txt

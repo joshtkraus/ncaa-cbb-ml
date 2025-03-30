@@ -6,6 +6,7 @@ def run():
     import pandas as pd
     from models.FitModels import train_models
     from models.VotingClassifier import tune_clf
+    from models.PermImport import get_importance
 
     # Load
     data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/processed/data.csv')
@@ -24,6 +25,9 @@ def run():
 
     # Tune Voting Classifier
     tune_clf(data, split_dict)
+
+    # Get Permutation Importance
+    get_importance(data,split_dict)
 
 if __name__ == '__main__':
     mp.freeze_support()
