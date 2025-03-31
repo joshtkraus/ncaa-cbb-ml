@@ -41,11 +41,8 @@ def train_models(data, split_dict, nn_feat=None, gbm_feat=None):
 
     # Save
     if nn_feat is None or gbm_feat is None:
-        nn_path = os.path.join(os.path.abspath(os.getcwd()), 'models/pre_fs/nn.json')
-        gbm_path = os.path.join(os.path.abspath(os.getcwd()), 'models/pre_fs/gbm.json')
-    else:
-        nn_path = os.path.join(os.path.abspath(os.getcwd()), 'models/post_fs/nn.json')
-        gbm_path = os.path.join(os.path.abspath(os.getcwd()), 'models/post_fs/gbm.json')
+        nn_path = os.path.join(os.path.abspath(os.getcwd()), 'models/components/nn.json')
+        gbm_path = os.path.join(os.path.abspath(os.getcwd()), 'models/components/gbm.json')
 
     with open(nn_path, 'w') as f:
         json.dump(nn_params, f)
