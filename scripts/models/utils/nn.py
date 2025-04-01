@@ -8,7 +8,7 @@ def set_seed(seed=23):
 
 def create_model(trial, input_shape):
     from tensorflow import keras
-    from tensorflow.keras import layers
+    from tensorflow.keras import layers, regularizers
 
     set_seed()
     
@@ -21,7 +21,12 @@ def create_model(trial, input_shape):
         num_units = trial.suggest_int(f"units_{i}", 64, 320, step=32)
         activation = trial.suggest_categorical(f"activation_{i}", ['relu', 
                                                                    'tanh'])
-        model.add(layers.Dense(num_units, activation=activation))
+        model.add(layers.Dense(num_units,
+                               activation=activation,
+                               kernel_regularizer=regularizers.L1L2(l1=trial.suggest_float(f"L1_{i}", 1e-6, 1e-2),
+                                                                    l2=trial.suggest_float(f"L2_{i}", 1e-6, 1e-2))
+                                )
+                )
         
         # Tune BatchNormalization
         if trial.suggest_categorical(f"batch_norm_{i}", [True, False]):
@@ -120,7 +125,7 @@ def tune_nn(data, r, split_dict, best_features=None, n_trials=300):
 def tuned_nn(params, X_train, y_train, X_val=None, y_val=None):
     import os
     from tensorflow import keras
-    from tensorflow.keras import layers
+    from tensorflow.keras import layers, regularizers
     from tensorflow.keras.optimizers.legacy import Adam, RMSprop, SGD
 
     # Logging
@@ -139,7 +144,12 @@ def tuned_nn(params, X_train, y_train, X_val=None, y_val=None):
         num_units = params[f"units_{i}"]
         activation = params[f"activation_{i}"]
 
-        model.add(layers.Dense(num_units, activation=activation))
+        model.add(layers.Dense(num_units,
+                               activation=activation,
+                               kernel_regularizer=regularizers.L1L2(l1=params[f"L1_{i}"],
+                                                                    l2=params[f"L2_{i}"])
+                                )
+                )
         
         # BatchNormalization
         if params[f"batch_norm_{i}"]:
