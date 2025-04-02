@@ -41,7 +41,7 @@ Year | Points
 2024 | 1360
 2025 | Coming Soon
 
-Overall, this method typically finishes in the top 90% of brackets, and has correctly selected the winner 73% of the time.
+Overall, this method has correctly selected the winner 82% of the time.
 
 ## Set-Up
 Below are basic commands to create your virtual environement:  
