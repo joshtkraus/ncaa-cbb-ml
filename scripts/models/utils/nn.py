@@ -23,8 +23,7 @@ def create_model(trial, input_shape):
                                                                    'tanh'])
         model.add(layers.Dense(num_units,
                                activation=activation,
-                               kernel_regularizer=regularizers.L1L2(l1=trial.suggest_float(f"L1_{i}", 1e-6, 1e-2),
-                                                                    l2=trial.suggest_float(f"L2_{i}", 1e-6, 1e-2))
+                               kernel_regularizer=regularizers.L1(trial.suggest_float(f"L1_{i}", 1e-6, 1e-2))
                                 )
                 )
         
@@ -146,8 +145,7 @@ def tuned_nn(params, X_train, y_train, X_val=None, y_val=None):
 
         model.add(layers.Dense(num_units,
                                activation=activation,
-                               kernel_regularizer=regularizers.L1L2(l1=params[f"L1_{i}"],
-                                                                    l2=params[f"L2_{i}"])
+                               kernel_regularizer=regularizers.L1(params[f"L1_{i}"])
                                 )
                 )
         
