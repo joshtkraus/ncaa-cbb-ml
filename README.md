@@ -19,7 +19,7 @@ Classification models were built by-round using two primary models: Gradient Boo
 
 ## Pick Selection Strategy
 The selection metric used to determine each pick to make in each round is the **Expected Points** that would be garnered if the pick was corrected. Using the standard scoring method, this means that *E(Winner)* would be as follows:  
-*E(Winner) = P(R32)\*10 + P(S16)\*20 + P(E8)\*40 + P(F4)\*80 + P(NCG)\*160 + P(Winner)\*320*  
+*E(Winner) = p(R32)\*10 + p(S16)\*20 + p(E8)\*40 + p(F4)\*80 + p(NCG)\*160 + p(Winner)\*320*  
 
 Thus, the first pick made would be the team with the most expected points for winning the tournament and this team would be selected throughout each round of the tournament. This process would then continue until the entire bracket is completed. 
 
@@ -28,18 +28,18 @@ To evaluate the peformance of this strategy, backtesting was implemented startin
 
 Year | Points
 --- | ---
-2013 | 1120
-2014 | 760
-2015 | 1450
-2016 | 870
-2017 | 1480
-2018 | 1410
-2019 | 1370
-2021 | 1480
-2022 | 1070
-2023 | 1320
-2024 | 1090
-2025 | Coming Soon!
+2013 | 1160
+2014 | 710
+2015 | 1310
+2016 | 810
+2017 | 1470
+2018 | 1400
+2019 | 1770
+2021 | 1510
+2022 | 1130
+2023 | 1080
+2024 | 1360
+2025 | Coming Soon
 
 Overall, this method typically finishes in the top 90% of brackets, and has correctly selected the winner 73% of the time.
 
