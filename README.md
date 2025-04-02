@@ -28,17 +28,17 @@ To evaluate the peformance of this strategy, backtesting was implemented startin
 
 Year | Points
 --- | ---
-2013 | 1160
-2014 | 710
-2015 | 1310
-2016 | 810
-2017 | 1470
-2018 | 1400
-2019 | 1770
+2013 | 1150
+2014 | 690
+2015 | 1270
+2016 | 830
+2017 | 1490
+2018 | 1420
+2019 | 1690
 2021 | 1510
-2022 | 1130
-2023 | 1080
-2024 | 1360
+2022 | 1140
+2023 | 1120
+2024 | 1370
 2025 | Coming Soon
 
 Overall, this method has correctly selected the winner 82% of the time.
