@@ -23,7 +23,7 @@ def create_model(trial, input_shape):
                                                                    'tanh'])
         model.add(layers.Dense(num_units,
                                activation=activation,
-                               kernel_regularizer=regularizers.L1(trial.suggest_float(f"L1_{i}", 1e-6, 1e-2))
+                               kernel_regularizer=regularizers.L1(trial.suggest_float(f"L1_{i}", 1e-9, 1e-3))
                                 )
                 )
         
