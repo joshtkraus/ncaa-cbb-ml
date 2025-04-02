@@ -14,7 +14,7 @@ def get_pred(X_train_nn, X_train_gbm, X_val_nn, X_val_gbm, y_train_nn, y_train_g
                         X_val_gbm, y_val)
     return nn, gbm
 
-def get_importance(data, split_dict, nn_params, gbm_params, weights, nn_feat=None, gbm_feat=None):
+def get_importance(data, split_dict, nn_params, gbm_params, weights):
     # Libraries
     import os
     import numpy as np
@@ -28,11 +28,11 @@ def get_importance(data, split_dict, nn_params, gbm_params, weights, nn_feat=Non
         print('Round '+str(r))
         # Create Data
         # NN
-        X_SMTL_nn, y_SMTL_nn = create_splits(data, r, train=True, best_features=nn_feat)
-        X_nn, y = create_splits(data, r, train=False, best_features=nn_feat)
+        X_SMTL_nn, y_SMTL_nn = create_splits(data, r, train=True)
+        X_nn, y = create_splits(data, r, train=False)
         # GBM
-        X_SMTL_gbm, y_SMTL_gbm = create_splits(data, r, train=True, best_features=gbm_feat)
-        X_gbm, _ = create_splits(data, r, train=False, best_features=gbm_feat)
+        X_SMTL_gbm, y_SMTL_gbm = create_splits(data, r, train=True)
+        X_gbm, _ = create_splits(data, r, train=False)
 
         # Create Splits
         split_idx = int(split_dict[r] * len(X_nn))

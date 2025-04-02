@@ -1,5 +1,5 @@
 # Create Data Splits
-def create_splits(data,r,train,best_features=None,years_list=False,get_features=False):
+def create_splits(data,r,train,years_list=False,get_features=False):
    # Libraries
    import numpy as np
    import pandas as pd
@@ -31,14 +31,6 @@ def create_splits(data,r,train,best_features=None,years_list=False,get_features=
    if get_features == True:
       return list(X.columns)
    else:
-      # If Best Features, get col indicies
-      if best_features != None:
-         if isinstance(best_features,dict):
-            col_ind = X.columns.get_indexer(best_features[r])
-         else:
-            col_ind = X.columns.get_indexer(best_features)
-
-      # Data Processing
       # Scaling
       scaler = MinMaxScaler()
       X = scaler.fit_transform(X)
@@ -55,10 +47,6 @@ def create_splits(data,r,train,best_features=None,years_list=False,get_features=
       # Get Years
       if years_list:
          years = X[:,0]
-
-      # If Best Features, subset cols
-      if best_features is not None:
-         X = X[:,col_ind]
 
       # to Numpy
       X = np.array(X)    

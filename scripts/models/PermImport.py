@@ -1,5 +1,5 @@
 # Tune Models
-def get_importance(data, split_dict, nn_feat=None, gbm_feat=None):
+def get_importance(data, split_dict):
     print('Calculating Permutation Importance...')
     # Libraries
     import os
@@ -24,4 +24,4 @@ def get_importance(data, split_dict, nn_feat=None, gbm_feat=None):
     weights = {int(key): value for key, value in weights.items()}
 
     # Get Weights
-    get_importance(data, split_dict, nn_params, gbm_params, weights, nn_feat, gbm_feat)
+    get_importance(data, split_dict, nn_params, gbm_params, weights)

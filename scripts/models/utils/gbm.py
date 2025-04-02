@@ -37,7 +37,7 @@ def objective(trial, X_train, X_val, y_train, y_val):
     )
     return model.best_score
 
-def tune_gbm(data, r, split_dict, best_features=None, n_trials=600):
+def tune_gbm(data, r, split_dict, n_trials=600):
     import os
     import numpy as np
     from models.utils.DataProcessing import create_splits
@@ -48,8 +48,8 @@ def tune_gbm(data, r, split_dict, best_features=None, n_trials=600):
     optuna.logging.set_verbosity(optuna.logging.WARNING)
     
     # Create Data
-    X_SMTL, y_SMTL = create_splits(data, r, train=True, best_features=best_features)
-    X, y = create_splits(data, r, train=False, best_features=best_features)
+    X_SMTL, y_SMTL = create_splits(data, r, train=True)
+    X, y = create_splits(data, r, train=False)
 
     # Data Splits
     split_idx = int(split_dict[r] * len(X))

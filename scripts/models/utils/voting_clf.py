@@ -1,4 +1,3 @@
-# Feature Selection
 def get_pred(X_train_nn, X_train_gbm, X_val_nn, X_val_gbm, y_train_nn, y_train_gbm, y_val, nn_params, gbm_params):
     from models.utils.nn import tuned_nn
     from models.utils.gbm import tuned_gbm
@@ -33,7 +32,7 @@ def objective(trial, prob_nn, prob_gbm, y_val):
     return brier_score_loss(y_val, combined_probs)
 
 
-def tune_weights(data, split_dict, nn_params, gbm_params, nn_feat=None, gbm_feat=None, n_trials=100):
+def tune_weights(data, split_dict, nn_params, gbm_params, n_trials=100):
     # Libraries
     import numpy as np
     from models.utils.DataProcessing import create_splits
@@ -48,11 +47,11 @@ def tune_weights(data, split_dict, nn_params, gbm_params, nn_feat=None, gbm_feat
         weights[r] = {}
         # Create Data
         # NN
-        X_SMTL_nn, y_SMTL_nn = create_splits(data, r, train=True, best_features=nn_feat)
-        X_nn, y = create_splits(data, r, train=False, best_features=nn_feat)
+        X_SMTL_nn, y_SMTL_nn = create_splits(data, r, train=True)
+        X_nn, y = create_splits(data, r, train=False)
         # GBM
-        X_SMTL_gbm, y_SMTL_gbm = create_splits(data, r, train=True, best_features=gbm_feat)
-        X_gbm, _ = create_splits(data, r, train=False, best_features=gbm_feat)
+        X_SMTL_gbm, y_SMTL_gbm = create_splits(data, r, train=True)
+        X_gbm, _ = create_splits(data, r, train=False)
 
         # Create Splits
         split_idx = int(split_dict[r] * len(X_nn))

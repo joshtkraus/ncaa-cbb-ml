@@ -1,5 +1,5 @@
 # Tune Models
-def tune_clf(data, split_dict, nn_feat=None, gbm_feat=None):
+def tune_clf(data, split_dict):
     print('Tuning Weights...')
     # Libraries
     import os
@@ -19,7 +19,7 @@ def tune_clf(data, split_dict, nn_feat=None, gbm_feat=None):
     gbm_params = {int(key): value for key, value in gbm_params.items()}
 
     # Get Weights
-    weights = tune_weights(data, split_dict, nn_params, gbm_params, nn_feat, gbm_feat)
+    weights = tune_weights(data, split_dict, nn_params, gbm_params)
 
     # Export Weights
     weights_path = os.path.join(os.path.abspath(os.getcwd()), 'models/weights.json')

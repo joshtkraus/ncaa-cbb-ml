@@ -1,5 +1,5 @@
 # Combine Component Models
-def combine_model(data,nn_params,gbm_params,weights,correct_picks,nn_feat=None,gbm_feat=None,backwards_year=2013):
+def combine_model(data,nn_params,gbm_params,weights,correct_picks,backwards_year=2013):
     print('Combining Models...')
     # Libraries
     import os
@@ -27,11 +27,11 @@ def combine_model(data,nn_params,gbm_params,weights,correct_picks,nn_feat=None,g
     for r in range(2,8):
         # Data Splits
         # NN
-        X_SMTL_nn, y_SMTL_nn, years_SMTL_nn = create_splits(data, r, train=True, best_features=nn_feat, years_list=True)
-        X_nn, y, years_nn = create_splits(data, r, train=False, best_features=nn_feat, years_list=True)
+        X_SMTL_nn, y_SMTL_nn, years_SMTL_nn = create_splits(data, r, train=True, years_list=True)
+        X_nn, y, years_nn = create_splits(data, r, train=False, years_list=True)
         # GBM
-        X_SMTL_gbm, y_SMTL_gbm, years_SMTL_gbm = create_splits(data, r, train=True, best_features=gbm_feat, years_list=True)
-        X_gbm, _, years_gbm = create_splits(data, r, train=False, best_features=gbm_feat, years_list=True)
+        X_SMTL_gbm, y_SMTL_gbm, years_SMTL_gbm = create_splits(data, r, train=True, years_list=True)
+        X_gbm, _, years_gbm = create_splits(data, r, train=False, years_list=True)
 
         # Backwards Testing
         predictions = run_test(
