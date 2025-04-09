@@ -15,7 +15,7 @@ from models.utils.StandarizePredictions import standarize
 from models.utils.MakePicks import predict_bracket
 from utils.GroupedMetrics import get_grouped_metrics
 
-run_scraper = False
+scraper_ind = True
 
 # Logging
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
@@ -31,15 +31,11 @@ def check_data_join(data, SR, KP):
         raise ValueError('Data Loss in Join.')
 
 # Get SR Data
-if run_scraper == True:
+if scraper_ind == True:
     SR = run_scraper(years=[year],
-                    export=False)
+                export=False)
 else:
     SR = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/prediction/sportsreference.csv'), index_col=False)
-
-# Play in Teams
-playin_SR = ['Saint Francis Pa','Texas','American','San Diego State']
-SR = SR[~SR['Team'].isin(playin_SR)]
 
 # Read KenPom Data
 # Teams who made play-in but lost
@@ -78,6 +74,7 @@ data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/processed/data.csv'
 modeling_data = pd.read_csv(data_path)
 modeling_data = modeling_data[modeling_data['Year']!=year]
 modeling_data = modeling_data.loc[:,~modeling_data.columns.str.startswith(('R32_','S16_','E8_','F4_','NCG_','Winner_'))]
+modeling_data = modeling_data.loc[:,~modeling_data.columns.str.contains('Seed_Avg')]
 modeling_data.drop(columns=['First_Year'],inplace=True)
 
 # Sort Columns

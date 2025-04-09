@@ -72,6 +72,12 @@ def get_grouped_metrics(df):
         mean = grouped[c].transform('mean')
         df['Winner_'+c+'_Avg'] = (mean * n - df[c])/(n-1)
 
+        # Seed
+        grouped = df.groupby(['Year','Seed'])
+        n = grouped[c].transform('count')
+        mean = grouped[c].transform('mean')
+        df[c+'_Seed_Avg'] = (mean * n - df[c])/(n-1)
+
         # Get Difference
         if 'Rank' in c:
             df['R32_'+c+'_Avg'] = df['R32_'+c+'_Avg'] - df[c]
@@ -80,6 +86,7 @@ def get_grouped_metrics(df):
             df['F4_'+c+'_Avg'] = df['F4_'+c+'_Avg'] - df[c]
             df['NCG_'+c+'_Avg'] = df['NCG_'+c+'_Avg'] - df[c]
             df['Winner_'+c+'_Avg'] = df['Winner_'+c+'_Avg'] - df[c]
+            df[c+'_Seed_Avg'] = df[c+'_Seed_Avg'] - df[c]
         else:
             df['R32_'+c+'_Avg'] = df[c] - df['R32_'+c+'_Avg']
             df['S16_'+c+'_Avg'] = df[c] - df['S16_'+c+'_Avg']
@@ -87,6 +94,7 @@ def get_grouped_metrics(df):
             df['F4_'+c+'_Avg'] = df[c] - df['F4_'+c+'_Avg']
             df['NCG_'+c+'_Avg'] = df[c] - df['NCG_'+c+'_Avg']
             df['Winner_'+c+'_Avg'] = df[c] - df['Winner_'+c+'_Avg']
+            df[c+'_Seed_Avg'] = df[c] - df[c+'_Seed_Avg']
 
     # Drop
     df.drop(columns=['R32_Group','S16_Group','E8_Group','NCG_Group'],inplace=True)

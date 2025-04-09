@@ -35,11 +35,9 @@ def check_year_round_length_dict(picks_dict):
 def run_scraper(years=None, export=True):
     # Libraries
     import os
+    import numpy as np
     import pandas as pd
-    import ssl
-    import certifi
     import requests
-    from urllib.request import urlopen, Request
     from bs4 import BeautifulSoup
     import re
     import time
@@ -57,7 +55,7 @@ def run_scraper(years=None, export=True):
 
     # Years to scrape
     if years == None:
-        years = [*range(2002,2025)]
+        years = [*range(2007,2026)]
         years.remove(2020)
 
     # All possible region names
@@ -66,6 +64,7 @@ def run_scraper(years=None, export=True):
                 'eastrutherford','phoenix']
     # Standardize Region Naming
     regions_convert = {
+                        2025:{'south':'West','west':'East','east':'South','midwest':'Midwest'},
                         2024:{'east':'West','west':'East','south':'South','midwest':'Midwest'},
                         2023:{'south':'West','east':'East','midwest':'South','west':'Midwest'},
                         2022:{'west':'West','east':'East','south':'South','midwest':'Midwest'},
@@ -99,9 +98,6 @@ def run_scraper(years=None, export=True):
         5:'F4'
         }
 
-    # SSL Context
-    ssl_context = ssl.create_default_context(cafile=certifi.where())
-
     # Iterate years
     print('Scraping Sports Reference...')
     for year in years:
@@ -110,8 +106,6 @@ def run_scraper(years=None, export=True):
         time.sleep(5)
         # Open url
         year_url = "https://www.sports-reference.com/cbb/postseason/{}-ncaa.html".format(year)
-        # year_url_req = Request(year_url, headers={"User-Agent": "Mozilla/5.0"})
-        # year_html = urlopen(year_url_req, context=ssl_context).read()
         year_html = requests.get(year_url, headers=headers).text
         # Parse html
         year_soup = BeautifulSoup(year_html, features='html.parser')
@@ -166,8 +160,6 @@ def run_scraper(years=None, export=True):
                     tourney_team = tourney_region.select_one("div.round")
                     t = t + 1
                 else:
-                    playin = tourney_region.select_one('p')
-
                     # Get each teams individual page
                     for link in tourney_team.find_all('a'):
                         links = link.get('href')
@@ -176,8 +168,6 @@ def run_scraper(years=None, export=True):
                             time.sleep(5)
                             # Open url, get data
                             team_url = 'https://www.sports-reference.com' + links
-                            # team_url_req = Request(team_url, headers=headers)
-                            # team_html = urlopen(team_url_req, context=ssl_context).read()
                             team_html = requests.get(team_url, headers=headers).text
                             team_soup = BeautifulSoup(team_html, features='html.parser')
 
@@ -189,7 +179,7 @@ def run_scraper(years=None, export=True):
                             part_url = re.sub('https://www.sports-reference.com/cbb/schools/','',team_url)
                             yeardict[year][re.sub('/(\d+).html','',part_url).title()] = {}
 
-                            # Homepage Texet
+                            # Homepage Text
                             homepage = team_soup.select_one('div#info')
                             homepage_text= [hp.getText()for hp in homepage.findAll('p')]
 
@@ -245,13 +235,43 @@ def run_scraper(years=None, export=True):
                                 else:
                                     yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Seed'] = seeds.group(0).replace(' seed','')
 
+                                # Get Win History
+                                # Schedule Page
+                                sched_url = 'https://www.sports-reference.com' + links[:-5] + '-schedule.html'
+                                sched_html = requests.get(sched_url, headers=headers).text
+                                sched_soup = BeautifulSoup(sched_html, features='html.parser')
+                                games = sched_soup.select_one('div#all_schedule')
+                                # Game Types
+                                g_type = games.find_all('td',{'data-stat':'game_type'})
+                                type_data = [d.getText() for d in g_type]
+                                # Streak Data
+                                streak = games.find_all('td',{'data-stat':'game_streak'})
+                                # Filter Out NCAA
+                                mask = [d != 'NCAA' for d in type_data]
+                                streak = [x for x, m in zip(streak, mask) if m]
+                                # Get Streaks
+                                streak_data = [0 if len(d.getText()) == 0 else int(d.getText()[2:]) if d.getText()[0] == 'W' else 0 for d in streak]
+                                # Current Win Streak
+                                yeardict[year][re.sub('/(\d+).html','',part_url).title()]['WinStreak'] = streak_data[-1]
+                                # Last 10
+                                win_result = []
+                                for i in range(len(streak_data)-1):
+                                    if streak_data[i] >= streak_data[i+1]:
+                                        win_result.append(0)
+                                    else:
+                                        win_result.append(1)
+                                yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Last10'] = np.sum(win_result[-10:])
+                                # Streak Stats
+                                yeardict[year][re.sub('/(\d+).html','',part_url).title()]['WinStreak_Avg'] = np.mean(streak_data)
+                                yeardict[year][re.sub('/(\d+).html','',part_url).title()]['WinStreak_SD'] = np.std(streak_data)
+                                
                                 # Create df from dict
                                 yeardata = pd.DataFrame.from_dict({(i,j): yeardict[i][j] 
                                                         for i in yeardict.keys() 
                                                         for j in yeardict[i].keys()},
                                                     orient='index')
                                 yeardata.reset_index(inplace=True)
-                                yeardata.columns = ['Year','Team','Conf','Round','Wins','Conf Tourney','Region','Seed']
+                                yeardata.columns = ['Year','Team','Conf','Round','Wins','Conf Tourney','Region','Seed','WinStreak','Last10','WinStreak_Avg','WinStreak_SD']
 
                                 # Convert Dtypes
                                 yeardata[['Round','Wins','Conf Tourney','Seed']] = yeardata[['Round','Wins','Conf Tourney','Seed']].astype(int)

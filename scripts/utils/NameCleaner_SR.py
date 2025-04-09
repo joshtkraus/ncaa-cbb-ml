@@ -44,5 +44,7 @@ def clean_SR(df):
     df.loc[:, 'Team'] = df['Team'].str.replace('Nevada Las Vegas', 'UNLV',regex=False)
     df.loc[:, 'Team'] = df['Team'].str.replace('Long Island University', 'Long Island',regex=False)
     df.loc[:, 'Team'] = df['Team'].str.replace('Saint Francis Pa', 'Saint Francis',regex=False)
-    df.loc[:, 'Team'] = df['Team'].str.replace('Southern Illinois-Edwardsville', 'SIUE',regex=False)
+    df.loc[:, 'Team'] = df['Team'].str.replace('Southern Illinois Edwardsville', 'SIUE',regex=False)
+    df.loc[:, 'Team'] = df['Team'].str.replace('Nebraska Omaha', 'Omaha',regex=False)
+    df.loc[:, 'Team'] = df['Team'].str.replace('California San Diego', 'UC San Diego',regex=False)
     return df

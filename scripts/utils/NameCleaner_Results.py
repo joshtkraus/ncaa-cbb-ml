@@ -43,7 +43,9 @@ def clean_names(team):
     team = re.sub(r'Texas Arlington', 'UT Arlington', team)
     team = re.sub(r'Long Island University', 'Long Island', team)
     team = re.sub(r'Saint Francis Pa', 'Saint Francis', team)
-    team = re.sub(r'Southern Illinois-Edwardsville', 'SIUE', team)
+    team = re.sub(r'Southern Illinois Edwardsville', 'SIUE', team)
+    team = re.sub(r'Nebraska Omaha', 'Omaha', team)
+    team = re.sub(r'California San Diego', 'UC San Diego', team)
     return team
 
 # Function to Iterate Renaming

@@ -13,7 +13,7 @@ from utils.GroupedMetrics import get_grouped_metrics
 start_year = 2007
 
 # Run Web Scraper Ind
-scraper = False
+scraper = True
 
 # Unit Tests
 def check_KP_join(summary, joined):
@@ -56,6 +56,7 @@ SR_sub = SR[SR['Year']>=start_year]
 # Read KenPom Data
 # Teams who made play-in but lost
 playin_dict = {
+                2025:['Saint Francis','Texas','American','San Diego St.'],
                 2024:['Howard','Virginia','Montana St.','Boise St.'],
                 2023:['Southeast Missouri St.','Texas Southern','Nevada','Mississippi St.'],
                 2022:['Wyoming','Texas A&M Corpus Chris','Bryant','Rutgers'],
@@ -80,7 +81,7 @@ playin_dict = {
                 2002:['Alcorn St.']
                 }
 # List of years to include, excluding 2020
-years = list(range(start_year, 2025))
+years = list(range(start_year, 2026))
 years.remove(2020)
 # Initialize
 KP = pd.DataFrame()
@@ -90,6 +91,8 @@ for year in years:
     summary_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/raw/KP/summary/{year}.csv'), index_col=False)
     points_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/raw/KP/points/{year}.csv'), index_col=False)
     roster_temp = pd.read_csv(os.path.join(os.path.abspath(os.getcwd()), f'data/raw/KP/roster/{year}.csv'), index_col=False)
+    if 'Continuity' in roster_temp.columns:
+        roster_temp.drop(columns=['Continuity','RankContinuity'],inplace=True)
     # Rename Columns
     summary_temp.columns = ['Year','Team','Tempo','RankTempo','AdjTempo','RankAdjTempo','OE','RankOE','AdjOE','RankAdjOE','DE','RankDE','AdjDE','RankAdjDE','AdjEM','RankAdjEM','Seed']
     points_temp.columns = ['Year','Team','Off_1','RankOff_1','Off_2','RankOff_2','Off_3','RankOff_3','Def_1','RankDef_1','Def_2','RankDef_2','Def_3','RankDef_3']

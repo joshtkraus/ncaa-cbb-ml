@@ -52,14 +52,21 @@ def get_importance(data, split_dict, nn_params, gbm_params, weights):
         # NN
         nn_exp = shap.DeepExplainer(nn, X_train_nn)
         nn_shap = nn_exp.shap_values(X_val_nn)[:,:,0]
+        nn_import = np.mean(np.abs(nn_shap),axis=0)
         # GBM
         gbm_exp = shap.TreeExplainer(gbm,
                                      X_train_gbm,
                                      feature_perturbation='interventional',
                                      model_output='probability')
         gbm_shap = gbm_exp.shap_values(X_val_gbm)
+        gbm_import = np.mean(np.abs(gbm_shap),axis=0)
+        # Standardize SHAP
+        nn_import = nn_import / np.sum(nn_import)
+        gbm_import = gbm_import / np.sum(gbm_import)
         # Weighted
         weight_shap = nn_shap*weights[r]['NN'] + gbm_shap*weights[r]['GBM']
+        weight_import = nn_import*weights[r]['NN'] + gbm_import*weights[r]['GBM']
+        weight_import = weight_import / np.sum(weight_import)
         # Feature Names
         features = create_splits(data, r, train=False, get_features=True)
 
@@ -67,19 +74,19 @@ def get_importance(data, split_dict, nn_params, gbm_params, weights):
         # NN
         nn_df = pd.DataFrame({
             "Feature": features,
-            "Importance": np.mean(np.abs(nn_shap),axis=0),
+            "Importance": nn_import,
             "SHAP": np.mean(nn_shap,axis=0)
         })
         # GBM
         gbm_df = pd.DataFrame({
             "Feature": features,
-            "Importance": np.mean(np.abs(gbm_shap),axis=0),
+            "Importance": gbm_import,
             "SHAP": np.mean(gbm_shap,axis=0)
         })
         # Weighted Average
         weight_df = pd.DataFrame({
             "Feature": features,
-            "Importance": np.mean(np.abs(weight_shap),axis=0),
+            "Importance": weight_import,
             "SHAP": np.mean(weight_shap,axis=0)
         })
 
