@@ -13,7 +13,7 @@ from utils.GroupedMetrics import get_grouped_metrics
 start_year = 2007
 
 # Run Web Scraper Ind
-scraper = True
+scraper = False
 
 # Unit Tests
 def check_KP_join(summary, joined):
@@ -52,6 +52,7 @@ with open(os.path.join(os.path.abspath(os.getcwd()), 'data/raw/results.json'), "
     results = json.load(json_file)
 # Filter by Start Year
 SR_sub = SR[SR['Year']>=start_year]
+SR_sub = SR[SR['Year']<2025]
 
 # Read KenPom Data
 # Teams who made play-in but lost
