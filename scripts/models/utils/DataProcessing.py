@@ -1,5 +1,5 @@
 # Create Data Splits
-def create_splits(data,r,train,years_list=False,get_features=False):
+def create_splits(data,r,train,years_list=False,get_features=False,return_scaler=False):
    # Libraries
    import numpy as np
    import pandas as pd
@@ -54,6 +54,12 @@ def create_splits(data,r,train,years_list=False,get_features=False):
 
       if years_list:
          years = np.array(years)
-         return X, y, years
+         if return_scaler==False:
+            return X, y, years
+         else:
+            return X, y, years, scaler
       else:
-         return X, y
+         if return_scaler==False:
+            return X, y
+         else:
+            return X, y, scaler

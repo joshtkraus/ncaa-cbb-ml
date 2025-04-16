@@ -28,20 +28,20 @@ To evaluate the peformance of this strategy, backtesting was implemented startin
 
 Year | Points
 --- | ---
-2013 | 1150
-2014 | 690
-2015 | 1270
-2016 | 830
-2017 | 1490
-2018 | 1420
-2019 | 1690
-2021 | 1510
-2022 | 1140
-2023 | 1120
-2024 | 1370
-2025 | Coming Soon
+2013 | 1100
+2014 | 660
+2015 | 1390
+2016 | 890
+2017 | 1580
+2018 | 1360
+2019 | 1670
+2021 | 1380
+2022 | 1150
+2023 | 1260
+2024 | 1400
+2025 | 1780
 
-Overall, this method has correctly selected the winner 82% of the time.
+Overall, this method has correctly selected the winner 83% of the time.
 
 ## Set-Up
 Below are basic commands to create your virtual environement:  
