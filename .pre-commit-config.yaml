@@ -28,7 +28,7 @@ repos:
           - pandas-stubs
           - numpy
         args: ["--ignore-missing-imports"]
-  
+
   # Pydoclint — docstring argument/return consistency
   - repo: https://github.com/jsh9/pydoclint
     rev: 0.5.9
