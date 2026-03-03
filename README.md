@@ -12,19 +12,19 @@ The dataset constructed consists of the teams and results of the past 18 NCAA To
 - Efficiency: *Offensive & Defensive Efficiency, Tempo, Luck, Strength of Schedule*
 - Points: *Offensive & Defensive Point Rankings*
 - Roster: *Height, Experience, Bench Rating*
-- Computed Fields: *Historical Seed Performance, Grouped Metrics by Tournament Round & Reigon*
+- Computed Fields: *Historical Seed Performance, Grouped Metrics by Tournament Round & Region*
 
 ## Models
-Classification models were built by-round using two primary models: Gradient Boosting Machines (*XGBoost*) & Multilayer Perceptron (*Keras*) models. Hyperparameters were tuned for each using *Optuna*, with the final models being a weighted ensemble of the two components (the optimal weights which minimizes **Brier Score**). 
+Classification models were built by-round using two primary models: Gradient Boosting Machines (*XGBoost*) & Multilayer Perceptron (*Keras*) models. Hyperparameters were tuned for each using *Optuna*, with the final models being a weighted ensemble of the two components (the optimal weights which minimizes **Brier Score**).
 
 ## Pick Selection Strategy
-The selection metric used to determine each pick to make in each round is the **Expected Points** that would be garnered if the pick was corrected. Using the standard scoring method, this means that *E(Winner)* would be as follows:  
-*E(Winner) = p(R32)\*10 + p(S16)\*20 + p(E8)\*40 + p(F4)\*80 + p(NCG)\*160 + p(Winner)\*320*  
+The selection metric used to determine each pick to make in each round is the **Expected Points** that would be garnered if the pick was corrected. Using the standard scoring method, this means that *E(Winner)* would be as follows:
+*E(Winner) = p(R32)\*10 + p(S16)\*20 + p(E8)\*40 + p(F4)\*80 + p(NCG)\*160 + p(Winner)\*320*
 
-Thus, the first pick made would be the team with the most expected points for winning the tournament and this team would be selected throughout each round of the tournament. This process would then continue until the entire bracket is completed. 
+Thus, the first pick made would be the team with the most expected points for winning the tournament and this team would be selected throughout each round of the tournament. This process would then continue until the entire bracket is completed.
 
-## Evalutation
-To evaluate the peformance of this strategy, backtesting was implemented starting with the *2013 tournament*. While these results may be overly optimistic given the overlap between training, validation, and backtesting data, the results are as follows: 
+## Evaluation
+To evaluate the performance of this strategy, backtesting was implemented starting with the *2013 tournament*. While these results may be overly optimistic given the overlap between training, validation, and backtesting data, the results are as follows:
 
 Year | Points
 --- | ---
@@ -44,11 +44,38 @@ Year | Points
 Overall, this method has correctly selected the winner 83% of the time.
 
 ## Set-Up
-Below are basic commands to create your virtual environement:  
-python3 -m venv .venv  
-source .venv/bin/activate  
-pip install -r requirements.txt
+
+This project uses [uv](https://docs.astral.sh/uv/) for environment and dependency management.
+
+### Install uv
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### Create environment and install dependencies
+```bash
+uv sync
+```
+
+This creates a `.venv` and installs all core and dev dependencies defined in `pyproject.toml`.
+
+### Activate the environment
+```bash
+source .venv/bin/activate  # macOS/Linux
+.venv\Scripts\activate     # Windows
+```
+
+### Install pre-commit hooks
+```bash
+uv run pre-commit install
+```
+
+Once installed, ruff, mypy, and pydoclint will run automatically on every commit.
+To run them manually against all files:
+```bash
+uv run pre-commit run --all-files
+```
 
 ## Contact
-Author: Josh Kraus  
+Author: Josh Kraus
 Email: joshtkraus@gmail.com

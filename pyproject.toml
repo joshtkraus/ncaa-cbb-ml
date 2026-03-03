@@ -1,0 +1,97 @@
+[project]
+name = "ncaa-bracket-predictor"
+version = "0.1.0"
+description = "Predictive modeling for NCAA Men's Basketball Tournament bracket selection"
+readme = "README.md"
+authors = [
+    {name = "Josh Kraus", email = "joshtkraus@gmail.com"}
+]
+
+requires-python = ">=3.11, <4.0"
+dependencies = [
+    "beautifulsoup4>=4.12.0",
+    "imbalanced-learn>=0.12.0",
+    "numpy>=1.26.0",
+    "optuna>=3.6.0",
+    "pandas>=2.0.0",
+    "requests>=2.32.0",
+    "scikit-learn>=1.4.0",
+    "shap>=0.45.0",
+    "tensorflow>=2.16.0",
+    "xgboost>=2.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.5.0",
+    "pandas-stubs>=2.0.0",
+    "pydocstyle>=6.3.0",
+    "pydoclint>=0.5.0",
+    "pre-commit>=4.5.1",
+    "ruff>=0.15.0",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+package = false
+
+# ---------------------------------------------------------------------------
+# Ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+preview = true
+lint.select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "C",    # flake8-comprehensions
+    "B",    # flake8-bugbear
+    "G",    # flake8-logging-format
+    "I",    # isort
+    "D",    # pydocstyle
+    "T100", # breakpoint
+    "COM",  # commas
+]
+lint.ignore = [
+    "COM812", # trailing comma (conflicts with formatter)
+]
+exclude = [".venv", ".git"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+# ---------------------------------------------------------------------------
+# Pydoclint
+# ---------------------------------------------------------------------------
+[tool.pydoclint]
+style = "google"
+skip-checking-short-docstrings = false
+check-return-types = false
+check-yield-types = false
+allow-init-docstring = true
+check-class-attributed = false
+arg-type-hints-in-docstring = false
+arg-type-hints-in-signature = false
+
+# ---------------------------------------------------------------------------
+# Pydocstyle
+# ---------------------------------------------------------------------------
+[tool.pydocstyle]
+convention = "google"
+
+# ---------------------------------------------------------------------------
+# Mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_ignores = true
+no_implicit_optional = false
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = ["requests", "requests.*"]
+ignore_missing_imports = true
