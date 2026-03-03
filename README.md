@@ -75,7 +75,3 @@ To run them manually against all files:
 ```bash
 uv run pre-commit run --all-files
 ```
-
-## Contact
-Author: Josh Kraus
-Email: joshtkraus@gmail.com
