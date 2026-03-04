@@ -7,12 +7,13 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 from scrapers.GetData_SR import run_scraper
+from sklearn.preprocessing import MinMaxScaler
 from utils.GetSeedProb import calc_seed_prob
 from utils.GroupedMetrics import get_grouped_metrics
 from utils.NameCleaner_KP import clean_KP
 from utils.NameCleaner_SR import clean_SR
 
-from models.utils.DataProcessing import create_splits
+from models.utils.DataProcessing import apply_smote, create_splits
 from models.utils.gbm import tuned_gbm
 from models.utils.MakePicks import predict_bracket
 from models.utils.nn import tuned_nn
@@ -47,7 +48,6 @@ def check_data_join(data, SR, KP):
         raise ValueError("Data Loss in Join.")
 
 
-# Get SR Data
 if scraper_ind:
     SR = run_scraper(years=[year], export=False)
     assert SR is not None, "run_scraper returned None unexpectedly"
@@ -57,7 +57,6 @@ else:
         index_col=False,
     )
 
-# Teams who made play-in but lost
 playin_KP = ["Saint Francis", "Texas", "American", "San Diego St."]
 
 summary_temp = pd.read_csv(
@@ -169,7 +168,6 @@ data.drop_duplicates(inplace=True)
 data.dropna(inplace=True)
 check_data_join(data, SR, KP)
 
-# Get Modeling Data (remove seed probs to recalculate)
 data_path = os.path.join(os.path.abspath(os.getcwd()), "data/processed/data.csv")
 modeling_data = pd.read_csv(data_path)
 modeling_data = modeling_data[modeling_data["Year"] != year]
@@ -183,7 +181,6 @@ data = data[modeling_data.columns]
 data = pd.concat([modeling_data, data], ignore_index=True)
 data.drop_duplicates(inplace=True)
 
-# Get Historical Seed Probabilities
 data[
     [
         "R32_Actual_Full",
@@ -221,7 +218,6 @@ data = get_grouped_metrics(data)
 data_path = os.path.join(os.path.abspath(os.getcwd()), "data/prediction/data.csv")
 data.to_csv(data_path, index=False)
 
-# Load model parameters
 nn_path = os.path.join(os.path.abspath(os.getcwd()), "models/components/nn.json")
 with open(nn_path, "r") as json_file:
     nn_params = json.load(json_file)
@@ -237,32 +233,37 @@ with open(weights_path, "r") as json_file:
     weights = json.load(json_file)
 weights = {int(key): value for key, value in weights.items()}
 
-# Make Picks
 predictions = {}
 for r in range(2, 8):
+    # Get raw unscaled arrays with year column
+    X_raw, y_raw, years_raw = create_splits(data, r, years_list=True)
+
     full_years = [*range(data["Year"].min(), data["Year"].max() + 1)]
     full_years.remove(2020)
-    _, _, years_scaled = create_splits(data, r, train=False, years_list=True)
-    years_scaled = sorted(np.unique(np.array(years_scaled)))
+    years_sorted = sorted(np.unique(years_raw))
     idx = np.where(np.array(full_years) == year)[0][0]
+    cutoff = years_sorted[idx]
 
-    X_SMTL_nn, y_SMTL_nn, years_SMTL_nn = create_splits(data, r, train=True, years_list=True)
-    X_nn, y, years_nn = create_splits(data, r, train=False, years_list=True)
-    X_SMTL_gbm, y_SMTL_gbm, years_SMTL_gbm = create_splits(data, r, train=True, years_list=True)
-    X_gbm, _, years_gbm = create_splits(data, r, train=False, years_list=True)
+    # Split by year on raw arrays — scaler sees only training rows
+    train_mask = years_raw < cutoff
+    test_mask = years_raw == cutoff
 
-    X_train_nn = X_SMTL_nn[years_SMTL_nn < years_scaled[idx]]
-    X_test_nn = X_nn[years_nn == years_scaled[idx]]
-    y_train_nn = y_SMTL_nn[years_SMTL_nn < years_scaled[idx]]
-    X_train_gbm = X_SMTL_gbm[years_SMTL_gbm < years_scaled[idx]]
-    X_test_gbm = X_gbm[years_gbm == years_scaled[idx]]
-    y_train_gbm = y_SMTL_gbm[years_SMTL_gbm < years_scaled[idx]]
+    X_train_raw = X_raw[train_mask]
+    X_test_raw = X_raw[test_mask]
+    y_train = y_raw[train_mask]
 
-    nn = tuned_nn(nn_params[r], X_train_nn, y_train_nn)
-    gbm = tuned_gbm(gbm_params[r], X_train_gbm, y_train_gbm)
+    scaler = MinMaxScaler()
+    X_train = scaler.fit_transform(X_train_raw)
+    X_test = scaler.transform(X_test_raw)
 
-    prob_nn = nn.predict(X_test_nn, verbose=0).flatten()
-    dtest = xgb.DMatrix(X_test_gbm)
+    # Single SMOTE pass shared by both models
+    X_train_res, y_train_res = apply_smote(X_train, y_train)
+
+    nn = tuned_nn(nn_params[r], X_train_res, y_train_res)
+    gbm = tuned_gbm(gbm_params[r], X_train_res, y_train_res)
+
+    prob_nn = nn.predict(X_test, verbose=0).flatten()
+    dtest = xgb.DMatrix(X_test)
     prob_gbm = gbm.predict(dtest)
 
     y_pred = prob_nn * weights[r]["NN"] + prob_gbm * weights[r]["GBM"]
@@ -278,7 +279,6 @@ pred_df = pred_df[
 
 pred_df = standarize(pred_df)
 
-# Get Expected Points
 points_df = pred_df.copy()
 points_df["R32"] = points_df["R32"] * 10
 points_df["S16"] = points_df["R32"] + points_df["S16"] * 20

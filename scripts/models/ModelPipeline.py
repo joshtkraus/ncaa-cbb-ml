@@ -4,6 +4,10 @@
 def combine_model(data, nn_params, gbm_params, weights, correct_picks, backwards_year=2013):
     """Run walk-forward backtesting and export pick accuracy and points results.
 
+    For each round, raw unscaled arrays are passed to run_test, which fits
+    the scaler per training window and applies a single shared SMOTE pass
+    to each fold to prevent data leakage.
+
     Args:
         data: Full modeling DataFrame.
         nn_params: Dict of tuned NN hyperparameters keyed by round number.
@@ -32,30 +36,20 @@ def combine_model(data, nn_params, gbm_params, weights, correct_picks, backwards
         predictions[test_year]["Region"] = data.loc[data["Year"] == test_year, "Region"].values
 
     for r in range(2, 8):
-        X_SMTL_nn, y_SMTL_nn, years_SMTL_nn = create_splits(data, r, train=True, years_list=True)
-        X_nn, y, years_nn = create_splits(data, r, train=False, years_list=True)
-        X_SMTL_gbm, y_SMTL_gbm, years_SMTL_gbm = create_splits(data, r, train=True, years_list=True)
-        X_gbm, _, years_gbm = create_splits(data, r, train=False, years_list=True)
+        # Pass raw unscaled arrays; run_test handles per-window scaling and SMOTE
+        X_raw, y_raw, years_raw = create_splits(data, r, years_list=True)
 
         predictions = run_test(
             data,
-            X_SMTL_nn,
-            y_SMTL_nn,
-            X_nn,
-            X_SMTL_gbm,
-            y_SMTL_gbm,
-            X_gbm,
-            y,
+            X_raw,
+            y_raw,
+            years_raw,
             nn_params[r],
             gbm_params[r],
             weights[r],
             years,
             r,
             predictions,
-            years_SMTL_nn,
-            years_nn,
-            years_SMTL_gbm,
-            years_gbm,
         )
 
     points_df, accs_df = standardize_predict(years, predictions, correct_picks)

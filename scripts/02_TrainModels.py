@@ -16,15 +16,7 @@ def run():
     data_path = os.path.join(os.path.abspath(os.getcwd()), "data/processed/data.csv")
     data = pd.read_csv(data_path)
 
-    # w/o 2025 Data
-    split_dict = {
-        2: 0.8236,
-        3: 0.8236,
-        4: 0.7059,
-        5: 0.7059,
-        6: 0.5883,
-        7: 0.5883,
-    }
+    split_dict = {2: 0.7778, 3: 0.7778, 4: 0.6667, 5: 0.6667, 6: 0.5556, 7: 0.5556}
     train_models(data, split_dict)
     tune_clf(data, split_dict)
     get_importance(data, split_dict)

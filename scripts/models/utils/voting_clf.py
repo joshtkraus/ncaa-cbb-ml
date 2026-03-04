@@ -65,6 +65,10 @@ def objective(trial, prob_nn, prob_gbm, y_val):
 def tune_weights(data, split_dict, nn_params, gbm_params, n_trials=100):
     """Tune ensemble blend weights for all rounds using Optuna.
 
+    Splits data first, fits the scaler on the training fold only, then applies
+    a single SMOTE pass shared by both NN and GBM to prevent data leakage and
+    avoid redundant resampling.
+
     Args:
         data: Full modeling DataFrame.
         split_dict: Dict mapping round number to train/val split ratio.
@@ -75,10 +79,9 @@ def tune_weights(data, split_dict, nn_params, gbm_params, n_trials=100):
     Returns:
         Dict of ensemble weights keyed by round number, each with 'NN' and 'GBM' keys.
     """
-    import numpy as np
     import optuna
 
-    from models.utils.DataProcessing import create_splits
+    from models.utils.DataProcessing import apply_smote, create_splits
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
@@ -87,32 +90,25 @@ def tune_weights(data, split_dict, nn_params, gbm_params, n_trials=100):
         print("Round " + str(r))
         weights[r] = {}
 
-        X_SMTL_nn, y_SMTL_nn = create_splits(data, r, train=True)
-        X_nn, y = create_splits(data, r, train=False)
-        X_SMTL_gbm, y_SMTL_gbm = create_splits(data, r, train=True)
-        X_gbm, _ = create_splits(data, r, train=False)
+        X_raw, y_raw = create_splits(data, r)
+        split_idx = int(split_dict[r] * len(X_raw))
+        X_train, X_val, y_train, y_val, _ = create_splits(data, r, split_idx=split_idx)
 
-        split_idx = int(split_dict[r] * len(X_nn))
-        split_idx_SMTL = np.where((X_SMTL_nn == X_nn[split_idx]).all(axis=1))[0][0]
-
-        X_train_nn, y_train_nn = X_SMTL_nn[:split_idx_SMTL], y_SMTL_nn[:split_idx_SMTL]
-        X_val_nn, y_val = X_nn[split_idx:], y[split_idx:]
-        X_train_gbm, y_train_gbm = X_SMTL_gbm[:split_idx_SMTL], y_SMTL_gbm[:split_idx_SMTL]
-        X_val_gbm = X_gbm[split_idx:]
+        # Single SMOTE pass shared by both models
+        X_train_res, y_train_res = apply_smote(X_train, y_train)
 
         prob_nn, prob_gbm = get_pred(
-            X_train_nn,
-            X_train_gbm,
-            X_val_nn,
-            X_val_gbm,
-            y_train_nn,
-            y_train_gbm,
+            X_train_res,
+            X_train_res,
+            X_val,
+            X_val,
+            y_train_res,
+            y_train_res,
             y_val,
             nn_params[r],
             gbm_params[r],
         )
 
-        # Capture loop variables explicitly to avoid B023 late-binding closure issue
         study = optuna.create_study(direction="minimize")
         study.optimize(
             lambda trial, pn=prob_nn, pg=prob_gbm, yv=y_val: objective(trial, pn, pg, yv),

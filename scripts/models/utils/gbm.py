@@ -63,6 +63,9 @@ def objective(trial, X_train, X_val, y_train, y_val):
 def tune_gbm(data, r, split_dict, n_trials=600):
     """Tune XGBoost hyperparameters using Optuna for a given round.
 
+    Splits data first, fits the scaler on the training fold only, then
+    applies SMOTE resampling to the training fold to prevent data leakage.
+
     Args:
         data: Full modeling DataFrame.
         r: Tournament round number.
@@ -74,21 +77,17 @@ def tune_gbm(data, r, split_dict, n_trials=600):
     """
     import os
 
-    import numpy as np
     import optuna
     from optuna.visualization import plot_optimization_history
 
-    from models.utils.DataProcessing import create_splits
+    from models.utils.DataProcessing import apply_smote, create_splits
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-    X_SMTL, y_SMTL = create_splits(data, r, train=True)
-    X, y = create_splits(data, r, train=False)
-
-    split_idx = int(split_dict[r] * len(X))
-    split_idx_SMTL = np.where((X_SMTL == X[split_idx]).all(axis=1))[0][0]
-    X_train, X_val = X_SMTL[:split_idx_SMTL], X[split_idx:]
-    y_train, y_val = y_SMTL[:split_idx_SMTL], y[split_idx:]
+    X_raw, y_raw = create_splits(data, r)
+    split_idx = int(split_dict[r] * len(X_raw))
+    X_train, X_val, y_train, y_val, _ = create_splits(data, r, split_idx=split_idx)
+    X_train, y_train = apply_smote(X_train, y_train)
 
     study = optuna.create_study(
         study_name=f"xgboost_round_{r}",

@@ -39,6 +39,9 @@ def get_pred(
 def get_importance(data, split_dict, nn_params, gbm_params, weights):
     """Compute and export SHAP-based feature importance for all rounds.
 
+    Splits data first, fits the scaler on the training fold only, then applies
+    a single SMOTE pass shared by both NN and GBM to prevent data leakage.
+
     Args:
         data: Full modeling DataFrame.
         split_dict: Dict mapping round number to train/val split ratio.
@@ -53,49 +56,43 @@ def get_importance(data, split_dict, nn_params, gbm_params, weights):
     import pandas as pd
     import shap
 
-    from models.utils.DataProcessing import create_splits
+    from models.utils.DataProcessing import apply_smote, create_splits
 
     warnings.simplefilter("ignore", UserWarning)
 
     for r in range(2, 8):
         print("Round " + str(r))
 
-        X_SMTL_nn, y_SMTL_nn = create_splits(data, r, train=True)
-        X_nn, y = create_splits(data, r, train=False)
-        X_SMTL_gbm, y_SMTL_gbm = create_splits(data, r, train=True)
-        X_gbm, _ = create_splits(data, r, train=False)
+        X_raw, y_raw = create_splits(data, r)
+        split_idx = int(split_dict[r] * len(X_raw))
+        X_train, X_val, y_train, y_val, _ = create_splits(data, r, split_idx=split_idx)
 
-        split_idx = int(split_dict[r] * len(X_nn))
-        split_idx_SMTL = np.where((X_SMTL_nn == X_nn[split_idx]).all(axis=1))[0][0]
-
-        X_train_nn, y_train_nn = X_SMTL_nn[:split_idx_SMTL], y_SMTL_nn[:split_idx_SMTL]
-        X_val_nn, y_val = X_nn[split_idx:], y[split_idx:]
-        X_train_gbm, y_train_gbm = X_SMTL_gbm[:split_idx_SMTL], y_SMTL_gbm[:split_idx_SMTL]
-        X_val_gbm = X_gbm[split_idx:]
+        # Single SMOTE pass shared by both models
+        X_train_res, y_train_res = apply_smote(X_train, y_train)
 
         nn, gbm = get_pred(
-            X_train_nn,
-            X_train_gbm,
-            X_val_nn,
-            X_val_gbm,
-            y_train_nn,
-            y_train_gbm,
+            X_train_res,
+            X_train_res,
+            X_val,
+            X_val,
+            y_train_res,
+            y_train_res,
             y_val,
             nn_params[r],
             gbm_params[r],
         )
 
-        nn_exp = shap.DeepExplainer(nn, X_train_nn)
-        nn_shap = nn_exp.shap_values(X_val_nn)[:, :, 0]
+        nn_exp = shap.DeepExplainer(nn, X_train_res)
+        nn_shap = nn_exp.shap_values(X_val)[:, :, 0]
         nn_import = np.mean(np.abs(nn_shap), axis=0)
 
         gbm_exp = shap.TreeExplainer(
             gbm,
-            X_train_gbm,
+            X_train_res,
             feature_perturbation="interventional",
             model_output="probability",
         )
-        gbm_shap = gbm_exp.shap_values(X_val_gbm)
+        gbm_shap = gbm_exp.shap_values(X_val)
         gbm_import = np.mean(np.abs(gbm_shap), axis=0)
 
         nn_import = nn_import / np.sum(nn_import)
@@ -105,7 +102,7 @@ def get_importance(data, split_dict, nn_params, gbm_params, weights):
         weight_import = nn_import * weights[r]["NN"] + gbm_import * weights[r]["GBM"]
         weight_import = weight_import / np.sum(weight_import)
 
-        features = create_splits(data, r, train=False, get_features=True)
+        features = create_splits(data, r, get_features=True)
 
         nn_df = pd.DataFrame({
             "Feature": features,
