@@ -62,12 +62,12 @@ def objective(trial, prob_nn, prob_gbm, y_val):
     return brier_score_loss(y_val, combined_probs)
 
 
-def tune_weights(data, split_dict, nn_params, gbm_params, n_trials=100):
+def tune_weights(data, split_dict, nn_params, gbm_params, n_trials=100, features_dict=None):
     """Tune ensemble blend weights for all rounds using Optuna.
 
-    Splits data first, fits the scaler on the training fold only, then applies
-    a single SMOTE pass shared by both NN and GBM to prevent data leakage and
-    avoid redundant resampling.
+    When features_dict is provided, each model is trained and evaluated on its
+    own surviving feature subset so that the blended weight reflects performance
+    on the same columns used during inference.
 
     Args:
         data: Full modeling DataFrame.
@@ -75,6 +75,8 @@ def tune_weights(data, split_dict, nn_params, gbm_params, n_trials=100):
         nn_params: Dict of tuned NN hyperparameters keyed by round number.
         gbm_params: Dict of tuned GBM hyperparameters keyed by round number.
         n_trials: Number of Optuna trials per round (default 100).
+        features_dict: Optional dict keyed by round number with 'nn' and 'gbm'
+            feature lists. When None, all features are used for both models.
 
     Returns:
         Dict of ensemble weights keyed by round number, each with 'NN' and 'GBM' keys.
@@ -82,6 +84,7 @@ def tune_weights(data, split_dict, nn_params, gbm_params, n_trials=100):
     import optuna
 
     from models.utils.DataProcessing import apply_smote, create_splits
+    from models.utils.importance import _dropped_cols
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
@@ -90,20 +93,32 @@ def tune_weights(data, split_dict, nn_params, gbm_params, n_trials=100):
         print("Round " + str(r))
         weights[r] = {}
 
-        X_raw, y_raw = create_splits(data, r)
-        split_idx = int(split_dict[r] * len(X_raw))
-        X_train, X_val, y_train, y_val, _ = create_splits(data, r, split_idx=split_idx)
+        drop_nn = _dropped_cols(data, r, features_dict, "nn") if features_dict else None
+        drop_gbm = _dropped_cols(data, r, features_dict, "gbm") if features_dict else None
 
-        # Single SMOTE pass shared by both models
-        X_train_res, y_train_res = apply_smote(X_train, y_train)
+        # NN fold
+        X_raw_nn, y_raw_nn = create_splits(data, r, drop_cols=drop_nn)
+        split_idx_nn = int(split_dict[r] * len(X_raw_nn))
+        X_train_nn, X_val_nn, y_train_nn, y_val, _ = create_splits(
+            data, r, split_idx=split_idx_nn, drop_cols=drop_nn
+        )
+        X_train_nn_res, y_train_nn_res = apply_smote(X_train_nn, y_train_nn)
+
+        # GBM fold
+        X_raw_gbm, y_raw_gbm = create_splits(data, r, drop_cols=drop_gbm)
+        split_idx_gbm = int(split_dict[r] * len(X_raw_gbm))
+        X_train_gbm, X_val_gbm, y_train_gbm, _, _ = create_splits(
+            data, r, split_idx=split_idx_gbm, drop_cols=drop_gbm
+        )
+        X_train_gbm_res, y_train_gbm_res = apply_smote(X_train_gbm, y_train_gbm)
 
         prob_nn, prob_gbm = get_pred(
-            X_train_res,
-            X_train_res,
-            X_val,
-            X_val,
-            y_train_res,
-            y_train_res,
+            X_train_nn_res,
+            X_train_gbm_res,
+            X_val_nn,
+            X_val_gbm,
+            y_train_nn_res,
+            y_train_gbm_res,
             y_val,
             nn_params[r],
             gbm_params[r],

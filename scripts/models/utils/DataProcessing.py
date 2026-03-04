@@ -1,12 +1,12 @@
 """Utilities for creating train/test data splits with SMOTE resampling."""
 
 
-def create_splits(data, r, split_idx=None, years_list=False, get_features=False):
+def create_splits(data, r, split_idx=None, years_list=False, get_features=False, drop_cols=None):
     """Prepare feature matrix and labels for a given tournament round.
 
-    Encodes categorical columns, optionally returns feature names, and
-    splits into train/val folds when split_idx is provided. The scaler is
-    always fit exclusively on the training portion to prevent data leakage.
+    Encodes categorical columns, optionally drops a subset of features,
+    and splits into train/val folds when split_idx is provided. The scaler
+    is always fit exclusively on the training portion to prevent data leakage.
 
     Args:
         data: Full modeling DataFrame including all features and metadata.
@@ -16,6 +16,9 @@ def create_splits(data, r, split_idx=None, years_list=False, get_features=False)
             name retrieval or year-based slicing in backtesting).
         years_list: If True, also return the year column from the feature array.
         get_features: If True, return only the list of feature column names.
+        drop_cols: Optional list of feature column names to exclude before
+            scaling. Used to apply per-round, per-model feature subsets
+            identified during feature selection.
 
     Returns:
         If get_features is True, returns a list of column name strings.
@@ -41,6 +44,9 @@ def create_splits(data, r, split_idx=None, years_list=False, get_features=False)
 
     X = data_sub.drop(columns="Outcome")
     y = data_sub["Outcome"]
+
+    if drop_cols:
+        X = X.drop(columns=[c for c in drop_cols if c in X.columns])
 
     if get_features:
         return list(X.columns)
