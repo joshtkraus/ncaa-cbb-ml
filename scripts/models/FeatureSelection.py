@@ -53,24 +53,33 @@ def select_features(data, split_dict):
         iteration = 0
         while True:
             iteration += 1
-            all_features_set = set(all_features)
             drop_nn = [f for f in all_features if f not in set(surviving_nn)] or None
             drop_gbm = [f for f in all_features if f not in set(surviving_gbm)] or None
 
             nn_imp, gbm_imp, nn_features, gbm_features, _, _ = _round_importances(
-                data, r, split_dict, nn_params[r], gbm_params[r], rng,
-                drop_cols_nn=drop_nn, drop_cols_gbm=drop_gbm,
+                data,
+                r,
+                split_dict,
+                nn_params[r],
+                gbm_params[r],
+                rng,
+                drop_cols_nn=drop_nn,
+                drop_cols_gbm=drop_gbm,
             )
 
             # Features to drop this iteration: those with importance <= 0
-            nn_drop = {f for f, imp in zip(nn_features, nn_imp) if imp <= 0}
-            gbm_drop = {f for f, imp in zip(gbm_features, gbm_imp) if imp <= 0}
+            nn_drop = {f for f, imp in zip(nn_features, nn_imp, strict=False) if imp <= 0}
+            gbm_drop = {f for f, imp in zip(gbm_features, gbm_imp, strict=False) if imp <= 0}
 
             new_surviving_nn = [f for f in surviving_nn if f not in nn_drop]
             new_surviving_gbm = [f for f in surviving_gbm if f not in gbm_drop]
 
-            n_dropped = (len(surviving_nn) - len(new_surviving_nn)
-                         + len(surviving_gbm) - len(new_surviving_gbm))
+            n_dropped = (
+                len(surviving_nn)
+                - len(new_surviving_nn)
+                + len(surviving_gbm)
+                - len(new_surviving_gbm)
+            )
             print(
                 f"    Iteration {iteration}: dropped {len(surviving_nn) - len(new_surviving_nn)}"
                 f" NN features, {len(surviving_gbm) - len(new_surviving_gbm)} GBM features"

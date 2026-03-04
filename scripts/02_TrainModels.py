@@ -17,9 +17,7 @@ def run():
     data_path = os.path.join(os.path.abspath(os.getcwd()), "data/processed/data.csv")
     data = pd.read_csv(data_path)
 
-    # 18 years (2007-2025, excl. 2020): 15/3 val split for R32/S16,
-    # 13/5 for E8/F4, 11/7 for NCG/Winner
-    split_dict = {2: 0.8333, 3: 0.8333, 4: 0.7222, 5: 0.7222, 6: 0.6111, 7: 0.6111}
+    split_dict = {2: 0.7778, 3: 0.7778, 4: 0.6667, 5: 0.6667, 6: 0.5556, 7: 0.5556}
 
     train_models(data, split_dict)
     features_dict = select_features(data, split_dict)

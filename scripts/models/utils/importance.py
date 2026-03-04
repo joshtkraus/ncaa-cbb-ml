@@ -164,8 +164,6 @@ def get_importance(data, split_dict, nn_params, gbm_params, weights, features_di
     rng = np.random.RandomState(23)
 
     for r in range(2, 8):
-        print("Round " + str(r))
-
         drop_nn = _dropped_cols(data, r, features_dict, "nn") if features_dict else None
         drop_gbm = _dropped_cols(data, r, features_dict, "gbm") if features_dict else None
 
