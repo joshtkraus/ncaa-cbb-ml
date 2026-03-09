@@ -1,7 +1,7 @@
 """Hyperparameter tuning for NN and GBM models for each tournament round."""
 
 
-def _tune_round(r, data, split_dict, out_q):
+def _tune_round(r, data, split_dict, out_q, drop_cols_nn=None, drop_cols_gbm=None):
     """Tune NN and GBM hyperparameters for a single round in a subprocess.
 
     Args:
@@ -9,25 +9,34 @@ def _tune_round(r, data, split_dict, out_q):
         data: Full modeling DataFrame.
         split_dict: Dict mapping round number to train/val split ratio.
         out_q: Multiprocessing Queue to store results.
+        drop_cols_nn: Optional list of feature names to exclude for NN tuning.
+        drop_cols_gbm: Optional list of feature names to exclude for GBM tuning.
     """
     from models.utils.gbm import tune_gbm
     from models.utils.nn import tune_nn
 
-    nn_result = tune_nn(data, r, split_dict)
-    gbm_result = tune_gbm(data, r, split_dict)
+    nn_result = tune_nn(data, r, split_dict, drop_cols=drop_cols_nn)
+    gbm_result = tune_gbm(data, r, split_dict, drop_cols=drop_cols_gbm)
     out_q.put((r, nn_result, gbm_result))
 
 
-def train_models(data, split_dict):
+def train_models(data, split_dict, features_dict=None):
     """Tune NN and GBM hyperparameters for all rounds and save results to disk.
+
+    When features_dict is provided, each model is tuned on its own surviving
+    feature subset identified during feature selection.
 
     Args:
         data: Full modeling DataFrame.
         split_dict: Dict mapping round number to train/val split ratio.
+        features_dict: Optional dict keyed by round number with 'nn' and 'gbm'
+            feature lists. When None, all features are used for both models.
     """
     import json
     import os
     from multiprocessing import Process, Queue
+
+    from models.utils.importance import _dropped_cols
 
     print("Tuning Models...")
 
@@ -37,7 +46,13 @@ def train_models(data, split_dict):
 
     for r in range(2, 8):
         print("Round", r)
-        p = Process(target=_tune_round, args=(r, data, split_dict, results_q))
+        drop_nn = _dropped_cols(data, r, features_dict, "nn") if features_dict else None
+        drop_gbm = _dropped_cols(data, r, features_dict, "gbm") if features_dict else None
+        p = Process(
+            target=_tune_round,
+            args=(r, data, split_dict, results_q),
+            kwargs={"drop_cols_nn": drop_nn, "drop_cols_gbm": drop_gbm},
+        )
         p.start()
         p.join()
 

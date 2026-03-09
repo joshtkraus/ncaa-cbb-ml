@@ -37,13 +37,13 @@ def objective(trial, X_train, X_val, y_train, y_val):
         "eval_metric": "logloss",
         "booster": trial.suggest_categorical("booster", ["gbtree", "dart"]),
         "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.3, log=True),
-        "max_depth": trial.suggest_int("max_depth", 1, 10),
-        "min_child_weight": trial.suggest_int("min_child_weight", 1, 10),
-        "subsample": trial.suggest_float("subsample", 0.1, 1.0),
+        "max_depth": trial.suggest_int("max_depth", 2, 7),
+        "min_child_weight": trial.suggest_int("min_child_weight", 2, 20),
+        "subsample": trial.suggest_float("subsample", 0.5, 1.0),
         "colsample_bytree": trial.suggest_float("colsample_bytree", 0.1, 1.0),
-        "reg_lambda": trial.suggest_float("reg_lambda", 1e-5, 1, log=True),
-        "reg_alpha": trial.suggest_float("reg_alpha", 1e-3, 10.0, log=True),
-        "gamma": trial.suggest_float("gamma", 1e-3, 10.0),
+        "reg_lambda": trial.suggest_float("reg_lambda", 0.1, 10, log=True),
+        "reg_alpha": trial.suggest_float("reg_alpha", 0.01, 1, log=True),
+        "gamma": trial.suggest_float("gamma", 0.1, 10.0),
         "grow_policy": trial.suggest_categorical("grow_policy", ["depthwise", "lossguide"]),
     }
 
@@ -54,13 +54,13 @@ def objective(trial, X_train, X_val, y_train, y_val):
         dtrain,
         num_boost_round=trial.suggest_int("num_boost_round", 100, 1000),
         evals=[(dval, "validation")],
-        early_stopping_rounds=10,
+        early_stopping_rounds=30,
         verbose_eval=False,
     )
     return model.best_score
 
 
-def tune_gbm(data, r, split_dict, n_trials=600):
+def tune_gbm(data, r, split_dict, n_trials=300, drop_cols=None):
     """Tune XGBoost hyperparameters using Optuna for a given round.
 
     Splits data first, fits the scaler on the training fold only, then
@@ -69,8 +69,10 @@ def tune_gbm(data, r, split_dict, n_trials=600):
     Args:
         data: Full modeling DataFrame.
         r: Tournament round number.
-        split_dict: Dict mapping round number to train/val split ratio.
-        n_trials: Number of Optuna trials (default 600).
+        split_dict: Dict mapping round number to validation start year.
+        n_trials: Number of Optuna trials (default 300).
+        drop_cols: Optional list of feature column names to exclude before
+            scaling. Used to restrict tuning to the selected feature subset.
 
     Returns:
         Best hyperparameter dict from the Optuna study.
@@ -84,9 +86,9 @@ def tune_gbm(data, r, split_dict, n_trials=600):
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-    X_raw, y_raw = create_splits(data, r)
-    split_idx = int(split_dict[r] * len(X_raw))
-    X_train, X_val, y_train, y_val, _ = create_splits(data, r, split_idx=split_idx)
+    X_train, X_val, y_train, y_val, _ = create_splits(
+        data, r, val_start=split_dict[r], drop_cols=drop_cols
+    )
     X_train, y_train = apply_smote(X_train, y_train)
 
     study = optuna.create_study(

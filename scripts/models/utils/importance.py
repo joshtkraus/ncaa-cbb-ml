@@ -1,6 +1,6 @@
 """Permutation importance computation for ensemble models."""
 
-_N_REPEATS = 10
+_N_REPEATS = 50
 
 
 def _get_models(X_train, X_val, y_train, y_val, nn_params, gbm_params):
@@ -79,7 +79,7 @@ def _round_importances(
     Args:
         data: Full modeling DataFrame.
         r: Tournament round number.
-        split_dict: Dict mapping round number to train/val split ratio.
+        split_dict: Dict mapping round number to validation start year.
         nn_params: Tuned NN hyperparameter dict for this round.
         gbm_params: Tuned GBM hyperparameter dict for this round.
         rng: numpy RandomState instance for reproducibility.
@@ -102,18 +102,14 @@ def _round_importances(
         return model.predict(xgb.DMatrix(X))
 
     # NN splits
-    X_raw_nn, y_raw_nn = create_splits(data, r, drop_cols=drop_cols_nn)
-    split_idx_nn = int(split_dict[r] * len(X_raw_nn))
     X_train_nn, X_val_nn, y_train_nn, y_val_nn, _ = create_splits(
-        data, r, split_idx=split_idx_nn, drop_cols=drop_cols_nn
+        data, r, val_start=split_dict[r], drop_cols=drop_cols_nn
     )
     X_train_nn_res, y_train_nn_res = apply_smote(X_train_nn, y_train_nn)
 
     # GBM splits (may differ if drop_cols differ)
-    X_raw_gbm, y_raw_gbm = create_splits(data, r, drop_cols=drop_cols_gbm)
-    split_idx_gbm = int(split_dict[r] * len(X_raw_gbm))
     X_train_gbm, X_val_gbm, y_train_gbm, y_val_gbm, _ = create_splits(
-        data, r, split_idx=split_idx_gbm, drop_cols=drop_cols_gbm
+        data, r, val_start=split_dict[r], drop_cols=drop_cols_gbm
     )
     X_train_gbm_res, y_train_gbm_res = apply_smote(X_train_gbm, y_train_gbm)
 
@@ -148,7 +144,7 @@ def get_importance(data, split_dict, nn_params, gbm_params, weights, features_di
 
     Args:
         data: Full modeling DataFrame.
-        split_dict: Dict mapping round number to train/val split ratio.
+        split_dict: Dict mapping round number to validation start year.
         nn_params: Dict of tuned NN hyperparameters keyed by round number.
         gbm_params: Dict of tuned GBM hyperparameters keyed by round number.
         weights: Dict of ensemble weights keyed by round number.
@@ -164,6 +160,8 @@ def get_importance(data, split_dict, nn_params, gbm_params, weights, features_di
     rng = np.random.RandomState(23)
 
     for r in range(2, 8):
+        print("Round " + str(r))
+
         drop_nn = _dropped_cols(data, r, features_dict, "nn") if features_dict else None
         drop_gbm = _dropped_cols(data, r, features_dict, "gbm") if features_dict else None
 
@@ -181,7 +179,6 @@ def get_importance(data, split_dict, nn_params, gbm_params, weights, features_di
         w_nn, w_gbm = weights[r]["NN"], weights[r]["GBM"]
         nn_imp_norm = nn_imp / nn_imp.max()
         gbm_imp_norm = gbm_imp / gbm_imp.max()
-        weighted_imp = w_nn * nn_imp_norm + w_gbm * gbm_imp_norm
 
         nn_df = pd.DataFrame({
             "Feature": nn_features,
@@ -196,11 +193,17 @@ def get_importance(data, split_dict, nn_params, gbm_params, weights, features_di
             "Baseline_Loss": gbm_baseline,
         })
 
-        # Weighted output uses nn_features as the index — both must share the
-        # same columns at this point (called after feature selection is done)
+        # Weighted blend over the union of both feature sets; features absent
+        # from one model are treated as having zero normalized importance
+        nn_imp_series = pd.Series(nn_imp_norm, index=nn_features)
+        gbm_imp_series = pd.Series(gbm_imp_norm, index=gbm_features)
+        all_features_union = list(nn_imp_series.index.union(gbm_imp_series.index))
+        nn_aligned = nn_imp_series.reindex(all_features_union, fill_value=0.0)
+        gbm_aligned = gbm_imp_series.reindex(all_features_union, fill_value=0.0)
+        weighted_imp = w_nn * nn_aligned.values + w_gbm * gbm_aligned.values
         weighted_baseline = w_nn * nn_baseline + w_gbm * gbm_baseline
         weight_df = pd.DataFrame({
-            "Feature": nn_features,
+            "Feature": all_features_union,
             "Importance": weighted_imp,
             "Importance_Normalized": weighted_imp / weighted_imp.max(),
             "Baseline_Loss": weighted_baseline,

@@ -51,20 +51,20 @@ def create_model(trial, input_shape):
     model = keras.Sequential()
     model.add(layers.Input(shape=(input_shape,)))
 
-    num_layers = trial.suggest_int("num_layers", 1, 3)
+    num_layers = trial.suggest_int("num_layers", 1, 2)
     for i in range(num_layers):
-        num_units = trial.suggest_int(f"units_{i}", 64, 320, step=32)
+        num_units = trial.suggest_int(f"units_{i}", 32, 256, step=32)
         activation = trial.suggest_categorical(f"activation_{i}", ["relu", "tanh"])
         model.add(
             layers.Dense(
                 num_units,
                 activation=activation,
-                kernel_regularizer=regularizers.L1(trial.suggest_float(f"L1_{i}", 1e-9, 1e-3)),
+                kernel_regularizer=regularizers.L1(trial.suggest_float(f"L1_{i}", 1e-6, 1e-2)),
             )
         )
-        if trial.suggest_categorical(f"batch_norm_{i}", [True, False]):
-            model.add(layers.BatchNormalization())
-        dropout_rate = trial.suggest_float(f"dropout_{i}", 0.0, 1)
+        # if trial.suggest_categorical(f"batch_norm_{i}", [True, False]):
+        #     model.add(layers.BatchNormalization())
+        dropout_rate = trial.suggest_float(f"dropout_{i}", 0.0, 0.7)
         model.add(layers.Dropout(dropout_rate))
 
     model.add(layers.Dense(1, activation="sigmoid"))
@@ -88,24 +88,24 @@ def objective(trial, X_train, X_val, y_train, y_val):
 
     from tensorflow import keras
     from tensorflow.keras import backend as K
-    from tensorflow.keras.optimizers.legacy import SGD, Adam, RMSprop
+    from tensorflow.keras.optimizers import Adam, RMSprop
 
     model = create_model(trial, X_train.shape[1])
-    optimizer_name = trial.suggest_categorical("optimizer", ["adam", "rmsprop", "sgd"])
-    learning_rate = trial.suggest_float("learning_rate", 1e-5, 1e-1, log=True)
-    optimizer_dict = {"adam": Adam, "rmsprop": RMSprop, "sgd": SGD}
+    optimizer_name = trial.suggest_categorical("optimizer", ["adam", "rmsprop"])
+    learning_rate = trial.suggest_float("learning_rate", 1e-4, 1e-1, log=True)
+    optimizer_dict = {"adam": Adam, "rmsprop": RMSprop}
     optimizer = optimizer_dict[optimizer_name](learning_rate=learning_rate)
     model.compile(optimizer=optimizer, loss="binary_crossentropy", metrics=["Precision"])
 
     early_stopping = keras.callbacks.EarlyStopping(
-        monitor="val_loss", patience=5, restore_best_weights=True
+        monitor="val_loss", patience=30, restore_best_weights=True
     )
     history = model.fit(
         X_train,
         y_train,
         validation_data=(X_val, y_val),
-        epochs=50,
-        batch_size=trial.suggest_categorical("batch_size", [16, 32, 64]),
+        epochs=200,
+        batch_size=trial.suggest_categorical("batch_size", [16, 32]),
         callbacks=[early_stopping, ClearMemory()],
         verbose=0,
     )
@@ -118,7 +118,7 @@ def objective(trial, X_train, X_val, y_train, y_val):
     return loss
 
 
-def tune_nn(data, r, split_dict, n_trials=300):
+def tune_nn(data, r, split_dict, n_trials=150, drop_cols=None):
     """Tune Keras MLP hyperparameters using Optuna for a given round.
 
     Splits data first, fits the scaler on the training fold only, then
@@ -127,8 +127,10 @@ def tune_nn(data, r, split_dict, n_trials=300):
     Args:
         data: Full modeling DataFrame.
         r: Tournament round number.
-        split_dict: Dict mapping round number to train/val split ratio.
-        n_trials: Number of Optuna trials (default 300).
+        split_dict: Dict mapping round number to validation start year.
+        n_trials: Number of Optuna trials (default 150).
+        drop_cols: Optional list of feature column names to exclude before
+            scaling. Used to restrict tuning to the selected feature subset.
 
     Returns:
         Best hyperparameter dict from the Optuna study.
@@ -147,9 +149,9 @@ def tune_nn(data, r, split_dict, n_trials=300):
     for gpu in gpus:
         tf.config.experimental.set_memory_growth(gpu, True)
 
-    X_raw, y_raw = create_splits(data, r)
-    split_idx = int(split_dict[r] * len(X_raw))
-    X_train, X_val, y_train, y_val, _ = create_splits(data, r, split_idx=split_idx)
+    X_train, X_val, y_train, y_val, _ = create_splits(
+        data, r, val_start=split_dict[r], drop_cols=drop_cols
+    )
     X_train, y_train = apply_smote(X_train, y_train)
 
     study = optuna.create_study(
@@ -187,7 +189,7 @@ def tuned_nn(params, X_train, y_train, X_val=None, y_val=None):
 
     from tensorflow import keras
     from tensorflow.keras import layers, regularizers
-    from tensorflow.keras.optimizers.legacy import SGD, Adam, RMSprop
+    from tensorflow.keras.optimizers import Adam, RMSprop
 
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
     set_seed()
@@ -204,13 +206,13 @@ def tuned_nn(params, X_train, y_train, X_val=None, y_val=None):
                 kernel_regularizer=regularizers.L1(params[f"L1_{i}"]),
             )
         )
-        if params[f"batch_norm_{i}"]:
-            model.add(layers.BatchNormalization())
+        # if params[f"batch_norm_{i}"]:
+        #     model.add(layers.BatchNormalization())
         model.add(layers.Dropout(params[f"dropout_{i}"]))
 
     model.add(layers.Dense(1, activation="sigmoid"))
 
-    optimizer_dict = {"adam": Adam, "rmsprop": RMSprop, "sgd": SGD}
+    optimizer_dict = {"adam": Adam, "rmsprop": RMSprop}
     model.compile(
         optimizer=optimizer_dict[params["optimizer"]](learning_rate=params["learning_rate"]),
         loss="binary_crossentropy",
@@ -219,13 +221,13 @@ def tuned_nn(params, X_train, y_train, X_val=None, y_val=None):
 
     if (X_val is not None) and (y_val is not None):
         early_stopping = keras.callbacks.EarlyStopping(
-            monitor="val_loss", patience=5, restore_best_weights=True
+            monitor="val_loss", patience=30, restore_best_weights=True
         )
         model.fit(
             X_train,
             y_train,
             validation_data=(X_val, y_val),
-            epochs=50,
+            epochs=200,
             batch_size=params["batch_size"],
             callbacks=[early_stopping, ClearMemory()],
             verbose=0,

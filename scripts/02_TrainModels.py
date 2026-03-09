@@ -9,7 +9,6 @@ def run():
 
     import pandas as pd
 
-    from models.FeatureSelection import select_features
     from models.FitModels import train_models
     from models.PermImport import get_importance
     from models.VotingClassifier import tune_clf
@@ -17,11 +16,11 @@ def run():
     data_path = os.path.join(os.path.abspath(os.getcwd()), "data/processed/data.csv")
     data = pd.read_csv(data_path)
 
-    split_dict = {2: 0.7778, 3: 0.7778, 4: 0.6667, 5: 0.6667, 6: 0.5556, 7: 0.5556}
+    # Validation start rounds
+    split_dict = {2: 2022, 3: 2022, 4: 2019, 5: 2019, 6: 2016, 7: 2016}
 
     train_models(data, split_dict)
-    features_dict = select_features(data, split_dict)
-    tune_clf(data, split_dict, features_dict=features_dict)
+    tune_clf(data, split_dict)
     get_importance(data, split_dict)
 
 

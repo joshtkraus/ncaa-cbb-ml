@@ -24,7 +24,11 @@ def combine_model(data, nn_params, gbm_params, weights, correct_picks, backwards
 
     print("Combining Models...")
 
-    years = [*range(backwards_year - 1, 2024)]
+    # years = [*range(backwards_year - 1, 2024)]
+    # years.remove(2020)
+
+    max_train_year = data["Year"].max() - 1  # last training year whose test_year is in the data
+    years = [*range(backwards_year - 1, max_train_year + 1)]
     years.remove(2020)
 
     predictions = {}
@@ -37,7 +41,7 @@ def combine_model(data, nn_params, gbm_params, weights, correct_picks, backwards
 
     for r in range(2, 8):
         # Pass raw unscaled arrays; run_test handles per-window scaling and SMOTE
-        X_raw, y_raw, years_raw = create_splits(data, r, years_list=True)
+        X_raw, y_raw, years_raw = create_splits(data, r)
 
         predictions = run_test(
             data,

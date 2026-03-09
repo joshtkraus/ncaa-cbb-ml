@@ -57,7 +57,7 @@ def objective(trial, prob_nn, prob_gbm, y_val):
     """
     from sklearn.metrics import brier_score_loss
 
-    w = trial.suggest_float("weight", 0, 1)
+    w = trial.suggest_float("weight", 0.3, 0.7)
     combined_probs = w * prob_nn + (1 - w) * prob_gbm
     return brier_score_loss(y_val, combined_probs)
 
@@ -71,7 +71,7 @@ def tune_weights(data, split_dict, nn_params, gbm_params, n_trials=100, features
 
     Args:
         data: Full modeling DataFrame.
-        split_dict: Dict mapping round number to train/val split ratio.
+        split_dict: Dict mapping round number to validation start year.
         nn_params: Dict of tuned NN hyperparameters keyed by round number.
         gbm_params: Dict of tuned GBM hyperparameters keyed by round number.
         n_trials: Number of Optuna trials per round (default 100).
@@ -97,18 +97,14 @@ def tune_weights(data, split_dict, nn_params, gbm_params, n_trials=100, features
         drop_gbm = _dropped_cols(data, r, features_dict, "gbm") if features_dict else None
 
         # NN fold
-        X_raw_nn, y_raw_nn = create_splits(data, r, drop_cols=drop_nn)
-        split_idx_nn = int(split_dict[r] * len(X_raw_nn))
         X_train_nn, X_val_nn, y_train_nn, y_val, _ = create_splits(
-            data, r, split_idx=split_idx_nn, drop_cols=drop_nn
+            data, r, val_start=split_dict[r], drop_cols=drop_nn
         )
         X_train_nn_res, y_train_nn_res = apply_smote(X_train_nn, y_train_nn)
 
         # GBM fold
-        X_raw_gbm, y_raw_gbm = create_splits(data, r, drop_cols=drop_gbm)
-        split_idx_gbm = int(split_dict[r] * len(X_raw_gbm))
         X_train_gbm, X_val_gbm, y_train_gbm, _, _ = create_splits(
-            data, r, split_idx=split_idx_gbm, drop_cols=drop_gbm
+            data, r, val_start=split_dict[r], drop_cols=drop_gbm
         )
         X_train_gbm_res, y_train_gbm_res = apply_smote(X_train_gbm, y_train_gbm)
 

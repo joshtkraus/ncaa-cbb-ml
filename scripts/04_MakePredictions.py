@@ -3,7 +3,6 @@
 import json
 import os
 
-import numpy as np
 import pandas as pd
 import xgboost as xgb
 from scrapers.GetData_SR import run_scraper
@@ -171,11 +170,6 @@ check_data_join(data, SR, KP)
 data_path = os.path.join(os.path.abspath(os.getcwd()), "data/processed/data.csv")
 modeling_data = pd.read_csv(data_path)
 modeling_data = modeling_data[modeling_data["Year"] != year]
-modeling_data = modeling_data.loc[
-    :, ~modeling_data.columns.str.startswith(("R32_", "S16_", "E8_", "F4_", "NCG_", "Winner_"))
-]
-modeling_data = modeling_data.loc[:, ~modeling_data.columns.str.contains("Seed_Avg")]
-modeling_data.drop(columns=["First_Year"], inplace=True)
 
 data = data[modeling_data.columns]
 data = pd.concat([modeling_data, data], ignore_index=True)
@@ -235,18 +229,11 @@ weights = {int(key): value for key, value in weights.items()}
 
 predictions = {}
 for r in range(2, 8):
-    # Get raw unscaled arrays with year column
-    X_raw, y_raw, years_raw = create_splits(data, r, years_list=True)
-
-    full_years = [*range(data["Year"].min(), data["Year"].max() + 1)]
-    full_years.remove(2020)
-    years_sorted = sorted(np.unique(years_raw))
-    idx = np.where(np.array(full_years) == year)[0][0]
-    cutoff = years_sorted[idx]
+    X_raw, y_raw, years_raw = create_splits(data, r)
 
     # Split by year on raw arrays — scaler sees only training rows
-    train_mask = years_raw < cutoff
-    test_mask = years_raw == cutoff
+    train_mask = years_raw < year
+    test_mask = years_raw == year
 
     X_train_raw = X_raw[train_mask]
     X_test_raw = X_raw[test_mask]
