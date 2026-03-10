@@ -91,12 +91,12 @@ _KENPOM_COLS = [
 
 
 def _mismatched_avg_cols(r):
-    """Return grouped-average and Actual column names whose prefix does not match round r.
+    """Return grouped-average and Actual column names for future rounds relative to round r.
 
-    For round r only the semantically matched prefix (e.g. R32 for round 2)
-    is kept for both KenPom grouped averages and historical Actual columns.
-    The five remaining prefixes are dropped to remove correlated copies that
-    cause permutation importance to systematically undervalue features.
+    Only prefixes up to and including the matched prefix for round r are kept —
+    these represent historical context the model could legitimately have at that
+    stage. Future-round prefixes are dropped since those games have not yet
+    been played and including them would be conceptually invalid.
 
     Args:
         r: Tournament round number (2-7).
@@ -210,3 +210,61 @@ def apply_smote(X_train, y_train):
     tl = TomekLinks()
     X_res, y_res = tl.fit_resample(X_res, y_res)
     return X_res, y_res
+
+
+def create_fold_splits(data, r, fold, drop_cols=None):
+    """Prepare scaled train/val arrays for a single walk-forward CV fold.
+
+    Applies the same feature construction as create_splits but uses
+    explicit train_years and val_years from a fold definition rather than
+    a val_start year. The scaler is fit exclusively on training rows.
+
+    Args:
+        data: Full modeling DataFrame.
+        r: Tournament round number used to define the binary outcome and
+            round-matched feature prefix.
+        fold: Dict with keys 'train_years' and 'val_years' as returned by
+            make_folds().
+        drop_cols: Optional list of additional feature column names to exclude.
+
+    Returns:
+        Tuple of (X_train, X_val, y_train, y_val) as scaled numpy arrays.
+    """
+    import numpy as np
+    import pandas as pd
+    from sklearn.preprocessing import MinMaxScaler
+
+    mod_data = data.copy()
+    mod_data["Outcome"] = 0
+    mod_data.loc[mod_data["Round"] < r, "Outcome"] = 0
+    mod_data.loc[mod_data["Round"] >= r, "Outcome"] = 1
+
+    data_sub = mod_data.drop(columns=["Team", "Round"])
+    data_sub = pd.concat([data_sub, pd.get_dummies(data_sub["Conf"], prefix="Conf")], axis=1)
+    data_sub.drop(columns="Conf", inplace=True)
+    data_sub = pd.concat([data_sub, pd.get_dummies(data_sub["Region"], prefix="Region")], axis=1)
+    data_sub.drop(columns="Region", inplace=True)
+
+    years = np.array(data_sub["Year"])
+    y = data_sub["Outcome"]
+    X = data_sub.drop(columns=["Outcome"])
+
+    to_drop = set(_mismatched_avg_cols(r))
+    if drop_cols:
+        to_drop.update(drop_cols)
+    X = X.drop(columns=[c for c in to_drop if c in X.columns])
+
+    X_arr = np.array(X)
+    y_arr = np.array(y)
+
+    train_mask = np.isin(years, fold["train_years"])
+    val_mask = np.isin(years, fold["val_years"])
+
+    X_train_raw, X_val_raw = X_arr[train_mask], X_arr[val_mask]
+    y_train, y_val = y_arr[train_mask], y_arr[val_mask]
+
+    scaler = MinMaxScaler()
+    X_train = scaler.fit_transform(X_train_raw)
+    X_val = scaler.transform(X_val_raw)
+
+    return X_train, X_val, y_train, y_val

@@ -15,20 +15,25 @@ def set_seed(seed=23):
     random.seed(seed)
 
 
-def objective(trial, X_train, X_val, y_train, y_val):
-    """Optuna objective function for XGBoost hyperparameter tuning.
+def objective(trial, data, r, folds, drop_cols=None):
+    """Optuna objective function for XGBoost hyperparameter tuning using CV.
+
+    Trains and evaluates the model on each walk-forward fold, returning the
+    mean validation log-loss across all folds for stable hyperparameter selection.
 
     Args:
         trial: Optuna trial object.
-        X_train: Training feature array.
-        X_val: Validation feature array.
-        y_train: Training labels.
-        y_val: Validation labels.
+        data: Full modeling DataFrame.
+        r: Tournament round number (used for feature construction).
+        folds: List of fold dicts from make_folds().
+        drop_cols: Optional list of feature names to exclude.
 
     Returns:
-        Best validation log-loss score from early stopping.
+        Mean validation log-loss across all CV folds.
     """
     import xgboost as xgb
+
+    from models.utils.DataProcessing import apply_smote, create_fold_splits
 
     set_seed()
 
@@ -47,32 +52,46 @@ def objective(trial, X_train, X_val, y_train, y_val):
         "grow_policy": trial.suggest_categorical("grow_policy", ["depthwise", "lossguide"]),
     }
 
-    dtrain = xgb.DMatrix(X_train, label=y_train)
-    dval = xgb.DMatrix(X_val, label=y_val)
-    model = xgb.train(
-        params,
-        dtrain,
-        num_boost_round=trial.suggest_int("num_boost_round", 100, 1000),
-        evals=[(dval, "validation")],
-        early_stopping_rounds=30,
-        verbose_eval=False,
-    )
-    return model.best_score
+    fold_losses = []
+    for fold_idx, fold in enumerate(folds):
+        X_train, X_val, y_train, y_val = create_fold_splits(data, r, fold, drop_cols=drop_cols)
+        X_train, y_train = apply_smote(X_train, y_train)
+
+        dtrain = xgb.DMatrix(X_train, label=y_train)
+        dval = xgb.DMatrix(X_val, label=y_val)
+        model = xgb.train(
+            params,
+            dtrain,
+            num_boost_round=trial.suggest_int("num_boost_round", 100, 1000),
+            evals=[(dval, "validation")],
+            early_stopping_rounds=30,
+            verbose_eval=False,
+        )
+        fold_losses.append(model.best_score)
+        print(
+            f"      Fold {fold_idx + 1}/{len(folds)}: val_loss={model.best_score:.4f} "
+            f"(rounds={model.best_iteration + 1})"
+        )
+
+    mean_loss = sum(fold_losses) / len(fold_losses)
+    print(f"      Mean loss: {mean_loss:.4f}")
+    return mean_loss
 
 
-def tune_gbm(data, r, split_dict, n_trials=300, drop_cols=None):
-    """Tune XGBoost hyperparameters using Optuna for a given round.
+def tune_gbm(data, r, folds, n_trials=200, drop_cols=None):
+    """Tune XGBoost hyperparameters using Optuna with walk-forward CV.
 
-    Splits data first, fits the scaler on the training fold only, then
-    applies SMOTE resampling to the training fold to prevent data leakage.
+    Evaluates each trial across all CV folds and returns the hyperparameters
+    that minimise mean validation log-loss, giving stable estimates that are
+    not dependent on any single val window.
 
     Args:
         data: Full modeling DataFrame.
-        r: Tournament round number.
-        split_dict: Dict mapping round number to validation start year.
-        n_trials: Number of Optuna trials (default 300).
+        r: Tournament round number used for feature construction.
+        folds: List of fold dicts from make_folds().
+        n_trials: Number of Optuna trials (default 200).
         drop_cols: Optional list of feature column names to exclude before
-            scaling. Used to restrict tuning to the selected feature subset.
+            scaling.
 
     Returns:
         Best hyperparameter dict from the Optuna study.
@@ -82,24 +101,25 @@ def tune_gbm(data, r, split_dict, n_trials=300, drop_cols=None):
     import optuna
     from optuna.visualization import plot_optimization_history
 
-    from models.utils.DataProcessing import apply_smote, create_splits
-
     optuna.logging.set_verbosity(optuna.logging.WARNING)
-
-    X_train, X_val, y_train, y_val, _ = create_splits(
-        data, r, val_start=split_dict[r], drop_cols=drop_cols
-    )
-    X_train, y_train = apply_smote(X_train, y_train)
 
     study = optuna.create_study(
         study_name=f"xgboost_round_{r}",
         direction="minimize",
         sampler=optuna.samplers.TPESampler(seed=23),
     )
+
+    def _trial_callback(study, trial):
+        print(
+            f"    Trial {trial.number + 1}/{n_trials}: loss={trial.value:.4f} "
+            f"(best={study.best_value:.4f})"
+        )
+
     study.optimize(
-        lambda trial: objective(trial, X_train, X_val, y_train, y_val),
+        lambda trial: objective(trial, data, r, folds, drop_cols=drop_cols),
         n_trials=n_trials,
         gc_after_trial=True,
+        callbacks=[_trial_callback],
     )
 
     fig = plot_optimization_history(study)
@@ -128,6 +148,8 @@ def tuned_gbm(params, X_train, y_train, X_val=None, y_val=None):
     params_sub["objective"] = "binary:logistic"
     params_sub["eval_metric"] = "logloss"
 
+    early_stopping_rounds = None if params_sub.get("booster") == "dart" else 30
+
     dtrain = xgb.DMatrix(X_train, label=y_train)
     if (X_val is not None) and (y_val is not None):
         dval = xgb.DMatrix(X_val, label=y_val)
@@ -136,7 +158,7 @@ def tuned_gbm(params, X_train, y_train, X_val=None, y_val=None):
             dtrain,
             num_boost_round=params["num_boost_round"],
             evals=[(dval, "validation")],
-            early_stopping_rounds=10,
+            early_stopping_rounds=early_stopping_rounds,
             verbose_eval=False,
         )
     else:
@@ -145,7 +167,7 @@ def tuned_gbm(params, X_train, y_train, X_val=None, y_val=None):
             dtrain,
             num_boost_round=params["num_boost_round"],
             evals=[(dtrain, "training")],
-            early_stopping_rounds=10,
+            early_stopping_rounds=early_stopping_rounds,
             verbose_eval=False,
         )
     return model

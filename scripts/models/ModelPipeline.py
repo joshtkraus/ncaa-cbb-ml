@@ -24,9 +24,6 @@ def combine_model(data, nn_params, gbm_params, weights, correct_picks, backwards
 
     print("Combining Models...")
 
-    # years = [*range(backwards_year - 1, 2024)]
-    # years.remove(2020)
-
     max_train_year = data["Year"].max() - 1  # last training year whose test_year is in the data
     years = [*range(backwards_year - 1, max_train_year + 1)]
     years.remove(2020)

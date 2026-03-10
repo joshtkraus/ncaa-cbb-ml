@@ -1,15 +1,15 @@
 """Wrapper to tune and export ensemble voting classifier weights."""
 
 
-def tune_clf(data, split_dict, features_dict=None):
+def tune_clf(data):
     """Load tuned model params, optimise ensemble blend weights, and save to disk.
+
+    Uses walk-forward CV across all available years so that the blend weight
+    reflects performance across multiple val windows rather than a single
+    fixed split.
 
     Args:
         data: Full modeling DataFrame.
-        split_dict: Dict mapping round number to train/val split ratio.
-        features_dict: Optional dict keyed by round number with 'nn' and 'gbm'
-            feature lists from feature selection. When provided, each model is
-            trained and evaluated on its own surviving feature subset.
     """
     import json
     import os
@@ -28,7 +28,7 @@ def tune_clf(data, split_dict, features_dict=None):
         gbm_params = json.load(f)
     gbm_params = {int(k): v for k, v in gbm_params.items()}
 
-    weights = tune_weights(data, split_dict, nn_params, gbm_params, features_dict=features_dict)
+    weights = tune_weights(data, nn_params, gbm_params)
 
     weights_path = os.path.join(os.path.abspath(os.getcwd()), "models/weights.json")
     with open(weights_path, "w") as f:

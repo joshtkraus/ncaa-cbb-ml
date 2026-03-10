@@ -33,56 +33,56 @@ class ClearMemory(tf.keras.callbacks.Callback):
         gc.collect()
 
 
-def create_model(trial, input_shape):
-    """Build a Keras Sequential MLP with architecture defined by Optuna trial.
+def _build_model(arch_params, input_shape):
+    """Build a Keras Sequential MLP from a pre-sampled architecture parameter dict.
+
+    Separates model construction from Optuna trial sampling so that the same
+    architecture can be rebuilt with fresh weights for each CV fold without
+    triggering additional trial.suggest calls.
 
     Args:
-        trial: Optuna trial object used to suggest hyperparameters.
+        arch_params: Dict with keys num_layers, units_i, activation_i,
+            L1_i, dropout_i as sampled once per trial.
         input_shape: Number of input features.
 
     Returns:
-        Compiled Keras Sequential model.
+        Uncompiled Keras Sequential model.
     """
     from tensorflow import keras
     from tensorflow.keras import layers, regularizers
 
     set_seed()
-
     model = keras.Sequential()
     model.add(layers.Input(shape=(input_shape,)))
-
-    num_layers = trial.suggest_int("num_layers", 1, 2)
-    for i in range(num_layers):
-        num_units = trial.suggest_int(f"units_{i}", 32, 256, step=32)
-        activation = trial.suggest_categorical(f"activation_{i}", ["relu", "tanh"])
+    for i in range(arch_params["num_layers"]):
         model.add(
             layers.Dense(
-                num_units,
-                activation=activation,
-                kernel_regularizer=regularizers.L1(trial.suggest_float(f"L1_{i}", 1e-6, 1e-2)),
+                arch_params[f"units_{i}"],
+                activation=arch_params[f"activation_{i}"],
+                kernel_regularizer=regularizers.L1(arch_params[f"L1_{i}"]),
             )
         )
-        # if trial.suggest_categorical(f"batch_norm_{i}", [True, False]):
-        #     model.add(layers.BatchNormalization())
-        dropout_rate = trial.suggest_float(f"dropout_{i}", 0.0, 0.7)
-        model.add(layers.Dropout(dropout_rate))
-
+        model.add(layers.Dropout(arch_params[f"dropout_{i}"]))
     model.add(layers.Dense(1, activation="sigmoid"))
     return model
 
 
-def objective(trial, X_train, X_val, y_train, y_val):
-    """Optuna objective function for Keras MLP hyperparameter tuning.
+def objective(trial, data, r, folds, drop_cols=None):
+    """Optuna objective function for Keras MLP hyperparameter tuning using CV.
+
+    Samples all hyperparameters once per trial, then trains a fresh model
+    with those parameters on each walk-forward fold, returning the mean
+    validation loss across folds.
 
     Args:
         trial: Optuna trial object.
-        X_train: Training feature array.
-        X_val: Validation feature array.
-        y_train: Training labels.
-        y_val: Validation labels.
+        data: Full modeling DataFrame.
+        r: Tournament round number (used for feature construction).
+        folds: List of fold dicts from make_folds().
+        drop_cols: Optional list of feature names to exclude.
 
     Returns:
-        Minimum validation loss achieved during training.
+        Mean validation loss across all CV folds.
     """
     import gc
 
@@ -90,47 +90,75 @@ def objective(trial, X_train, X_val, y_train, y_val):
     from tensorflow.keras import backend as K
     from tensorflow.keras.optimizers import Adam, RMSprop
 
-    model = create_model(trial, X_train.shape[1])
+    from models.utils.DataProcessing import apply_smote, create_fold_splits
+
+    # Sample all hyperparameters once per trial
+    num_layers = trial.suggest_int("num_layers", 1, 2)
+    arch_params = {"num_layers": num_layers}
+    for i in range(num_layers):
+        arch_params[f"units_{i}"] = trial.suggest_int(f"units_{i}", 32, 256, step=32)
+        arch_params[f"activation_{i}"] = trial.suggest_categorical(
+            f"activation_{i}", ["relu", "tanh"]
+        )
+        arch_params[f"L1_{i}"] = trial.suggest_float(f"L1_{i}", 1e-6, 1e-2, log=True)
+        arch_params[f"dropout_{i}"] = trial.suggest_float(f"dropout_{i}", 0.0, 0.7)
+
+    batch_size = trial.suggest_categorical("batch_size", [16, 32])
     optimizer_name = trial.suggest_categorical("optimizer", ["adam", "rmsprop"])
     learning_rate = trial.suggest_float("learning_rate", 1e-4, 1e-1, log=True)
     optimizer_dict = {"adam": Adam, "rmsprop": RMSprop}
-    optimizer = optimizer_dict[optimizer_name](learning_rate=learning_rate)
-    model.compile(optimizer=optimizer, loss="binary_crossentropy", metrics=["Precision"])
 
-    early_stopping = keras.callbacks.EarlyStopping(
-        monitor="val_loss", patience=30, restore_best_weights=True
-    )
-    history = model.fit(
-        X_train,
-        y_train,
-        validation_data=(X_val, y_val),
-        epochs=200,
-        batch_size=trial.suggest_categorical("batch_size", [16, 32]),
-        callbacks=[early_stopping, ClearMemory()],
-        verbose=0,
-    )
-    loss = min(history.history["val_loss"])
+    fold_losses = []
+    for fold_idx, fold in enumerate(folds):
+        X_train, X_val, y_train, y_val = create_fold_splits(data, r, fold, drop_cols=drop_cols)
+        X_train, y_train = apply_smote(X_train, y_train)
 
-    K.clear_session()
-    gc.collect()
-    del model, history
+        model = _build_model(arch_params, X_train.shape[1])
+        optimizer = optimizer_dict[optimizer_name](learning_rate=learning_rate)
+        model.compile(optimizer=optimizer, loss="binary_crossentropy", metrics=["Precision"])
 
-    return loss
+        early_stopping = keras.callbacks.EarlyStopping(
+            monitor="val_loss", patience=30, restore_best_weights=True
+        )
+        history = model.fit(
+            X_train,
+            y_train,
+            validation_data=(X_val, y_val),
+            epochs=200,
+            batch_size=batch_size,
+            callbacks=[early_stopping, ClearMemory()],
+            verbose=0,
+        )
+        fold_loss = min(history.history["val_loss"])
+        fold_losses.append(fold_loss)
+        print(
+            f"      Fold {fold_idx + 1}/{len(folds)}: val_loss={fold_loss:.4f} "
+            f"(epochs={len(history.history['val_loss'])})"
+        )
+
+        K.clear_session()
+        gc.collect()
+        del model, history
+
+    mean_loss = sum(fold_losses) / len(fold_losses)
+    print(f"      Mean loss: {mean_loss:.4f}")
+    return mean_loss
 
 
-def tune_nn(data, r, split_dict, n_trials=150, drop_cols=None):
-    """Tune Keras MLP hyperparameters using Optuna for a given round.
+def tune_nn(data, r, folds, n_trials=75, drop_cols=None):
+    """Tune Keras MLP hyperparameters using Optuna with walk-forward CV.
 
-    Splits data first, fits the scaler on the training fold only, then
-    applies SMOTE resampling to the training fold to prevent data leakage.
+    Evaluates each trial across all CV folds and returns the hyperparameters
+    that minimise mean validation loss, giving stable estimates that are not
+    dependent on any single val window.
 
     Args:
         data: Full modeling DataFrame.
-        r: Tournament round number.
-        split_dict: Dict mapping round number to validation start year.
-        n_trials: Number of Optuna trials (default 150).
+        r: Tournament round number used for feature construction.
+        folds: List of fold dicts from make_folds().
+        n_trials: Number of Optuna trials (default 75).
         drop_cols: Optional list of feature column names to exclude before
-            scaling. Used to restrict tuning to the selected feature subset.
+            scaling.
 
     Returns:
         Best hyperparameter dict from the Optuna study.
@@ -140,8 +168,6 @@ def tune_nn(data, r, split_dict, n_trials=150, drop_cols=None):
     import optuna
     from optuna.visualization import plot_optimization_history
 
-    from models.utils.DataProcessing import apply_smote, create_splits
-
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
@@ -149,20 +175,23 @@ def tune_nn(data, r, split_dict, n_trials=150, drop_cols=None):
     for gpu in gpus:
         tf.config.experimental.set_memory_growth(gpu, True)
 
-    X_train, X_val, y_train, y_val, _ = create_splits(
-        data, r, val_start=split_dict[r], drop_cols=drop_cols
-    )
-    X_train, y_train = apply_smote(X_train, y_train)
-
     study = optuna.create_study(
         study_name=f"nn_round_{r}",
         direction="minimize",
         sampler=optuna.samplers.TPESampler(seed=23),
     )
+
+    def _trial_callback(study, trial):
+        print(
+            f"    Trial {trial.number + 1}/{n_trials}: loss={trial.value:.4f} "
+            f"(best={study.best_value:.4f})"
+        )
+
     study.optimize(
-        lambda trial: objective(trial, X_train, X_val, y_train, y_val),
+        lambda trial: objective(trial, data, r, folds, drop_cols=drop_cols),
         n_trials=n_trials,
         gc_after_trial=True,
+        callbacks=[_trial_callback],
     )
 
     fig = plot_optimization_history(study)
@@ -188,30 +217,11 @@ def tuned_nn(params, X_train, y_train, X_val=None, y_val=None):
     import os
 
     from tensorflow import keras
-    from tensorflow.keras import layers, regularizers
     from tensorflow.keras.optimizers import Adam, RMSprop
 
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
-    set_seed()
 
-    model = keras.Sequential()
-    model.add(layers.Input(shape=(X_train.shape[1],)))
-
-    num_layers = params["num_layers"]
-    for i in range(num_layers):
-        model.add(
-            layers.Dense(
-                params[f"units_{i}"],
-                activation=params[f"activation_{i}"],
-                kernel_regularizer=regularizers.L1(params[f"L1_{i}"]),
-            )
-        )
-        # if params[f"batch_norm_{i}"]:
-        #     model.add(layers.BatchNormalization())
-        model.add(layers.Dropout(params[f"dropout_{i}"]))
-
-    model.add(layers.Dense(1, activation="sigmoid"))
-
+    model = _build_model(params, X_train.shape[1])
     optimizer_dict = {"adam": Adam, "rmsprop": RMSprop}
     model.compile(
         optimizer=optimizer_dict[params["optimizer"]](learning_rate=params["learning_rate"]),
@@ -221,7 +231,7 @@ def tuned_nn(params, X_train, y_train, X_val=None, y_val=None):
 
     if (X_val is not None) and (y_val is not None):
         early_stopping = keras.callbacks.EarlyStopping(
-            monitor="val_loss", patience=30, restore_best_weights=True
+            monitor="val_loss", patience=10, restore_best_weights=True
         )
         model.fit(
             X_train,
@@ -234,12 +244,12 @@ def tuned_nn(params, X_train, y_train, X_val=None, y_val=None):
         )
     else:
         early_stopping = keras.callbacks.EarlyStopping(
-            monitor="loss", patience=5, restore_best_weights=True
+            monitor="loss", patience=30, restore_best_weights=True
         )
         model.fit(
             X_train,
             y_train,
-            epochs=50,
+            epochs=200,
             batch_size=params["batch_size"],
             callbacks=[early_stopping, ClearMemory()],
             verbose=0,

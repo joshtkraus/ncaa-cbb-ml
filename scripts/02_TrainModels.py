@@ -16,11 +16,11 @@ def run():
     data_path = os.path.join(os.path.abspath(os.getcwd()), "data/processed/data.csv")
     data = pd.read_csv(data_path)
 
-    # Validation start rounds
+    # split_dict is still used by PermImport for importance evaluation
     split_dict = {2: 2022, 3: 2022, 4: 2019, 5: 2019, 6: 2016, 7: 2016}
 
-    train_models(data, split_dict)
-    tune_clf(data, split_dict)
+    train_models(data)
+    tune_clf(data)
     get_importance(data, split_dict)
 
 

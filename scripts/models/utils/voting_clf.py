@@ -1,50 +1,28 @@
-"""Voting classifier weight tuning using Optuna to minimize Brier Score."""
+"""Voting classifier weight and temperature tuning using walk-forward CV."""
 
 
-def get_pred(
-    X_train_nn,
-    X_train_gbm,
-    X_val_nn,
-    X_val_gbm,
-    y_train_nn,
-    y_train_gbm,
-    y_val,
-    nn_params,
-    gbm_params,
-):
-    """Fit NN and GBM models and return their validation predictions.
+def apply_temperature(probs, temperature):
+    """Apply temperature scaling to probabilities via log-odds rescaling.
+
+    Temperature > 1 softens predictions toward 0.5 (more upset-friendly).
+    Temperature < 1 sharpens predictions away from 0.5 (more chalk-friendly).
 
     Args:
-        X_train_nn: Training features for the NN.
-        X_train_gbm: Training features for the GBM.
-        X_val_nn: Validation features for the NN.
-        X_val_gbm: Validation features for the GBM.
-        y_train_nn: Training labels for the NN.
-        y_train_gbm: Training labels for the GBM.
-        y_val: Validation labels shared by both models.
-        nn_params: Tuned NN hyperparameter dict.
-        gbm_params: Tuned GBM hyperparameter dict.
+        probs: Array of predicted probabilities.
+        temperature: Scaling factor applied to log-odds.
 
     Returns:
-        Tuple of (nn_probabilities, gbm_probabilities) on the validation set.
+        Temperature-scaled probability array.
     """
-    import xgboost as xgb
+    import numpy as np
 
-    from models.utils.gbm import tuned_gbm
-    from models.utils.nn import tuned_nn
-
-    nn = tuned_nn(nn_params, X_train_nn, y_train_nn, X_val_nn, y_val)
-    prob_nn = nn.predict(X_val_nn, verbose=0)
-
-    gbm = tuned_gbm(gbm_params, X_train_gbm, y_train_gbm, X_val_gbm, y_val)
-    dval = xgb.DMatrix(X_val_gbm)
-    prob_gbm = gbm.predict(dval)
-
-    return prob_nn[:, 0], prob_gbm
+    probs = np.clip(probs, 1e-7, 1 - 1e-7)
+    log_odds = np.log(probs / (1 - probs)) / temperature
+    return 1 / (1 + np.exp(-log_odds))
 
 
 def objective(trial, prob_nn, prob_gbm, y_val):
-    """Optuna objective function to minimize Brier Score for ensemble weights.
+    """Optuna objective minimizing Brier Score over ensemble weight and temperature.
 
     Args:
         trial: Optuna trial object.
@@ -53,80 +31,101 @@ def objective(trial, prob_nn, prob_gbm, y_val):
         y_val: True validation labels.
 
     Returns:
-        Brier score of the weighted ensemble on the validation set.
+        Brier score of the temperature-scaled weighted ensemble.
     """
     from sklearn.metrics import brier_score_loss
 
     w = trial.suggest_float("weight", 0.3, 0.7)
+    T = trial.suggest_float("temperature", 0.5, 2.0)
     combined_probs = w * prob_nn + (1 - w) * prob_gbm
-    return brier_score_loss(y_val, combined_probs)
+    scaled_probs = apply_temperature(combined_probs, T)
+    return brier_score_loss(y_val, scaled_probs)
 
 
-def tune_weights(data, split_dict, nn_params, gbm_params, n_trials=100, features_dict=None):
-    """Tune ensemble blend weights for all rounds using Optuna.
+def tune_weights(data, nn_params, gbm_params, n_trials=100):
+    """Tune ensemble blend weights and temperature for all rounds using CV.
 
-    When features_dict is provided, each model is trained and evaluated on its
-    own surviving feature subset so that the blended weight reflects performance
-    on the same columns used during inference.
+    For each round and each CV fold, trains both models on the fold's
+    training data and evaluates on the fold's val data. The concatenated
+    val predictions across all folds are used to tune the blend weight and
+    temperature jointly, giving robust estimates not dependent on any single
+    val window.
 
     Args:
         data: Full modeling DataFrame.
-        split_dict: Dict mapping round number to validation start year.
         nn_params: Dict of tuned NN hyperparameters keyed by round number.
         gbm_params: Dict of tuned GBM hyperparameters keyed by round number.
         n_trials: Number of Optuna trials per round (default 100).
-        features_dict: Optional dict keyed by round number with 'nn' and 'gbm'
-            feature lists. When None, all features are used for both models.
 
     Returns:
-        Dict of ensemble weights keyed by round number, each with 'NN' and 'GBM' keys.
+        Dict keyed by round number, each with 'NN', 'GBM', and 'temperature'
+        keys.
     """
+    import numpy as np
     import optuna
+    import xgboost as xgb
 
-    from models.utils.DataProcessing import apply_smote, create_splits
-    from models.utils.importance import _dropped_cols
+    from models.utils.cv_folds import make_folds
+    from models.utils.DataProcessing import apply_smote, create_fold_splits
+    from models.utils.gbm import tuned_gbm
+    from models.utils.nn import tuned_nn
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
+    folds = make_folds(data, n_folds=2)
     weights = {}
+
     for r in range(2, 8):
-        print("Round " + str(r))
-        weights[r] = {}
+        print(f"Round {r}")
 
-        drop_nn = _dropped_cols(data, r, features_dict, "nn") if features_dict else None
-        drop_gbm = _dropped_cols(data, r, features_dict, "gbm") if features_dict else None
+        all_prob_nn = []
+        all_prob_gbm = []
+        all_y_val = []
 
-        # NN fold
-        X_train_nn, X_val_nn, y_train_nn, y_val, _ = create_splits(
-            data, r, val_start=split_dict[r], drop_cols=drop_nn
+        for fold_idx, fold in enumerate(folds):
+            print(
+                f"  Fold {fold_idx + 1}/{len(folds)}: "
+                f"train={fold['train_years']}, val={fold['val_years']}"
+            )
+            X_train, X_val, y_train, y_val = create_fold_splits(data, r, fold)
+            X_train_res, y_train_res = apply_smote(X_train, y_train)
+
+            nn = tuned_nn(nn_params[r], X_train_res, y_train_res, X_val, y_val)
+            prob_nn = nn.predict(X_val, verbose=0).flatten()
+
+            gbm = tuned_gbm(gbm_params[r], X_train_res, y_train_res, X_val, y_val)
+            prob_gbm = gbm.predict(xgb.DMatrix(X_val))
+
+            all_prob_nn.append(prob_nn)
+            all_prob_gbm.append(prob_gbm)
+            all_y_val.append(y_val)
+
+        prob_nn_all = np.concatenate(all_prob_nn)
+        prob_gbm_all = np.concatenate(all_prob_gbm)
+        y_val_all = np.concatenate(all_y_val)
+
+        study = optuna.create_study(
+            direction="minimize",
+            sampler=optuna.samplers.TPESampler(seed=23 * r),
         )
-        X_train_nn_res, y_train_nn_res = apply_smote(X_train_nn, y_train_nn)
-
-        # GBM fold
-        X_train_gbm, X_val_gbm, y_train_gbm, _, _ = create_splits(
-            data, r, val_start=split_dict[r], drop_cols=drop_gbm
-        )
-        X_train_gbm_res, y_train_gbm_res = apply_smote(X_train_gbm, y_train_gbm)
-
-        prob_nn, prob_gbm = get_pred(
-            X_train_nn_res,
-            X_train_gbm_res,
-            X_val_nn,
-            X_val_gbm,
-            y_train_nn_res,
-            y_train_gbm_res,
-            y_val,
-            nn_params[r],
-            gbm_params[r],
-        )
-
-        study = optuna.create_study(direction="minimize")
         study.optimize(
-            lambda trial, pn=prob_nn, pg=prob_gbm, yv=y_val: objective(trial, pn, pg, yv),
+            lambda trial, pn=prob_nn_all, pg=prob_gbm_all, yv=y_val_all: objective(
+                trial, pn, pg, yv
+            ),
             n_trials=n_trials,
         )
 
-        weights[r]["NN"] = study.best_params["weight"]
-        weights[r]["GBM"] = 1 - study.best_params["weight"]
+        best = study.best_params
+        T = best["temperature"]
+        print(
+            f"  Round {r}: NN={best['weight']:.3f}, GBM={1 - best['weight']:.3f}, "
+            f"T={T:.3f} ({'softer' if T > 1 else 'sharper'})"
+        )
+
+        weights[r] = {
+            "NN": best["weight"],
+            "GBM": 1 - best["weight"],
+            "temperature": T,
+        }
 
     return weights
