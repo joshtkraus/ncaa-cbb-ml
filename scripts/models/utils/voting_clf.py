@@ -1,54 +1,34 @@
-"""Voting classifier weight tuning using walk-forward CV."""
+"""Voting classifier weight computation using closed-form analytic solution."""
 
 
-def objective(trial, prob_nn, prob_gbm, y_val):
-    """Optuna objective minimizing Brier Score over ensemble weight.
+def tune_weights(data, nn_params, gbm_params):
+    """Compute ensemble blend weights for all rounds using closed-form CV.
 
-    Args:
-        trial: Optuna trial object.
-        prob_nn: NN predicted probabilities on the validation set.
-        prob_gbm: GBM predicted probabilities on the validation set.
-        y_val: True validation labels.
+    For each round, trains both models on each walk-forward CV fold and
+    collects out-of-fold val predictions. The concatenated predictions across
+    all folds are passed to the closed-form analytic solution, which directly
+    minimises Brier score on the full val set in one shot — deterministic,
+    stable, and optimal by construction with no search overhead.
 
-    Returns:
-        Brier score of the weighted ensemble.
-    """
-    from sklearn.metrics import brier_score_loss
-
-    w = trial.suggest_float("weight", 0.3, 0.7)
-    combined_probs = w * prob_nn + (1 - w) * prob_gbm
-    return brier_score_loss(y_val, combined_probs)
-
-
-def tune_weights(data, nn_params, gbm_params, n_trials=100):
-    """Tune ensemble blend weights for all rounds using CV.
-
-    For each round and each CV fold, trains both models on the fold's
-    training data and evaluates on the fold's val data. The concatenated
-    val predictions across all folds are used to tune the blend weight
-    giving robust estimates not dependent on any single
-    val window.
+    Class weights are computed per fold from the post-SMOTE training labels
+    and passed to both models so that training is consistent with how each
+    model was tuned.
 
     Args:
         data: Full modeling DataFrame.
         nn_params: Dict of tuned NN hyperparameters keyed by round number.
         gbm_params: Dict of tuned GBM hyperparameters keyed by round number.
-        n_trials: Number of Optuna trials per round (default 100).
 
     Returns:
-        Dict keyed by round number, each with 'NN', 'GBM'
-        keys.
+        Dict keyed by round number, each with 'NN' and 'GBM' keys.
     """
     import numpy as np
-    import optuna
     import xgboost as xgb
 
     from models.utils.cv_folds import make_folds
-    from models.utils.DataProcessing import apply_smote, create_fold_splits
+    from models.utils.DataProcessing import apply_smote, create_fold_splits, get_class_weights
     from models.utils.gbm import tuned_gbm
     from models.utils.nn import tuned_nn
-
-    optuna.logging.set_verbosity(optuna.logging.WARNING)
 
     folds = make_folds(data, n_folds=2)
     weights = {}
@@ -68,10 +48,31 @@ def tune_weights(data, nn_params, gbm_params, n_trials=100):
             X_train, X_val, y_train, y_val = create_fold_splits(data, r, fold)
             X_train_res, y_train_res = apply_smote(X_train, y_train)
 
-            nn = tuned_nn(nn_params[r], X_train_res, y_train_res, X_val, y_val)
+            # Compute per-sample class weights from post-SMOTE labels
+            sample_weights = get_class_weights(y_train_res)
+            unique_classes = np.unique(y_train_res)
+            class_weight_dict = {
+                int(c): float(sample_weights[y_train_res == c][0]) for c in unique_classes
+            }
+
+            nn = tuned_nn(
+                nn_params[r],
+                X_train_res,
+                y_train_res,
+                X_val,
+                y_val,
+                class_weight=class_weight_dict,
+            )
             prob_nn = nn.predict(X_val, verbose=0).flatten()
 
-            gbm = tuned_gbm(gbm_params[r], X_train_res, y_train_res, X_val, y_val)
+            gbm = tuned_gbm(
+                gbm_params[r],
+                X_train_res,
+                y_train_res,
+                X_val,
+                y_val,
+                train_weights=sample_weights,
+            )
             prob_gbm = gbm.predict(xgb.DMatrix(X_val))
 
             all_prob_nn.append(prob_nn)
@@ -82,23 +83,17 @@ def tune_weights(data, nn_params, gbm_params, n_trials=100):
         prob_gbm_all = np.concatenate(all_prob_gbm)
         y_val_all = np.concatenate(all_y_val)
 
-        study = optuna.create_study(
-            direction="minimize",
-            sampler=optuna.samplers.TPESampler(seed=23 * r),
-        )
-        study.optimize(
-            lambda trial, pn=prob_nn_all, pg=prob_gbm_all, yv=y_val_all: objective(
-                trial, pn, pg, yv
-            ),
-            n_trials=n_trials,
-        )
+        brier_nn = float(np.mean((y_val_all - prob_nn_all) ** 2))
+        brier_gbm = float(np.mean((y_val_all - prob_gbm_all) ** 2))
+        print(f"  Round {r} Brier scores — NN: {brier_nn:.4f}, GBM: {brier_gbm:.4f}")
 
-        best = study.best_params
-        print(f"  Round {r}: NN={best['weight']:.3f}, GBM={1 - best['weight']:.3f}")
+        w_nn = (1 / brier_nn) / (1 / brier_nn + 1 / brier_gbm)
+        w_gbm = (1 / brier_gbm) / (1 / brier_nn + 1 / brier_gbm)
+        print(f"  Round {r} weights   — NN: {w_nn:.3f}, GBM: {w_gbm:.3f}")
 
         weights[r] = {
-            "NN": best["weight"],
-            "GBM": 1 - best["weight"],
+            "NN": w_nn,
+            "GBM": w_gbm,
         }
 
     return weights

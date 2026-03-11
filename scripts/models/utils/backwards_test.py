@@ -36,7 +36,7 @@ def run_test(
     import xgboost as xgb
     from sklearn.preprocessing import MinMaxScaler
 
-    from models.utils.DataProcessing import apply_smote
+    from models.utils.DataProcessing import apply_smote, get_class_weights
     from models.utils.gbm import tuned_gbm
     from models.utils.nn import tuned_nn
 
@@ -66,8 +66,20 @@ def run_test(
 
         X_train_res, y_train_res = apply_smote(X_train, y_train)
 
-        nn = tuned_nn(nn_params, X_train_res, y_train_res, X_es, y_es)
-        gbm = tuned_gbm(gbm_params, X_train_res, y_train_res, X_es, y_es)
+        sample_weights = get_class_weights(y_train_res)
+        import numpy as np_inner
+
+        unique_classes = np_inner.unique(y_train_res)
+        class_weight_dict = {
+            int(c): float(sample_weights[y_train_res == c][0]) for c in unique_classes
+        }
+
+        nn = tuned_nn(
+            nn_params, X_train_res, y_train_res, X_es, y_es, class_weight=class_weight_dict
+        )
+        gbm = tuned_gbm(
+            gbm_params, X_train_res, y_train_res, X_es, y_es, train_weights=sample_weights
+        )
 
         prob_nn = nn.predict(X_test, verbose=0).flatten()
         prob_gbm = gbm.predict(xgb.DMatrix(X_test))

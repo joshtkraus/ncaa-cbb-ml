@@ -33,7 +33,7 @@ def objective(trial, data, r, folds, drop_cols=None):
     """
     import xgboost as xgb
 
-    from models.utils.DataProcessing import apply_smote, create_fold_splits
+    from models.utils.DataProcessing import apply_smote, create_fold_splits, get_class_weights
 
     set_seed()
 
@@ -56,8 +56,9 @@ def objective(trial, data, r, folds, drop_cols=None):
     for fold_idx, fold in enumerate(folds):
         X_train, X_val, y_train, y_val = create_fold_splits(data, r, fold, drop_cols=drop_cols)
         X_train, y_train = apply_smote(X_train, y_train)
+        sample_weights = get_class_weights(y_train)
 
-        dtrain = xgb.DMatrix(X_train, label=y_train)
+        dtrain = xgb.DMatrix(X_train, label=y_train, weight=sample_weights)
         dval = xgb.DMatrix(X_val, label=y_val)
         model = xgb.train(
             params,
@@ -129,7 +130,7 @@ def tune_gbm(data, r, folds, n_trials=200, drop_cols=None):
     return study.best_params
 
 
-def tuned_gbm(params, X_train, y_train, X_val=None, y_val=None):
+def tuned_gbm(params, X_train, y_train, X_val=None, y_val=None, train_weights=None):
     """Train an XGBoost model with pre-tuned hyperparameters.
 
     Args:
@@ -138,6 +139,9 @@ def tuned_gbm(params, X_train, y_train, X_val=None, y_val=None):
         y_train: Training labels.
         X_val: Optional validation feature array for early stopping.
         y_val: Optional validation labels for early stopping.
+        train_weights: Optional per-sample weight array for training rows.
+            Used to pass class weights so the loss is scaled consistently
+            with how the model was tuned.
 
     Returns:
         Trained XGBoost Booster model.
@@ -150,7 +154,7 @@ def tuned_gbm(params, X_train, y_train, X_val=None, y_val=None):
 
     early_stopping_rounds = None if params_sub.get("booster") == "dart" else 30
 
-    dtrain = xgb.DMatrix(X_train, label=y_train)
+    dtrain = xgb.DMatrix(X_train, label=y_train, weight=train_weights)
     if (X_val is not None) and (y_val is not None):
         dval = xgb.DMatrix(X_val, label=y_val)
         model = xgb.train(

@@ -1,5 +1,6 @@
 """Keras MLP model definition, Optuna tuning, and training utilities."""
 
+import numpy as np
 import tensorflow as tf
 
 
@@ -10,8 +11,6 @@ def set_seed(seed=23):
         seed: Integer seed value (default 23).
     """
     import random
-
-    import numpy as np
 
     np.random.seed(seed)
     random.seed(seed)
@@ -90,7 +89,7 @@ def objective(trial, data, r, folds, drop_cols=None):
     from tensorflow.keras import backend as K
     from tensorflow.keras.optimizers import Adam, RMSprop
 
-    from models.utils.DataProcessing import apply_smote, create_fold_splits
+    from models.utils.DataProcessing import apply_smote, create_fold_splits, get_class_weights
 
     # Sample all hyperparameters once per trial
     num_layers = trial.suggest_int("num_layers", 1, 2)
@@ -112,6 +111,10 @@ def objective(trial, data, r, folds, drop_cols=None):
     for fold_idx, fold in enumerate(folds):
         X_train, X_val, y_train, y_val = create_fold_splits(data, r, fold, drop_cols=drop_cols)
         X_train, y_train = apply_smote(X_train, y_train)
+        class_weights = get_class_weights(y_train)
+        # Convert per-sample array to {class: weight} dict for Keras
+        unique_classes = np.unique(y_train)
+        class_weight_dict = {int(c): float(class_weights[y_train == c][0]) for c in unique_classes}
 
         model = _build_model(arch_params, X_train.shape[1])
         optimizer = optimizer_dict[optimizer_name](learning_rate=learning_rate)
@@ -126,6 +129,7 @@ def objective(trial, data, r, folds, drop_cols=None):
             validation_data=(X_val, y_val),
             epochs=200,
             batch_size=batch_size,
+            class_weight=class_weight_dict,
             callbacks=[early_stopping, ClearMemory()],
             verbose=0,
         )
@@ -201,7 +205,7 @@ def tune_nn(data, r, folds, n_trials=75, drop_cols=None):
     return study.best_params
 
 
-def tuned_nn(params, X_train, y_train, X_val=None, y_val=None):
+def tuned_nn(params, X_train, y_train, X_val=None, y_val=None, class_weight=None):
     """Train a Keras MLP with pre-tuned hyperparameters.
 
     Args:
@@ -210,6 +214,9 @@ def tuned_nn(params, X_train, y_train, X_val=None, y_val=None):
         y_train: Training labels.
         X_val: Optional validation feature array for early stopping.
         y_val: Optional validation labels for early stopping.
+        class_weight: Optional dict mapping class indices to weights, e.g.
+            {0: 1.0, 1: 2.5}. Passed directly to model.fit() so the loss
+            is scaled per class during training.
 
     Returns:
         Trained Keras Sequential model.
@@ -239,6 +246,7 @@ def tuned_nn(params, X_train, y_train, X_val=None, y_val=None):
             validation_data=(X_val, y_val),
             epochs=200,
             batch_size=params["batch_size"],
+            class_weight=class_weight,
             callbacks=[early_stopping, ClearMemory()],
             verbose=0,
         )
@@ -251,6 +259,7 @@ def tuned_nn(params, X_train, y_train, X_val=None, y_val=None):
             y_train,
             epochs=200,
             batch_size=params["batch_size"],
+            class_weight=class_weight,
             callbacks=[early_stopping, ClearMemory()],
             verbose=0,
         )

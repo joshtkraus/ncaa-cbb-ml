@@ -37,6 +37,7 @@ def combine_model(data, nn_params, gbm_params, weights, correct_picks, backwards
         predictions[test_year]["Region"] = data.loc[data["Year"] == test_year, "Region"].values
 
     for r in range(2, 8):
+        print(f"Round {r}")
         # Pass raw unscaled arrays; run_test handles per-window scaling and SMOTE
         X_raw, y_raw, years_raw = create_splits(data, r)
 

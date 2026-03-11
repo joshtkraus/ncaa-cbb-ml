@@ -8,6 +8,14 @@
 # systematically undervalue features.
 _ROUND_PREFIX = {2: "R32", 3: "S16", 4: "E8", 5: "F4", 6: "NCG", 7: "Winner"}
 
+# Seed threshold above which a winning team is considered an upset in each
+# round. Teams with seed > threshold who won are upweighted in the loss to
+# incentivise the model to identify upsets.
+_UPSET_SEED_THRESHOLD = {2: 8, 3: 4, 4: 2, 5: 1, 6: 1, 7: 1}
+
+# Multiplier applied to upset winners in the weighted Brier score objective.
+_UPSET_WEIGHT = 2.0
+
 _ALL_PREFIXES = ["R32", "S16", "E8", "F4", "NCG", "Winner"]
 
 _ACTUAL_SUFFIXES = ["Full", "12", "6"]
@@ -195,15 +203,27 @@ def apply_smote(X_train, y_train):
     Must be called only on the training fold after the train/val split and
     after scaling, to prevent data leakage into the validation set.
 
+    Falls back to returning the original arrays unchanged if there are too
+    few minority class samples to support BorderlineSMOTE (requires at least
+    k+1=6 minority samples by default).
+
     Args:
         X_train: Scaled training feature array.
         y_train: Training labels.
 
     Returns:
-        Tuple of (X_resampled, y_resampled) after SMOTE and TomekLinks.
+        Tuple of (X_resampled, y_resampled) after SMOTE and TomekLinks,
+        or the original arrays if SMOTE cannot be applied.
     """
+    import numpy as np
     from imblearn.over_sampling import BorderlineSMOTE
     from imblearn.under_sampling import TomekLinks
+
+    k_neighbors = 5
+    n_minority = int(np.sum(y_train == 1))
+    if n_minority <= k_neighbors:
+        print(f"      Skipping SMOTE: only {n_minority} minority samples (need >{k_neighbors})")
+        return X_train, y_train
 
     sm = BorderlineSMOTE(random_state=23)
     X_res, y_res = sm.fit_resample(X_train, y_train)
@@ -268,3 +288,65 @@ def create_fold_splits(data, r, fold, drop_cols=None):
     X_val = scaler.transform(X_val_raw)
 
     return X_train, X_val, y_train, y_val
+
+
+def get_class_weights(y_train):
+    """Compute per-sample class weights from training labels using sklearn.
+
+    Uses sklearn's 'balanced' strategy, which sets class weights inversely
+    proportional to class frequencies:
+
+        weight_c = n_samples / (n_classes * n_samples_c)
+
+    Weights are computed from the original pre-SMOTE labels so they reflect
+    the true class imbalance in the training window. The returned array is
+    aligned to the (potentially post-SMOTE) y array passed in, mapping each
+    sample's label to its corresponding class weight. This means synthetic
+    SMOTE samples receive the same weight as the real minority samples they
+    were interpolated from, which is consistent with their purpose of
+    up-representing the minority class.
+
+    Args:
+        y_train: Training label array (may be post-SMOTE). Class weights are
+            derived from the unique classes and their frequencies present in
+            this array.
+
+    Returns:
+        Numpy array of per-sample weights aligned to y_train.
+    """
+    import numpy as np
+    from sklearn.utils.class_weight import compute_class_weight
+
+    classes = np.unique(y_train)
+    weights = compute_class_weight(class_weight="balanced", classes=classes, y=y_train)
+    class_weight_dict = dict(zip(classes, weights, strict=False))
+    return np.array([class_weight_dict[label] for label in y_train])
+
+
+def get_sample_weights(data, r, years_mask):
+    """Build a sample weight array upweighting upset winners for a given round.
+
+    Upset winners are defined as teams with seed > _UPSET_SEED_THRESHOLD[r]
+    whose outcome is 1 (they won). All other samples receive weight 1.0.
+
+    Args:
+        data: Full modeling DataFrame containing 'Seed', 'Round', and 'Year'
+            columns.
+        r: Tournament round number used to look up the upset seed threshold.
+        years_mask: Boolean array aligned to data rows selecting the rows
+            relevant to this fold or split.
+
+    Returns:
+        Numpy array of sample weights aligned to the masked rows.
+    """
+    import numpy as np
+
+    subset = data[years_mask].copy()
+    subset["Outcome"] = (subset["Round"] >= r).astype(int)
+
+    threshold = _UPSET_SEED_THRESHOLD[r]
+    is_upset_winner = (subset["Seed"] > threshold) & (subset["Outcome"] == 1)
+
+    weights = np.ones(len(subset))
+    weights[is_upset_winner.values] = _UPSET_WEIGHT
+    return weights
