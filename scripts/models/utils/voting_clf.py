@@ -1,28 +1,8 @@
-"""Voting classifier weight and temperature tuning using walk-forward CV."""
-
-
-def apply_temperature(probs, temperature):
-    """Apply temperature scaling to probabilities via log-odds rescaling.
-
-    Temperature > 1 softens predictions toward 0.5 (more upset-friendly).
-    Temperature < 1 sharpens predictions away from 0.5 (more chalk-friendly).
-
-    Args:
-        probs: Array of predicted probabilities.
-        temperature: Scaling factor applied to log-odds.
-
-    Returns:
-        Temperature-scaled probability array.
-    """
-    import numpy as np
-
-    probs = np.clip(probs, 1e-7, 1 - 1e-7)
-    log_odds = np.log(probs / (1 - probs)) / temperature
-    return 1 / (1 + np.exp(-log_odds))
+"""Voting classifier weight tuning using walk-forward CV."""
 
 
 def objective(trial, prob_nn, prob_gbm, y_val):
-    """Optuna objective minimizing Brier Score over ensemble weight and temperature.
+    """Optuna objective minimizing Brier Score over ensemble weight.
 
     Args:
         trial: Optuna trial object.
@@ -31,24 +11,22 @@ def objective(trial, prob_nn, prob_gbm, y_val):
         y_val: True validation labels.
 
     Returns:
-        Brier score of the temperature-scaled weighted ensemble.
+        Brier score of the weighted ensemble.
     """
     from sklearn.metrics import brier_score_loss
 
     w = trial.suggest_float("weight", 0.3, 0.7)
-    T = trial.suggest_float("temperature", 0.5, 2.0)
     combined_probs = w * prob_nn + (1 - w) * prob_gbm
-    scaled_probs = apply_temperature(combined_probs, T)
-    return brier_score_loss(y_val, scaled_probs)
+    return brier_score_loss(y_val, combined_probs)
 
 
 def tune_weights(data, nn_params, gbm_params, n_trials=100):
-    """Tune ensemble blend weights and temperature for all rounds using CV.
+    """Tune ensemble blend weights for all rounds using CV.
 
     For each round and each CV fold, trains both models on the fold's
     training data and evaluates on the fold's val data. The concatenated
-    val predictions across all folds are used to tune the blend weight and
-    temperature jointly, giving robust estimates not dependent on any single
+    val predictions across all folds are used to tune the blend weight
+    giving robust estimates not dependent on any single
     val window.
 
     Args:
@@ -58,7 +36,7 @@ def tune_weights(data, nn_params, gbm_params, n_trials=100):
         n_trials: Number of Optuna trials per round (default 100).
 
     Returns:
-        Dict keyed by round number, each with 'NN', 'GBM', and 'temperature'
+        Dict keyed by round number, each with 'NN', 'GBM'
         keys.
     """
     import numpy as np
@@ -116,16 +94,11 @@ def tune_weights(data, nn_params, gbm_params, n_trials=100):
         )
 
         best = study.best_params
-        T = best["temperature"]
-        print(
-            f"  Round {r}: NN={best['weight']:.3f}, GBM={1 - best['weight']:.3f}, "
-            f"T={T:.3f} ({'softer' if T > 1 else 'sharper'})"
-        )
+        print(f"  Round {r}: NN={best['weight']:.3f}, GBM={1 - best['weight']:.3f}")
 
         weights[r] = {
             "NN": best["weight"],
             "GBM": 1 - best["weight"],
-            "temperature": T,
         }
 
     return weights

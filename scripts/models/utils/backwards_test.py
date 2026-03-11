@@ -72,11 +72,7 @@ def run_test(
         prob_nn = nn.predict(X_test, verbose=0).flatten()
         prob_gbm = gbm.predict(xgb.DMatrix(X_test))
 
-        from models.utils.voting_clf import apply_temperature
-
         combined = prob_nn * weights["NN"] + prob_gbm * weights["GBM"]
-        predictions[test_year]["Round_" + str(r)] = apply_temperature(
-            combined, weights["temperature"]
-        )
+        predictions[test_year]["Round_" + str(r)] = combined
 
     return predictions

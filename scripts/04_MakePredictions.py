@@ -253,11 +253,8 @@ for r in range(2, 8):
     dtest = xgb.DMatrix(X_test)
     prob_gbm = gbm.predict(dtest)
 
-    from models.utils.voting_clf import apply_temperature
-
     combined = prob_nn * weights[r]["NN"] + prob_gbm * weights[r]["GBM"]
-    y_pred = apply_temperature(combined, weights[r]["temperature"])
-    predictions["Round_" + str(r)] = y_pred
+    predictions["Round_" + str(r)] = combined
 
 predictions["Team"] = data.loc[data["Year"] == year, "Team"].values
 predictions["Seed"] = data.loc[data["Year"] == year, "Seed"].values
