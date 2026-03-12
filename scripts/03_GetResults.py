@@ -5,7 +5,6 @@ import json
 import os
 
 import pandas as pd
-
 from models.ModelPipeline import combine_model
 
 # Load
@@ -18,23 +17,11 @@ data = pd.read_csv(data_path)
 with open(bracket_path, "r") as json_file:
     correct_picks = json.load(json_file)
 
-# Params
-# NN
-nn_path = os.path.join(os.path.abspath(os.getcwd()), "models/components/nn.json")
-with open(nn_path, "r") as json_file:
-    nn_params = json.load(json_file)
-nn_params = {int(key): value for key, value in nn_params.items()}
-# GBM
-gbm_path = os.path.join(os.path.abspath(os.getcwd()), "models/components/gbm.json")
-with open(gbm_path, "r") as json_file:
-    gbm_params = json.load(json_file)
-gbm_params = {int(key): value for key, value in gbm_params.items()}
+# Load the tuned params
+params_path = os.path.join(os.path.abspath(os.getcwd()), "model/autogluon_params.json")
+with open(params_path, "r") as f:
+    ag_params = json.load(f)
+ag_params = {int(k): v for k, v in ag_params.items()}
 
-# Weights
-weights_path = os.path.join(os.path.abspath(os.getcwd()), "models/weights.json")
-with open(weights_path, "r") as json_file:
-    weights = json.load(json_file)
-weights = {int(key): value for key, value in weights.items()}
-
-# Combine Models & Predict
-combine_model(data, nn_params, gbm_params, weights, correct_picks, backwards_year=2013)
+# Backtest using frozen model configs
+combine_model(data, ag_params, correct_picks)

@@ -1,30 +1,26 @@
-"""Backtesting pipeline that combines NN and GBM predictions across historical years."""
+"""Backtesting pipeline using AutoGluon frozen model configs."""
 
 
-def combine_model(data, nn_params, gbm_params, weights, correct_picks, backwards_year=2013):
-    """Run walk-forward backtesting and export pick accuracy and points results.
+def combine_model(data, ag_params, correct_picks, backwards_year=2013):
+    """Run walk-forward backtesting with AutoGluon and export results.
 
-    For each round, raw unscaled arrays are passed to run_test, which fits
-    the scaler per training window and applies a single shared SMOTE pass
-    to each fold to prevent data leakage.
+    For each round, passes the frozen AutoGluon config (model type +
+    exact hyperparameters) to run_test, which refits one model per
+    training window without any hyperparameter search.
 
     Args:
         data: Full modeling DataFrame.
-        nn_params: Dict of tuned NN hyperparameters keyed by round number.
-        gbm_params: Dict of tuned GBM hyperparameters keyed by round number.
-        weights: Dict of ensemble weights keyed by round number.
+        ag_params: Dict keyed by round number with 'model_type' and
+            'hyperparameters' keys, as produced by tune_autogluon.
         correct_picks: Dict of actual tournament results keyed by year string.
         backwards_year: First year to include in backtest (default 2013).
     """
     import os
 
     from models.utils.backwards_test import run_test
-    from models.utils.DataProcessing import create_splits
     from models.utils.StandarizePredictions import standardize_predict
 
-    print("Combining Models...")
-
-    max_train_year = data["Year"].max() - 1  # last training year whose test_year is in the data
+    max_train_year = data["Year"].max() - 1
     years = [*range(backwards_year - 1, max_train_year + 1)]
     years.remove(2020)
 
@@ -38,21 +34,7 @@ def combine_model(data, nn_params, gbm_params, weights, correct_picks, backwards
 
     for r in range(2, 8):
         print(f"Round {r}")
-        # Pass raw unscaled arrays; run_test handles per-window scaling and SMOTE
-        X_raw, y_raw, years_raw = create_splits(data, r)
-
-        predictions = run_test(
-            data,
-            X_raw,
-            y_raw,
-            years_raw,
-            nn_params[r],
-            gbm_params[r],
-            weights[r],
-            years,
-            r,
-            predictions,
-        )
+        predictions = run_test(data, ag_params, years, r, predictions)
 
     points_df, accs_df = standardize_predict(years, predictions, correct_picks)
 

@@ -1,31 +1,19 @@
-"""Walk-forward backtesting for the ensemble model across historical tournament years."""
+"""Walk-forward backtesting using a frozen AutoGluon model config per round."""
 
 
-def run_test(
-    data,
-    X_raw,
-    y_raw,
-    years_raw,
-    nn_params,
-    gbm_params,
-    weights,
-    years,
-    r,
-    predictions,
-):
-    """Run walk-forward backtesting for a single round across all backtest years.
+def run_test(data, ag_params, years, r, predictions):
+    """Run walk-forward backtesting for a single round using AutoGluon.
 
-    For each test year, fits the scaler exclusively on prior-year rows, applies
-    SMOTE only to that training fold, trains both models, and stores predictions.
+    For each test year, refits the winning AutoGluon model config (frozen
+    hyperparameters, no search) on all prior-year rows, then predicts on
+    the test year. Class imbalance is handled via a sample_weight column
+    computed from balanced class weights — no SMOTE or scaling is applied
+    since AutoGluon handles its own internal preprocessing.
 
     Args:
         data: Full modeling DataFrame.
-        X_raw: Unscaled feature array for all rows (Year already excluded).
-        y_raw: Label array aligned to X_raw.
-        years_raw: Integer year array aligned to X_raw rows.
-        nn_params: Tuned NN hyperparameter dict for this round.
-        gbm_params: Tuned GBM hyperparameter dict for this round.
-        weights: Ensemble weight dict with keys 'NN' and 'GBM'.
+        ag_params: Dict keyed by round number, each with 'model_type' and
+            'hyperparameters' keys as produced by tune_autogluon.
         years: List of backtest training years to iterate over.
         r: Tournament round number.
         predictions: Dict to store per-year round predictions.
@@ -33,58 +21,25 @@ def run_test(
     Returns:
         Updated predictions dict with Round_{r} arrays added for each test year.
     """
-    import xgboost as xgb
-    from sklearn.preprocessing import MinMaxScaler
+    import tempfile
 
-    from models.utils.DataProcessing import apply_smote, get_class_weights
-    from models.utils.gbm import tuned_gbm
-    from models.utils.nn import tuned_nn
+    from models.utils.autogluon import _make_test_df, _make_train_df, fit_autogluon
+
+    params = ag_params[r]
 
     for year in years:
         test_year = 2021 if year == 2019 else year + 1
 
-        train_mask = years_raw < test_year
-        test_mask = years_raw == test_year
-        # Use the 2 most recent training years as an internal val set for early
-        # stopping only — they are not withheld from the final model fit.
-        import numpy as np
+        train_mask = data["Year"].values < test_year
+        test_mask = data["Year"].values == test_year
 
-        sorted_train_years = sorted(set(years_raw[train_mask]))
-        early_stop_years = sorted_train_years[-2:]
-        early_stop_mask = np.isin(years_raw, early_stop_years)
+        train_df = _make_train_df(data, r, train_mask)
+        test_df = _make_test_df(data, r, test_mask)
 
-        X_train_raw = X_raw[train_mask]
-        X_test_raw = X_raw[test_mask]
-        X_es_raw = X_raw[early_stop_mask]
-        y_train = y_raw[train_mask]
-        y_es = y_raw[early_stop_mask]
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            predictor = fit_autogluon(train_df, test_df, params, save_path=tmp_dir)
+            prob = predictor.predict_proba(test_df)[1].values
 
-        scaler = MinMaxScaler()
-        X_train = scaler.fit_transform(X_train_raw)
-        X_test = scaler.transform(X_test_raw)
-        X_es = scaler.transform(X_es_raw)
-
-        X_train_res, y_train_res = apply_smote(X_train, y_train)
-
-        sample_weights = get_class_weights(y_train_res)
-        import numpy as np_inner
-
-        unique_classes = np_inner.unique(y_train_res)
-        class_weight_dict = {
-            int(c): float(sample_weights[y_train_res == c][0]) for c in unique_classes
-        }
-
-        nn = tuned_nn(
-            nn_params, X_train_res, y_train_res, X_es, y_es, class_weight=class_weight_dict
-        )
-        gbm = tuned_gbm(
-            gbm_params, X_train_res, y_train_res, X_es, y_es, train_weights=sample_weights
-        )
-
-        prob_nn = nn.predict(X_test, verbose=0).flatten()
-        prob_gbm = gbm.predict(xgb.DMatrix(X_test))
-
-        combined = prob_nn * weights["NN"] + prob_gbm * weights["GBM"]
-        predictions[test_year]["Round_" + str(r)] = combined
+        predictions[test_year]["Round_" + str(r)] = prob
 
     return predictions
