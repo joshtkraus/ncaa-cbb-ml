@@ -82,7 +82,6 @@ def standardize_predict(years, predictions, correct_picks):
     import os
 
     import pandas as pd
-
     from models.utils.MakePicks import predict_bracket
 
     points = {}
