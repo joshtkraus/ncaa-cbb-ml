@@ -6,7 +6,7 @@ import tempfile
 
 import pandas as pd
 from models.utils.autogluon import _make_test_df, _make_train_df, fit_autogluon
-from models.utils.MakePicks import predict_bracket
+from models.utils.MakePicks import create_picks
 from models.utils.StandarizePredictions import standarize
 from scrapers.GetData_SR import run_scraper
 from utils.GetSeedProb import calc_seed_prob
@@ -15,7 +15,7 @@ from utils.NameCleaner_KP import clean_KP
 from utils.NameCleaner_SR import clean_SR
 
 scraper_ind = True
-year = 2026
+year = 2025
 
 
 def check_data_join(data, SR, KP):
@@ -218,14 +218,43 @@ data.to_csv(data_path, index=False)
 # Load frozen AutoGluon params
 # ---------------------------------------------------------------------------
 
-params_path = os.path.join(os.path.abspath(os.getcwd()), "model/autogluon_params.json")
+cwd = os.path.abspath(os.getcwd())
+params_path = os.path.join(cwd, "model/autogluon_params.json")
 with open(params_path, "r") as f:
     ag_params = json.load(f)
 ag_params = {int(k): v for k, v in ag_params.items()}
 
+# Load matchup params and data if available
+matchup_params = None
+matchup_predictor = None
+matchup_data_path = os.path.join(cwd, "data/processed/data_matchup.csv")
+matchup_params_path = os.path.join(cwd, "model/autogluon_matchup_params.json")
+
+threshold = 0.5  # default if no tuned threshold found
+threshold_path = os.path.join(cwd, "model/matchup_threshold.json")
+
+if os.path.exists(matchup_params_path) and os.path.exists(matchup_data_path):
+    from models.utils.autogluon_matchup import fit_matchup_autogluon
+
+    with open(matchup_params_path, "r") as f:
+        matchup_params = json.load(f)
+    matchup_data = pd.read_csv(matchup_data_path)
+    if os.path.exists(threshold_path):
+        with open(threshold_path, "r") as f:
+            threshold = json.load(f)["threshold"]
+    # Fit matchup model on all historical data
+    train_mask = matchup_data["Year"].to_numpy() < year
+    print(f"Fitting matchup model on all historical data (threshold={threshold})...")
+    matchup_save_path = os.path.join(cwd, "model/autogluon_matchup_prediction")
+    matchup_predictor = fit_matchup_autogluon(
+        matchup_data, train_mask, matchup_params, save_path=matchup_save_path
+    )
+    print("Matchup model ready — bracket correction will be applied.")
+else:
+    print("No matchup model found — running without bracket correction.")
+
 # ---------------------------------------------------------------------------
-# Generate predictions — refit one model per round on all historical data,
-# predict on the current tournament year.
+# Generate predictions
 # ---------------------------------------------------------------------------
 
 predictions = {}
@@ -246,7 +275,7 @@ for r in range(2, 8):
         predictions["Round_" + str(r)] = predictor.predict_proba(test_df)[1].values
 
 # ---------------------------------------------------------------------------
-# Standardize and generate bracket picks
+# Standardize, apply matchup correction, and generate bracket picks
 # ---------------------------------------------------------------------------
 
 pred_df = pd.DataFrame.from_dict(predictions)
@@ -263,7 +292,6 @@ pred_df = pred_df[
         "Round_7",
     ]
 ]
-
 pred_df = standarize(pred_df)
 
 points_df = pred_df.copy()
@@ -274,10 +302,22 @@ points_df["F4"] = points_df["E8"] + points_df["F4"] * 80
 points_df["NCG"] = points_df["F4"] + points_df["NCG"] * 160
 points_df["Winner"] = points_df["NCG"] + points_df["Winner"] * 320
 
-picks = predict_bracket(points_df, real_picks=None, calc_correct=False)
+# Generate initial backward-selection bracket
+picks = create_picks(points_df)
 
-path = os.path.join(os.path.abspath(os.getcwd()), "prediction/probabilities.csv")
+# Apply forward-pass matchup corrections
+if matchup_predictor is not None:
+    from models.utils.BracketCorrection import correct_bracket
+
+    year_data = data[data["Year"] == year][["Team", "Seed", "Region"]]
+    full_year_data = data[data["Year"] == year]
+    picks = correct_bracket(
+        picks, year_data, full_year_data, matchup_predictor, threshold=threshold
+    )
+
+path = os.path.join(cwd, "prediction/probabilities.csv")
+os.makedirs(os.path.dirname(path), exist_ok=True)
 pred_df.to_csv(path, index=False)
-path = os.path.join(os.path.abspath(os.getcwd()), "prediction/picks.json")
+path = os.path.join(cwd, "prediction/picks.json")
 with open(path, "w") as f:
     json.dump(picks, f)

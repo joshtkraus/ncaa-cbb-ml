@@ -4,10 +4,6 @@
 def standarize(df):
     """Normalize raw model probabilities to sum to 1 within each matchup group.
 
-    For each round, teams are grouped by their bracket pod and probabilities
-    are rescaled so the group sums to 1, enforcing the constraint that exactly
-    one team from each matchup advances.
-
     Args:
         df: DataFrame with columns Team, Seed, Region, and raw round probabilities
             (Round_2 through Round_7).
@@ -67,13 +63,18 @@ def standarize(df):
     return df[["Team", "Seed", "Region", "R32", "S16", "E8", "F4", "NCG", "Winner"]]
 
 
-def standardize_predict(years, predictions, correct_picks):
-    """Normalize predictions, generate picks, score them, and export results.
+def standardize_predict(
+    years, predictions, correct_picks, data=None, matchup_predictor=None, threshold=0.6
+):
+    """Normalize predictions, generate picks, apply matchup corrections, score them, and export.
 
     Args:
         years: List of backtest training years (test year = year + 1).
         predictions: Nested dict of raw model outputs keyed by test year and round.
         correct_picks: Dict of actual tournament results keyed by year string.
+        data: Full modeling DataFrame. Required if matchup_predictor is provided.
+        matchup_predictor: Optional fitted matchup TabularPredictor.
+        threshold: Probability threshold for matchup model overrides (default 0.6).
 
     Returns:
         Tuple of (points_df, accs_df) summarizing backtesting performance.
@@ -83,6 +84,11 @@ def standardize_predict(years, predictions, correct_picks):
 
     import pandas as pd
     from models.utils.MakePicks import predict_bracket
+
+    use_correction = matchup_predictor is not None and data is not None
+
+    if use_correction:
+        from models.utils.BracketCorrection import correct_bracket
 
     points = {}
     pick_accs = {}
@@ -94,6 +100,7 @@ def standardize_predict(years, predictions, correct_picks):
         pred_df = standarize(pred_df)
 
         path = os.path.join(os.path.abspath(os.getcwd()), f"results/probabilities/{test_year}.csv")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         pred_df.to_csv(path, index=False)
 
         points_df = pred_df.copy()
@@ -119,15 +126,35 @@ def standardize_predict(years, predictions, correct_picks):
             + pred_df["Winner"] * 320
         )
 
-        pick_accs[test_year] = {}
+        # Generate initial backward-selection bracket
         picks, point, acc = predict_bracket(points_df, correct_picks[str(test_year)])
         assert isinstance(acc, dict)
 
+        # Apply forward-pass matchup corrections if predictor is available.
+        if use_correction:
+            if isinstance(matchup_predictor, dict):
+                predictor_for_year = matchup_predictor.get(test_year)
+            else:
+                predictor_for_year = matchup_predictor
+
+            if predictor_for_year is not None:
+                year_data = data[data["Year"] == test_year][["Team", "Seed", "Region"]]
+                full_year_data = data[data["Year"] == test_year]
+                picks = correct_bracket(
+                    picks, year_data, full_year_data, predictor_for_year, threshold
+                )
+                # Re-score the corrected bracket
+                from models.utils.MakePicks import real_Bracket
+
+                point, acc = real_Bracket(picks, correct_picks[str(test_year)])
+
         path = os.path.join(os.path.abspath(os.getcwd()), f"results/picks/{test_year}.json")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w") as f:
             json.dump(picks, f)
 
         points[test_year] = point
+        pick_accs[test_year] = {}
         pick_accs[test_year]["R32"] = acc["R32"] / 32
         pick_accs[test_year]["S16"] = acc["S16"] / 16
         pick_accs[test_year]["E8"] = acc["E8"] / 8
