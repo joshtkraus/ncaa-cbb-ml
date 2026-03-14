@@ -1,15 +1,13 @@
-"""AutoGluon-based model tuning and fitting for tournament round prediction."""
+"""AutoGluon model tuning and fitting for tournament round prediction."""
 
 import os
 
-# Suppress Ray's FutureWarning about accelerator env var override when num_gpus=0.
+# Suppress Ray's FutureWarning
 os.environ.setdefault("RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO", "0")
 
 import warnings  # noqa: E402
 
-# Suppress sklearn FutureWarning from AutoGluon's internal ColumnTransformer usage.
-# The `force_int_remainder_cols` parameter is deprecated in sklearn 1.7 and has no
-# effect — this warning originates inside AutoGluon and cannot be fixed from userland.
+# Suppress sklearn FutureWarning from AutoGluon's internal ColumnTransformer usage
 warnings.filterwarnings(
     "ignore",
     message="The parameter `force_int_remainder_cols` is deprecated",
@@ -17,29 +15,19 @@ warnings.filterwarnings(
     module="sklearn",
 )
 
-# Directory where AutoGluon saves fitted predictors during tuning.
+# Directory where AutoGluon saves fitted predictors during tuning
 _AG_TUNING_DIR = "model/autogluon"
 
-# Model types to exclude from the AutoGluon search. FastAI requires a separate
-# optional install (autogluon.tabular[fastai]) and fails with an ImportError if absent.
+# Model types to exclude
 _EXCLUDED_MODELS = ["FASTAI"]
 
-# Output directories for per-round leaderboard and feature importance CSVs.
+# Output directories for leaderboard and feature importance
 _LEADERBOARD_DIR = "results/model_leaderboard"
 _IMPORTANCE_DIR = "results/feature_importance"
 
 
-
 def _make_train_df(data, r, year_mask, weight_col="sample_weight"):
     """Build a labeled, weighted DataFrame for a given round and year subset.
-
-    Constructs features using the same round-matched prefix logic as
-    create_splits, adds the binary outcome label, and appends balanced
-    class weights as a column so AutoGluon can apply them during fitting.
-
-    Categorical columns (Conf, Region) are left as-is since AutoGluon
-    handles categoricals natively. No scaling is applied — AutoGluon
-    performs its own internal preprocessing per model type.
 
     Args:
         data: Full modeling DataFrame.
@@ -51,9 +39,8 @@ def _make_train_df(data, r, year_mask, weight_col="sample_weight"):
         DataFrame with features, 'Outcome' label column, and weight column.
     """
     import numpy as np
-    from sklearn.utils.class_weight import compute_class_weight
-
     from models.utils.DataProcessing import _mismatched_avg_cols
+    from sklearn.utils.class_weight import compute_class_weight
 
     subset = data[year_mask].copy()
     subset["Outcome"] = (subset["Round"] >= r).astype(int)
@@ -65,7 +52,7 @@ def _make_train_df(data, r, year_mask, weight_col="sample_weight"):
     y = subset["Outcome"].values
     classes = np.unique(y)
     cw = compute_class_weight("balanced", classes=classes, y=y)
-    class_weight_map = dict(zip(classes, cw))
+    class_weight_map = dict(zip(classes, cw, strict=False))
     subset[weight_col] = subset["Outcome"].map(class_weight_map)
 
     return subset
@@ -73,9 +60,6 @@ def _make_train_df(data, r, year_mask, weight_col="sample_weight"):
 
 def _make_test_df(data, r, year_mask):
     """Build an unlabeled feature DataFrame for prediction.
-
-    Identical feature construction to _make_train_df but without the
-    Outcome label or sample weight column.
 
     Args:
         data: Full modeling DataFrame.
@@ -99,17 +83,6 @@ def _make_test_df(data, r, year_mask):
 def tune_autogluon(data, r, folds):
     """Tune AutoGluon on walk-forward CV folds and return the best model's params.
 
-    For each fold, fits a TabularPredictor using the explicit walk-forward
-    train/val split. The val fold is passed as tuning_data so AutoGluon uses
-    it for internal early stopping and model selection rather than carving its
-    own random split from the training data. Bagging is disabled so that
-    tuning_data is respected — bagging ignores tuning_data in favour of its
-    own internal CV, which would break the temporal fold structure.
-
-    Val ROC-AUC scores are accumulated per base model across folds. The model
-    with the highest mean AUC is selected and its exact hyperparameters
-    are extracted for use during backtesting.
-
     Args:
         data: Full modeling DataFrame.
         r: Round number (2–7).
@@ -125,8 +98,8 @@ def tune_autogluon(data, r, folds):
 
     weight_col = "sample_weight"
     model_scores = {}
-    fold_leaderboards = []   # leaderboard DataFrame per fold
-    fold_importances = []    # feature importance DataFrame per fold
+    fold_leaderboards = []  # leaderboard DataFrame per fold
+    fold_importances = []  # feature importance DataFrame per fold
 
     for fold_idx, fold in enumerate(folds):
         print(
@@ -137,8 +110,7 @@ def tune_autogluon(data, r, folds):
         val_mask = np.isin(data["Year"].values, fold["val_years"])
 
         train_df = _make_train_df(data, r, train_mask, weight_col=weight_col)
-        # Val needs the Outcome label so AutoGluon can use it for early stopping,
-        # but we drop the weight column — val is always unweighted.
+        # Val needs the outcome for early stopping, but no weights
         val_df_labeled = _make_train_df(data, r, val_mask, weight_col=weight_col).drop(
             columns=[weight_col]
         )
@@ -159,15 +131,14 @@ def tune_autogluon(data, r, folds):
             train_data=train_df,
             tuning_data=val_df_labeled,
             presets="best_quality",
-            time_limit=300,
-            num_bag_folds=0,       # disable bagging so tuning_data is respected
-            num_stack_levels=0,    # disable stacking — no base models to stack on
+            time_limit=600,
+            num_bag_folds=0,
+            num_stack_levels=0,
             fit_weighted_ensemble=False,
             excluded_model_types=_EXCLUDED_MODELS,
         )
 
-        # Read AUC scores directly from the leaderboard — AutoGluon computes
-        # them on tuning_data (val_df_labeled) since eval_metric="roc_auc".
+        # Read AUC scores from the leaderboard
         fold_lb = predictor.leaderboard(val_df_labeled, silent=True)
         fold_lb["fold"] = fold_idx
         fold_leaderboards.append(fold_lb)
@@ -181,30 +152,18 @@ def tune_autogluon(data, r, folds):
         fold_imp["fold"] = fold_idx
         fold_importances.append(fold_imp)
 
-    mean_scores = {
-        m: float(np.mean(v))
-        for m, v in model_scores.items()
-        if len(v) == len(folds)
-    }
+    mean_scores = {m: float(np.mean(v)) for m, v in model_scores.items() if len(v) == len(folds)}
     best_model_name = max(mean_scores, key=mean_scores.get)
     print(f"    Best model: {best_model_name}  (mean AUC: {mean_scores[best_model_name]:.4f})")
-    print(
-        f"    All models: "
-        f"{ {m: f'{s:.4f}' for m, s in sorted(mean_scores.items(), key=lambda x: x[1], reverse=True)} }"
-    )
 
-    # Average leaderboard metrics across folds. Models that did not appear in
-    # every fold (e.g. failed in one) are excluded from the mean. The AUC
-    # score column uses mean_scores which is already averaged across folds.
+    # Average leaderboard metrics across folds
     import pandas as pd
 
     cwd = os.path.abspath(os.getcwd())
 
     all_lb = pd.concat(fold_leaderboards, ignore_index=True)
     numeric_lb_cols = all_lb.select_dtypes(include="number").columns.difference(["fold"])
-    avg_leaderboard = (
-        all_lb.groupby("model")[numeric_lb_cols].mean().reset_index()
-    )
+    avg_leaderboard = all_lb.groupby("model")[numeric_lb_cols].mean().reset_index()
     avg_leaderboard["auc_score"] = avg_leaderboard["model"].map(mean_scores)
     avg_leaderboard = avg_leaderboard.sort_values("auc_score", ascending=False)
     leaderboard_path = os.path.join(cwd, _LEADERBOARD_DIR, f"round_{r}.csv")
@@ -212,12 +171,12 @@ def tune_autogluon(data, r, folds):
     avg_leaderboard.to_csv(leaderboard_path, index=False)
     print(f"    Saved averaged leaderboard to {leaderboard_path}")
 
-    # Average feature importance across folds. The importance index is the
-    # feature name; stack folds and take the mean of all numeric columns.
+    # Average feature importance across folds
     all_imp = pd.concat(fold_importances)
     numeric_imp_cols = all_imp.select_dtypes(include="number").columns.difference(["fold"])
     avg_importance = (
-        all_imp.groupby(all_imp.index)[numeric_imp_cols].mean()
+        all_imp.groupby(all_imp.index)[numeric_imp_cols]
+        .mean()
         .sort_values("importance", ascending=False)
     )
     importance_path = os.path.join(cwd, _IMPORTANCE_DIR, f"round_{r}.csv")
@@ -225,10 +184,7 @@ def tune_autogluon(data, r, folds):
     avg_importance.to_csv(importance_path)
     print(f"    Saved averaged feature importance to {importance_path}")
 
-    # Derive the AutoGluon hyperparameters key from the best model name.
-    # AutoGluon encodes model type in the name prefix (e.g. "LightGBM" -> "GBM",
-    # "XGBoost" -> "XGB"). We map the name prefix to the short key used in
-    # hyperparameters dicts, then extract the fitted params via the trainer.
+    # Derive the AutoGluon hyperparameters key from the best model name
     _NAME_TO_KEY = {
         "LightGBM": "GBM",
         "CatBoost": "CAT",
@@ -246,7 +202,7 @@ def tune_autogluon(data, r, folds):
         (key for prefix, key in _NAME_TO_KEY.items() if best_model_name.startswith(prefix)),
         best_model_name,  # fallback: use name as-is if prefix not recognised
     )
-    # Extract hyperparameters via the internal trainer — more stable than .info().
+    # Extract hyperparameters via the internal trainer
     hyperparameters = predictor._trainer.load_model(best_model_name).params
 
     return {
@@ -255,16 +211,12 @@ def tune_autogluon(data, r, folds):
     }
 
 
-def fit_autogluon(train_df, test_df, ag_params, save_path, weight_col="sample_weight"):
+def fit_autogluon(train_df, ag_params, save_path, weight_col="sample_weight"):
     """Fit a single AutoGluon model instance with exact frozen hyperparameters.
-
-    Used during backtesting to refit the winning model config on each
-    walk-forward training fold without any hyperparameter search.
 
     Args:
         train_df: Training DataFrame with features, 'Outcome' label, and
             sample weight column (produced by _make_train_df).
-        test_df: Test DataFrame with features only (no label).
         ag_params: Dict with 'model_type' and 'hyperparameters' keys as
             returned by tune_autogluon.
         save_path: Directory path for AutoGluon to save the fitted predictor.

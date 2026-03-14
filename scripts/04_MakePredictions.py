@@ -2,26 +2,20 @@
 
 import json
 import os
+import tempfile
 
 import pandas as pd
-import xgboost as xgb
+from models.utils.autogluon import _make_test_df, _make_train_df, fit_autogluon
+from models.utils.MakePicks import predict_bracket
+from models.utils.StandarizePredictions import standarize
 from scrapers.GetData_SR import run_scraper
-from sklearn.preprocessing import MinMaxScaler
 from utils.GetSeedProb import calc_seed_prob
 from utils.GroupedMetrics import get_grouped_metrics
 from utils.NameCleaner_KP import clean_KP
 from utils.NameCleaner_SR import clean_SR
 
-from models.utils.DataProcessing import apply_smote, create_splits
-from models.utils.gbm import tuned_gbm
-from models.utils.MakePicks import predict_bracket
-from models.utils.nn import tuned_nn
-from models.utils.StandarizePredictions import standarize
-
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
-
 scraper_ind = True
-year = 2025
+year = 2026
 
 
 def check_data_join(data, SR, KP):
@@ -46,6 +40,10 @@ def check_data_join(data, SR, KP):
         )
         raise ValueError("Data Loss in Join.")
 
+
+# ---------------------------------------------------------------------------
+# Data ingestion
+# ---------------------------------------------------------------------------
 
 if scraper_ind:
     SR = run_scraper(years=[year], export=False)
@@ -167,6 +165,10 @@ data.drop_duplicates(inplace=True)
 data.dropna(inplace=True)
 check_data_join(data, SR, KP)
 
+# ---------------------------------------------------------------------------
+# Merge with historical modeling data and compute derived features
+# ---------------------------------------------------------------------------
+
 data_path = os.path.join(os.path.abspath(os.getcwd()), "data/processed/data.csv")
 modeling_data = pd.read_csv(data_path)
 modeling_data = modeling_data[modeling_data["Year"] != year]
@@ -212,56 +214,54 @@ data = get_grouped_metrics(data)
 data_path = os.path.join(os.path.abspath(os.getcwd()), "data/prediction/data.csv")
 data.to_csv(data_path, index=False)
 
-nn_path = os.path.join(os.path.abspath(os.getcwd()), "models/components/nn.json")
-with open(nn_path, "r") as json_file:
-    nn_params = json.load(json_file)
-nn_params = {int(key): value for key, value in nn_params.items()}
+# ---------------------------------------------------------------------------
+# Load frozen AutoGluon params
+# ---------------------------------------------------------------------------
 
-gbm_path = os.path.join(os.path.abspath(os.getcwd()), "models/components/gbm.json")
-with open(gbm_path, "r") as json_file:
-    gbm_params = json.load(json_file)
-gbm_params = {int(key): value for key, value in gbm_params.items()}
+params_path = os.path.join(os.path.abspath(os.getcwd()), "model/autogluon_params.json")
+with open(params_path, "r") as f:
+    ag_params = json.load(f)
+ag_params = {int(k): v for k, v in ag_params.items()}
 
-weights_path = os.path.join(os.path.abspath(os.getcwd()), "models/weights.json")
-with open(weights_path, "r") as json_file:
-    weights = json.load(json_file)
-weights = {int(key): value for key, value in weights.items()}
+# ---------------------------------------------------------------------------
+# Generate predictions — refit one model per round on all historical data,
+# predict on the current tournament year.
+# ---------------------------------------------------------------------------
 
 predictions = {}
-for r in range(2, 8):
-    X_raw, y_raw, years_raw = create_splits(data, r)
-
-    # Split by year on raw arrays — scaler sees only training rows
-    train_mask = years_raw < year
-    test_mask = years_raw == year
-
-    X_train_raw = X_raw[train_mask]
-    X_test_raw = X_raw[test_mask]
-    y_train = y_raw[train_mask]
-
-    scaler = MinMaxScaler()
-    X_train = scaler.fit_transform(X_train_raw)
-    X_test = scaler.transform(X_test_raw)
-
-    # Single SMOTE pass shared by both models
-    X_train_res, y_train_res = apply_smote(X_train, y_train)
-
-    nn = tuned_nn(nn_params[r], X_train_res, y_train_res)
-    gbm = tuned_gbm(gbm_params[r], X_train_res, y_train_res)
-
-    prob_nn = nn.predict(X_test, verbose=0).flatten()
-    dtest = xgb.DMatrix(X_test)
-    prob_gbm = gbm.predict(dtest)
-
-    combined = prob_nn * weights[r]["NN"] + prob_gbm * weights[r]["GBM"]
-    predictions["Round_" + str(r)] = combined
-
 predictions["Team"] = data.loc[data["Year"] == year, "Team"].values
 predictions["Seed"] = data.loc[data["Year"] == year, "Seed"].values
 predictions["Region"] = data.loc[data["Year"] == year, "Region"].values
+
+for r in range(2, 8):
+    print(f"Round {r}")
+    train_mask = data["Year"].values < year
+    test_mask = data["Year"].values == year
+
+    train_df = _make_train_df(data, r, train_mask)
+    test_df = _make_test_df(data, r, test_mask)
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        predictor = fit_autogluon(train_df, ag_params[r], save_path=tmp_dir)
+        predictions["Round_" + str(r)] = predictor.predict_proba(test_df)[1].values
+
+# ---------------------------------------------------------------------------
+# Standardize and generate bracket picks
+# ---------------------------------------------------------------------------
+
 pred_df = pd.DataFrame.from_dict(predictions)
 pred_df = pred_df[
-    ["Team", "Seed", "Region", "Round_2", "Round_3", "Round_4", "Round_5", "Round_6", "Round_7"]
+    [
+        "Team",
+        "Seed",
+        "Region",
+        "Round_2",
+        "Round_3",
+        "Round_4",
+        "Round_5",
+        "Round_6",
+        "Round_7",
+    ]
 ]
 
 pred_df = standarize(pred_df)

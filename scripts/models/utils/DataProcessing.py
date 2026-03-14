@@ -1,20 +1,7 @@
 """Utilities for creating train/test data splits with SMOTE resampling."""
 
-# Maps each tournament round to the one grouped-average prefix that is
-# semantically matched to that round. All other prefixes are redundant
-# (they measure a team relative to opponents it has already faced or will
-# never face at that stage) and are dropped before modelling to avoid the
-# correlated-feature problem that causes permutation importance to
-# systematically undervalue features.
+# Maps each tournament round to the grouped-average prefix
 _ROUND_PREFIX = {2: "R32", 3: "S16", 4: "E8", 5: "F4", 6: "NCG", 7: "Winner"}
-
-# Seed threshold above which a winning team is considered an upset in each
-# round. Teams with seed > threshold who won are upweighted in the loss to
-# incentivise the model to identify upsets.
-_UPSET_SEED_THRESHOLD = {2: 8, 3: 4, 4: 2, 5: 1, 6: 1, 7: 1}
-
-# Multiplier applied to upset winners in the weighted Brier score objective.
-_UPSET_WEIGHT = 2.0
 
 _ALL_PREFIXES = ["R32", "S16", "E8", "F4", "NCG", "Winner"]
 
@@ -101,11 +88,6 @@ _KENPOM_COLS = [
 def _mismatched_avg_cols(r):
     """Return grouped-average and Actual column names for future rounds relative to round r.
 
-    Only prefixes up to and including the matched prefix for round r are kept —
-    these represent historical context the model could legitimately have at that
-    stage. Future-round prefixes are dropped since those games have not yet
-    been played and including them would be conceptually invalid.
-
     Args:
         r: Tournament round number (2-7).
 
@@ -124,30 +106,16 @@ def _mismatched_avg_cols(r):
 def create_splits(data, r, val_start=None, get_features=False, drop_cols=None):
     """Prepare feature matrix and labels for a given tournament round.
 
-    Encodes categorical columns, retains Year as a predictor, removes the five
-    non-round-matched grouped average prefixes to reduce correlated features,
-    and optionally drops a caller-supplied feature subset. When val_start is
-    provided the data is split into train (Year < val_start) and val
-    (Year >= val_start) folds; the scaler is always fit exclusively on the
-    training portion to prevent data leakage.
-
     Args:
         data: Full modeling DataFrame including all features and metadata.
         r: Tournament round number used to define the binary outcome.
-        val_start: Integer year at which the validation set begins. Rows with
-            Year >= val_start form the val fold; earlier rows form the train
-            fold. When None the full unscaled array is returned (used by
-            backtesting and prediction loops that handle splitting themselves).
+        val_start: Integer year at which the validation set begins.
         get_features: If True, return only the list of feature column names.
-        drop_cols: Optional list of additional feature column names to exclude
-            before scaling. Used to apply per-round, per-model feature subsets
-            identified during feature selection.
+        drop_cols: List of additional feature column names to exclude before scaling.
 
     Returns:
         If get_features is True, returns a list of column name strings.
-        If val_start is None, returns (X_raw, y_raw, years_raw) as unscaled
-            numpy arrays, where years_raw is a copy of the Year column used
-            for year-based slicing by callers (Year is also retained in X).
+        If val_start is None, returns (X_raw, y_raw, years_raw).
         Otherwise returns (X_train, X_val, y_train, y_val, scaler).
     """
     import numpy as np
@@ -197,54 +165,13 @@ def create_splits(data, r, val_start=None, get_features=False, drop_cols=None):
     return X_train, X_val, y_train, y_val, scaler
 
 
-def apply_smote(X_train, y_train):
-    """Apply BorderlineSMOTE oversampling followed by TomekLinks undersampling.
-
-    Must be called only on the training fold after the train/val split and
-    after scaling, to prevent data leakage into the validation set.
-
-    Falls back to returning the original arrays unchanged if there are too
-    few minority class samples to support BorderlineSMOTE (requires at least
-    k+1=6 minority samples by default).
-
-    Args:
-        X_train: Scaled training feature array.
-        y_train: Training labels.
-
-    Returns:
-        Tuple of (X_resampled, y_resampled) after SMOTE and TomekLinks,
-        or the original arrays if SMOTE cannot be applied.
-    """
-    import numpy as np
-    from imblearn.over_sampling import BorderlineSMOTE
-    from imblearn.under_sampling import TomekLinks
-
-    k_neighbors = 5
-    n_minority = int(np.sum(y_train == 1))
-    if n_minority <= k_neighbors:
-        print(f"      Skipping SMOTE: only {n_minority} minority samples (need >{k_neighbors})")
-        return X_train, y_train
-
-    sm = BorderlineSMOTE(random_state=23)
-    X_res, y_res = sm.fit_resample(X_train, y_train)
-    tl = TomekLinks()
-    X_res, y_res = tl.fit_resample(X_res, y_res)
-    return X_res, y_res
-
-
 def create_fold_splits(data, r, fold, drop_cols=None):
     """Prepare scaled train/val arrays for a single walk-forward CV fold.
 
-    Applies the same feature construction as create_splits but uses
-    explicit train_years and val_years from a fold definition rather than
-    a val_start year. The scaler is fit exclusively on training rows.
-
     Args:
         data: Full modeling DataFrame.
-        r: Tournament round number used to define the binary outcome and
-            round-matched feature prefix.
-        fold: Dict with keys 'train_years' and 'val_years' as returned by
-            make_folds().
+        r: Tournament round number used to define the binary outcome and feature prefix.
+        fold: Dict with keys 'train_years' and 'val_years' as returned by make_folds().
         drop_cols: Optional list of additional feature column names to exclude.
 
     Returns:
@@ -293,19 +220,6 @@ def create_fold_splits(data, r, fold, drop_cols=None):
 def get_class_weights(y_train):
     """Compute per-sample class weights from training labels using sklearn.
 
-    Uses sklearn's 'balanced' strategy, which sets class weights inversely
-    proportional to class frequencies:
-
-        weight_c = n_samples / (n_classes * n_samples_c)
-
-    Weights are computed from the original pre-SMOTE labels so they reflect
-    the true class imbalance in the training window. The returned array is
-    aligned to the (potentially post-SMOTE) y array passed in, mapping each
-    sample's label to its corresponding class weight. This means synthetic
-    SMOTE samples receive the same weight as the real minority samples they
-    were interpolated from, which is consistent with their purpose of
-    up-representing the minority class.
-
     Args:
         y_train: Training label array (may be post-SMOTE). Class weights are
             derived from the unique classes and their frequencies present in
@@ -321,32 +235,3 @@ def get_class_weights(y_train):
     weights = compute_class_weight(class_weight="balanced", classes=classes, y=y_train)
     class_weight_dict = dict(zip(classes, weights, strict=False))
     return np.array([class_weight_dict[label] for label in y_train])
-
-
-def get_sample_weights(data, r, years_mask):
-    """Build a sample weight array upweighting upset winners for a given round.
-
-    Upset winners are defined as teams with seed > _UPSET_SEED_THRESHOLD[r]
-    whose outcome is 1 (they won). All other samples receive weight 1.0.
-
-    Args:
-        data: Full modeling DataFrame containing 'Seed', 'Round', and 'Year'
-            columns.
-        r: Tournament round number used to look up the upset seed threshold.
-        years_mask: Boolean array aligned to data rows selecting the rows
-            relevant to this fold or split.
-
-    Returns:
-        Numpy array of sample weights aligned to the masked rows.
-    """
-    import numpy as np
-
-    subset = data[years_mask].copy()
-    subset["Outcome"] = (subset["Round"] >= r).astype(int)
-
-    threshold = _UPSET_SEED_THRESHOLD[r]
-    is_upset_winner = (subset["Seed"] > threshold) & (subset["Outcome"] == 1)
-
-    weights = np.ones(len(subset))
-    weights[is_upset_winner.values] = _UPSET_WEIGHT
-    return weights

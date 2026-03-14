@@ -4,12 +4,6 @@
 def run_test(data, ag_params, years, r, predictions):
     """Run walk-forward backtesting for a single round using AutoGluon.
 
-    For each test year, refits the winning AutoGluon model config (frozen
-    hyperparameters, no search) on all prior-year rows, then predicts on
-    the test year. Class imbalance is handled via a sample_weight column
-    computed from balanced class weights — no SMOTE or scaling is applied
-    since AutoGluon handles its own internal preprocessing.
-
     Args:
         data: Full modeling DataFrame.
         ag_params: Dict keyed by round number, each with 'model_type' and
@@ -37,7 +31,7 @@ def run_test(data, ag_params, years, r, predictions):
         test_df = _make_test_df(data, r, test_mask)
 
         with tempfile.TemporaryDirectory() as tmp_dir:
-            predictor = fit_autogluon(train_df, test_df, params, save_path=tmp_dir)
+            predictor = fit_autogluon(train_df, params, save_path=tmp_dir)
             prob = predictor.predict_proba(test_df)[1].values
 
         predictions[test_year]["Round_" + str(r)] = prob

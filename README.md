@@ -1,77 +1,108 @@
 # NCAA College Basketball Tournament Predictive Modeling
 
 ## Overview
-This project aims to build a predictive model for selecting winners in the NCAA Men's Basketball Tournament. A common approach is to predict the likelihood that *Team X* defeats *Team Y* and use these probabilities iteratively to determine the winner of each matchup. However, this method overlooks a critical aspect of traditional tournament scoring: **the points awarded for a correct pick double in each subsequent round**. This means that correctly picking the national champion is worth **32 times** as many points as selecting a single Round of 64 winner.
+This project builds a predictive model for the NCAA Men's Basketball Tournament. Rather than predicting head-to-head matchups, it models each round independently and fills the bracket recursively from champion backward — maximizing **expected points** under the standard scoring structure where point values double each round.
 
-## Approach
-To account for the scoring structure, this project takes a probabilistic approach by modeling each round of the tournament separately. Instead of selecting winners matchup by matchup, the bracket is filled out recursively, starting with the champion and working backward through each round. This ensures that selections maximize expected points rather than just the likelihood of winning individual games.
+## Modeling Approach
 
-## Data
-The dataset constructed consists of the teams and results of the past 18 NCAA Tournaments, and is gathered from [SportsReference](https://www.sports-reference.com/cbb/) using *BeautifulSoup* and [KenPom](https://kenpom.com/). Data collected consists of:
-- Team Metadata: *Name, Conference, # of Wins, Won Conference Tournament (Y/N), Bracket Region, Seed*
-- Efficiency: *Offensive & Defensive Efficiency, Tempo, Luck, Strength of Schedule*
-- Points: *Offensive & Defensive Point Rankings*
-- Roster: *Height, Experience, Bench Rating*
-- Computed Fields: *Historical Seed Performance, Grouped Metrics by Tournament Round & Region*
+### Round-by-Round Classification
+A binary classifier is trained per round (R32 through Championship). The outcome for each team is whether they reached that round or beyond. This produces a probability for each team at each stage, which feeds directly into the pick selection strategy.
 
-## Models
-Classification models were built by-round using two primary models: Gradient Boosting Machines (*XGBoost*) & Multilayer Perceptron (*Keras*) models. Hyperparameters were tuned for each using *Optuna*, with the final models being a weighted ensemble of the two components (the optimal weights which minimizes **Brier Score**).
+### Model
+[AutoGluon](https://auto.ml/autogluon) `TabularPredictor` with `best_quality` preset. Bagging and stacking are disabled so an explicit walk-forward validation split can be used. The best-performing base model type and exact hyperparameters are selected via walk-forward cross-validation, then frozen for backtesting. Class imbalance is handled via balanced class weights.
 
-## Pick Selection Strategy
-The selection metric used to determine each pick to make in each round is the **Expected Points** that would be garnered if the pick was corrected. Using the standard scoring method, this means that *E(Winner)* would be as follows:
-*E(Winner) = p(R32)\*10 + p(S16)\*20 + p(E8)\*40 + p(F4)\*80 + p(NCG)\*160 + p(Winner)\*320*
+### Cross-Validation
+Walk-forward CV with 3 folds. Each fold's training set consists of all years prior to the validation window, respecting temporal ordering and preventing data leakage. The model with the highest mean val-set ROC-AUC across folds is selected per round.
 
-Thus, the first pick made would be the team with the most expected points for winning the tournament and this team would be selected throughout each round of the tournament. This process would then continue until the entire bracket is completed.
+### Backtesting
+Walk-forward backtesting from 2013 onward. For each test year, the frozen model config is refit on all prior years and evaluated on the held-out year. 2020 is excluded (no tournament).
 
-## Evaluation
-To evaluate the performance of this strategy, backtesting was implemented starting with the *2013 tournament*. While these results may be overly optimistic given the overlap between training, validation, and backtesting data, the results are as follows:
+### Pick Selection
+Each team's expected points are computed as:
 
-Year | Points
---- | ---
-2013 | 1100
-2014 | 660
-2015 | 1390
-2016 | 890
-2017 | 1580
-2018 | 1360
-2019 | 1670
-2021 | 1380
-2022 | 1150
-2023 | 1260
-2024 | 1400
-2025 | 1780
+```
+E = p(R32)×10 + p(S16)×20 + p(E8)×40 + p(F4)×80 + p(NCG)×160 + p(Winner)×320
+```
 
-Overall, this method has correctly selected the winner 83% of the time.
+The bracket is filled by selecting the highest expected-points team at each position, working from champion backward.
 
-## Set-Up
+### Data
+Per-team features for each tournament year scraped from [SportsReference](https://www.sports-reference.com/cbb/) and [KenPom](https://kenpom.com/):
+- **Metadata:** conference, seed, region, wins, conference tournament result
+- **Efficiency:** adjusted offensive/defensive efficiency, tempo, strength of schedule
+- **Points/Roster:** offensive/defensive point distributions, height, experience, bench depth
+- **Derived:** historical seed survival rates (full history, 12-year, 6-year windows), grouped KenPom averages by tournament round and region
+
+---
+
+## Setup
 
 This project uses [uv](https://docs.astral.sh/uv/) for environment and dependency management.
 
-### Install uv
 ```bash
+# Install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
-```
 
-### Create environment and install dependencies
-```bash
+# Create environment and install dependencies
 uv sync
-```
 
-This creates a `.venv` and installs all core and dev dependencies defined in `pyproject.toml`.
+# Activate
+source .venv/bin/activate       # macOS/Linux
+.venv\Scripts\activate          # Windows
 
-### Activate the environment
-```bash
-source .venv/bin/activate  # macOS/Linux
-.venv\Scripts\activate     # Windows
-```
-
-### Install pre-commit hooks
-```bash
+# Install pre-commit hooks (ruff, mypy, pydoclint)
 uv run pre-commit install
 ```
 
-Once installed, ruff, mypy, and pydoclint will run automatically on every commit.
-To run them manually against all files:
+---
+
+## Usage
+
+Scripts are run from the `scripts/` directory.
+
+### 1. Build the dataset
+Scrapes and processes historical tournament data into `data/processed/data.csv`.
 ```bash
-uv run pre-commit run --all-files
+python 01_GetData.py
 ```
+
+### 2. Tune models
+Runs walk-forward CV per round, selects the best AutoGluon model config, and saves frozen hyperparameters to `model/autogluon_params.json`. Re-run this when new tournament data is added.
+```bash
+python 02_TrainModels.py
+```
+
+### 3. Backtest
+Refits the frozen model configs in a walk-forward backtest from 2013 onward and exports accuracy and points results to `results/backwards_test/`.
+```bash
+python 03_GetResults.py
+```
+
+### 4. Generate predictions
+Scrapes current-year data, refits models on all historical data, and outputs bracket probabilities and picks to `prediction/`.
+```bash
+python 04_MakePredictions.py
+```
+
+> Update `year` and `playin_KP` at the top of `04_MakePredictions.py` each tournament year.
+
+---
+
+## Backtested Results
+
+| Year | Points |
+|------|--------|
+| 2013 | 1180 |
+| 2014 | 480 |
+| 2015 | 940 |
+| 2016 | 640 |
+| 2017 | 910 |
+| 2018 | 1080 |
+| 2019 | 930 |
+| 2021 | 860 |
+| 2022 | 480 |
+| 2023 | 560 |
+| 2024 | 700 |
+| 2025 | 1190 |
+
+Mean: **829 pts** &nbsp;|&nbsp; SD: **244 pts** &nbsp;|&nbsp; Overall pick accuracy: **62.0%**

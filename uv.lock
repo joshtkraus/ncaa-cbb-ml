@@ -2853,6 +2853,7 @@ dependencies = [
     { name = "numpy" },
     { name = "pandas" },
     { name = "requests" },
+    { name = "scikit-learn" },
 ]
 
 [package.dev-dependencies]
@@ -2872,6 +2873,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26.0" },
     { name = "pandas", specifier = ">=2.0.0" },
     { name = "requests", specifier = ">=2.32.0" },
+    { name = "scikit-learn", specifier = ">=1.4.0" },
 ]
 
 [package.metadata.requires-dev]
