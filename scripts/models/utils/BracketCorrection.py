@@ -27,7 +27,8 @@ def correct_bracket(picks_dict, team_data, full_data, predictor, thresholds=None
         team_data: DataFrame for the current tournament year.
         full_data: Full modeling DataFrame for the current year.
         predictor: Fitted matchup TabularPredictor.
-        thresholds: Optional dict mapping round number to threshold.
+        thresholds: Optional dict mapping round number to threshold. If
+            provided, overrides threshold for each round individually.
         threshold: Global threshold used when thresholds dict is not provided.
 
     Returns:
@@ -73,10 +74,20 @@ def _correct_s16(picks, full_data, predictor, threshold):
                 continue
             loser = team_b if override == team_a else team_a
             winner_slot = slot_a if override == team_a else slot_b
+            loser_slot = slot_b if override == team_a else slot_a
             e8_half = _S16_TO_E8[winner_slot]
             if picks[region]["E8"][e8_half] and picks[region]["E8"][e8_half][0] == loser:
+                # Move winner into loser's S16 slot and update E8.
+                # Do NOT propagate into R32 — R32 slots are already correctly
+                # set by create_picks based on seed, and swapping by name would
+                # place the winner in the wrong seed slot (e.g. a 5-seed in the
+                # 1/16 slot) causing duplicates.
                 picks[region]["E8"][e8_half] = [override]
-                _propagate_override(picks, region, loser, override, do_e8=False)
+                picks[region]["S16"][loser_slot] = [override]
+                picks[region]["S16"][winner_slot] = []
+                _propagate_override(
+                    picks, region, loser, override, do_e8=False, do_s16=False, do_r32=False
+                )
 
 
 def _correct_e8(picks, full_data, predictor, threshold):
