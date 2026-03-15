@@ -90,19 +90,17 @@ python 05_MakePredictions.py
 
 ## Backtested Results
 
-[View interactive bracket results](results/brackets/brackets.html)
-
 | Year | Points |
 |------|--------|
 | 2015 | 940 |
-| 2016 | 640 |
-| 2017 | 920 |
-| 2018 | 1000 |
-| 2019 | 1330 |
-| 2021 | 940 |
-| 2022 | 480 |
-| 2023 | 570 |
-| 2024 | 860 |
-| 2025 | 1670 |
+| 2016 | 740 |
+| 2017 | 930 |
+| 2018 | 1070 |
+| 2019 | 1010 |
+| 2021 | 860 |
+| 2022 | 510 |
+| 2023 | 1070 |
+| 2024 | 750 |
+| 2025 | 1230 |
 
-**Mean: 935 pts** &nbsp;|&nbsp; **SD: 337 pts** &nbsp;|&nbsp; **Overall pick accuracy: 63.7%**
+**Mean: 911 pts** &nbsp;|&nbsp; **SD: 195 pts** &nbsp;|&nbsp; **Overall pick accuracy: 63.7%**

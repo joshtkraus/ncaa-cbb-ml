@@ -72,6 +72,17 @@ def _make_matchup_row(team_a, team_b, round_num, winner, numeric_cols):
     }
     for col in numeric_cols:
         row[f"{col}_diff"] = float(team_a[col]) - float(team_b[col])
+    # AdjEM vs seed expectation differential: captures whether each team is
+    # over- or under-performing relative to their seed peers. Dropped from
+    # numeric_cols by _base_features so must be added explicitly.
+    row["AdjEM_vs_Seed_diff"] = float(team_a["AdjEM_Seed_Avg"]) - float(team_b["AdjEM_Seed_Avg"])
+    # Tempo mismatch: absolute pace differential. Large mismatches favour the
+    # team whose style dominates — not captured by the signed AdjTempo_diff.
+    row["Tempo_Mismatch"] = abs(float(team_a["AdjTempo"]) - float(team_b["AdjTempo"]))
+    # Defensive/offensive matchup: how well each team's defense neutralises the
+    # opponent's offense. Lower AdjDE is better; higher AdjOE is better.
+    row["DefOff_Matchup_A"] = float(team_a["AdjDE"]) - float(team_b["AdjOE"])
+    row["DefOff_Matchup_B"] = float(team_b["AdjDE"]) - float(team_a["AdjOE"])
     return row
 
 
@@ -213,7 +224,9 @@ def build_matchup_dataset(data, results):
         if c not in ["Year", "Team", "Conf", "Region", "Seed"]
         and pd.api.types.is_numeric_dtype(base[c])
     ]
-    lookup = {(int(row["Year"]), row["Team"]): row for _, row in base.iterrows()}
+    # Build lookup from the full data so engineered features that are stripped
+    # by _base_features (e.g. AdjEM_Seed_Avg) remain accessible in each row.
+    lookup = {(int(row["Year"]), row["Team"]): row for _, row in data.iterrows()}
 
     rows: list[dict] = []
     for year_str, bracket in results.items():
@@ -226,7 +239,8 @@ def build_matchup_dataset(data, results):
     df = pd.DataFrame(rows)
     meta_cols = ["Year", "Round", "Team_A", "Team_B", "Seed_A", "Seed_B", "Conf_A", "Conf_B"]
     diff_cols = [c for c in df.columns if c.endswith("_diff")]
-    return df[meta_cols + diff_cols + ["Outcome"]].reset_index(drop=True)
+    engineered_cols = ["Tempo_Mismatch", "DefOff_Matchup_A", "DefOff_Matchup_B"]
+    return df[meta_cols + diff_cols + engineered_cols + ["Outcome"]].reset_index(drop=True)
 
 
 def make_matchup_train_df(matchup_data, year_mask):
@@ -276,5 +290,9 @@ def make_matchup_pred_df(team_a_row, team_b_row, round_num, data):
     }
     for col in numeric_cols:
         row[f"{col}_diff"] = float(team_a[col]) - float(team_b[col])
+    row["AdjEM_vs_Seed_diff"] = float(team_a["AdjEM_Seed_Avg"]) - float(team_b["AdjEM_Seed_Avg"])
+    row["Tempo_Mismatch"] = abs(float(team_a["AdjTempo"]) - float(team_b["AdjTempo"]))
+    row["DefOff_Matchup_A"] = float(team_a["AdjDE"]) - float(team_b["AdjOE"])
+    row["DefOff_Matchup_B"] = float(team_b["AdjDE"]) - float(team_a["AdjOE"])
 
     return pd.DataFrame([row]), was_swapped

@@ -54,7 +54,7 @@ def tune_matchup_autogluon(matchup_data, folds):
         predictor = TabularPredictor(
             label="Outcome",
             problem_type="binary",
-            eval_metric="roc_auc",
+            eval_metric="log_loss",
             path=save_path,
             sample_weight=weight_col,
             verbosity=0,
@@ -67,6 +67,7 @@ def tune_matchup_autogluon(matchup_data, folds):
             num_stack_levels=0,
             fit_weighted_ensemble=False,
             excluded_model_types=_EXCLUDED_MODELS,
+            calibrate=True,
         )
 
         fold_lb = predictor.leaderboard(val_df, silent=True)
@@ -83,16 +84,16 @@ def tune_matchup_autogluon(matchup_data, folds):
         fold_importances.append(fold_imp)
 
     mean_scores = {m: float(np.mean(v)) for m, v in model_scores.items() if len(v) == len(folds)}
-    best_model_name = max(mean_scores, key=lambda m: mean_scores[m])
-    print(f"    Best model: {best_model_name}  (mean AUC: {mean_scores[best_model_name]:.4f})")
+    best_model_name = min(mean_scores, key=lambda m: mean_scores[m])
+    print(f"    Best model: {best_model_name}  (mean log loss: {mean_scores[best_model_name]:.4f})")
 
     cwd = os.path.abspath(os.getcwd())
 
     all_lb = pd.concat(fold_leaderboards, ignore_index=True)
     numeric_lb_cols = all_lb.select_dtypes(include="number").columns.difference(["fold"])
     avg_leaderboard = all_lb.groupby("model")[numeric_lb_cols].mean().reset_index()
-    avg_leaderboard["auc_score"] = avg_leaderboard["model"].map(mean_scores)
-    avg_leaderboard = avg_leaderboard.sort_values("auc_score", ascending=False)
+    avg_leaderboard["log_loss_score"] = avg_leaderboard["model"].map(mean_scores)
+    avg_leaderboard = avg_leaderboard.sort_values("log_loss_score", ascending=True)
     leaderboard_path = os.path.join(cwd, _LEADERBOARD_DIR, "matchup.csv")
     os.makedirs(os.path.dirname(leaderboard_path), exist_ok=True)
     avg_leaderboard.to_csv(leaderboard_path, index=False)
@@ -148,7 +149,7 @@ def fit_matchup_autogluon(matchup_data, train_mask, ag_params, save_path):
     predictor = TabularPredictor(
         label="Outcome",
         problem_type="binary",
-        eval_metric="roc_auc",
+        eval_metric="log_loss",
         path=save_path,
         sample_weight=weight_col,
         verbosity=0,
@@ -158,6 +159,7 @@ def fit_matchup_autogluon(matchup_data, train_mask, ag_params, save_path):
         num_bag_folds=0,
         num_stack_levels=0,
         fit_weighted_ensemble=False,
+        calibrate=True,
     )
     return predictor
 
