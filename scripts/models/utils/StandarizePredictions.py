@@ -4,10 +4,6 @@
 def standarize(df):
     """Normalize raw model probabilities to sum to 1 within each matchup group.
 
-    For each round, teams are grouped by their bracket pod and probabilities
-    are rescaled so the group sums to 1, enforcing the constraint that exactly
-    one team from each matchup advances.
-
     Args:
         df: DataFrame with columns Team, Seed, Region, and raw round probabilities
             (Round_2 through Round_7).

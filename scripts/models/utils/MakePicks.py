@@ -351,9 +351,6 @@ def _pick_r32(team_data, picks_dict, counters):
 def create_picks(team_data):
     """Generate a full bracket from expected-points scores, round by round.
 
-    Iterates from Winner down to R32, at each round selecting the highest
-    expected-points team that fits the required bracket slot.
-
     Args:
         team_data: DataFrame with columns Team, Seed, Region, and one column
             per round (Winner, NCG, F4, E8, S16, R32) containing expected points.

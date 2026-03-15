@@ -6,8 +6,7 @@ def run_test(data, ag_params, years, r, predictions):
 
     Args:
         data: Full modeling DataFrame.
-        ag_params: Dict keyed by round number, each with 'model_type' and
-            'hyperparameters' keys as produced by tune_autogluon.
+        ag_params: Dict keyed by round number, each with 'model_type' and 'hyperparameters'.
         years: List of backtest training years to iterate over.
         r: Tournament round number.
         predictions: Dict to store per-year round predictions.

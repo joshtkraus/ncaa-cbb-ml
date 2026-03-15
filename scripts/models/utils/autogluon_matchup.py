@@ -16,8 +16,8 @@ warnings.filterwarnings(
 
 _AG_TUNING_DIR = "model/autogluon_matchup"
 _EXCLUDED_MODELS = ["FASTAI"]
-_LEADERBOARD_DIR = "results/model_leaderboard_matchup"
-_IMPORTANCE_DIR = "results/feature_importance_matchup"
+_LEADERBOARD_DIR = "results/model_leaderboard"
+_IMPORTANCE_DIR = "results/feature_importance"
 DEFAULT_THRESHOLD = 0.5
 
 

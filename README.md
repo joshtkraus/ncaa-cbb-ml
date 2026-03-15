@@ -92,8 +92,6 @@ python 04_MakePredictions.py
 
 | Year | Points |
 |------|--------|
-| 2013 | 1180 |
-| 2014 | 530 |
 | 2015 | 940 |
 | 2016 | 680 |
 | 2017 | 880 |
@@ -105,4 +103,4 @@ python 04_MakePredictions.py
 | 2024 | 860 |
 | 2025 | 1670 |
 
-**Mean: 922 pts** &nbsp;|&nbsp; **SD: 329 pts** &nbsp;|&nbsp; **Overall pick accuracy: 63.2%**
+**Mean: 935 pts** &nbsp;|&nbsp; **SD: 328 pts** &nbsp;|&nbsp; **Overall pick accuracy: 63.7%**

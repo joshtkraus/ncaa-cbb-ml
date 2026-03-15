@@ -1,15 +1,4 @@
-"""Per-round threshold tuning for the matchup model bracket correction.
-
-Pre-computes all backward-selection predictions and per-year matchup
-predictors once, then tunes thresholds greedily round by round. A forward
-pass (R2→R7) is followed by a single backward pass (R6→R2) to allow early
-rounds to update given the now-tuned downstream thresholds.
-
-Results are printed to stdout and saved to model/matchup_threshold.json.
-
-Usage:
-    python 02c_TuneThreshold.py
-"""
+"""Per-round threshold tuning for the matchup model bracket correction."""
 
 import copy
 import json
@@ -262,7 +251,7 @@ def run():
         )
 
     # Greedy forward pass
-    print("\nGreedy forward pass (R2 → R7)...")
+    print("\nForward pass (R2 → R7)...")
     best_thresholds = dict.fromkeys(_ROUNDS, 1.0)
     for r in _ROUNDS:
         best_t, best_mean = _tune_round(r, best_thresholds, score_fn)

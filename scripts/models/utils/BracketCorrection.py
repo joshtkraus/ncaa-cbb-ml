@@ -27,8 +27,7 @@ def correct_bracket(picks_dict, team_data, full_data, predictor, thresholds=None
         team_data: DataFrame for the current tournament year.
         full_data: Full modeling DataFrame for the current year.
         predictor: Fitted matchup TabularPredictor.
-        thresholds: Optional dict mapping round number to threshold. If
-            provided, overrides threshold for each round individually.
+        thresholds: Optional dict mapping round number to threshold.
         threshold: Global threshold used when thresholds dict is not provided.
 
     Returns:

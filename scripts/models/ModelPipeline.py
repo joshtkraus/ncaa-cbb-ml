@@ -5,7 +5,7 @@ def combine_model(
     data,
     ag_params,
     correct_picks,
-    backwards_year=2013,
+    backwards_year=2015,
     matchup_params=None,
     matchup_data=None,
     thresholds=None,
@@ -14,15 +14,12 @@ def combine_model(
 
     Args:
         data: Full modeling DataFrame.
-        ag_params: Dict keyed by round number with 'model_type' and
-            'hyperparameters' keys, as produced by tune_autogluon.
+        ag_params: Dict keyed by round number with 'model_type' and 'hyperparameters' keys.
         correct_picks: Dict of actual tournament results keyed by year string.
-        backwards_year: First year to include in backtest (default 2013).
+        backwards_year: First year to include in backtest (default 2015).
         matchup_params: Optional dict with 'model_type' and 'hyperparameters'
         matchup_data: Optional full matchup DataFrame from build_matchup_dataset.
-            Required if matchup_params is provided.
-        thresholds: Optional dict mapping round number to threshold. Defaults to
-            0.5 for all rounds if not provided.
+        thresholds: Optional dict mapping round number to threshold.
     """
     import os
     import shutil
@@ -50,11 +47,6 @@ def combine_model(
         predictions = run_test(data, ag_params, years, r, predictions)
 
     # Build a per-year matchup predictor lookup if correction is enabled.
-    # For each test year, fit the matchup model on all prior years only —
-    # same walk-forward discipline as the by-round model.
-    # Predictors are saved to persistent paths since AutoGluon loads weights
-    # lazily from disk — they cannot live in a TemporaryDirectory that gets
-    # cleaned up before predict_proba is called.
     matchup_predictors = {}
     matchup_base_dir = os.path.join(cwd, "model/autogluon_matchup_backtest")
 
@@ -75,7 +67,6 @@ def combine_model(
                 matchup_data, train_mask, matchup_params, save_path=save_path
             )
             matchup_predictors[test_year] = predictor
-            print(f"  Matchup model fit for test year {test_year}")
 
     points_df, accs_df = standardize_predict(
         years,

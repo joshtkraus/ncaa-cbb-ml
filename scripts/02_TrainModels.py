@@ -13,7 +13,6 @@ def run():
     data_path = os.path.join(os.path.abspath(os.getcwd()), "data/processed/data.csv")
     data = pd.read_csv(data_path)
 
-    # Tune AutoGluon per round — finds best model config via walk-forward CV
     train_models(data)
 
 

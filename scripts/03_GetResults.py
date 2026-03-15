@@ -68,8 +68,6 @@ def _update_readme_results(points_path, accs_path, readme_path):
     with open(readme_path, "w") as f:
         f.write(updated)
 
-    print(f"README updated — mean: {mean:.0f} pts, weighted accuracy: {weighted_acc:.1%}")
-
 
 # ---------------------------------------------------------------------------
 # Paths
