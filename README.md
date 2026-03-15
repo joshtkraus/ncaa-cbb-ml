@@ -81,16 +81,16 @@ python 03_GetResults.py
 ### 4. Generate predictions
 Scrapes current-year data, refits models on all historical data, and outputs bracket probabilities and picks to `prediction/`.
 ```bash
-python 04_MakePredictions.py
+python 05_MakePredictions.py
 ```
 
-> Update `year` and `playin_KP` at the top of `04_MakePredictions.py` each tournament year.
+> Update `year` and `playin_KP` at the top of `05_MakePredictions.py` each tournament year.
 
 ---
 
 ## Backtested Results
 
-[View interactive bracket results →](results/brackets/brackets.html)
+[View interactive bracket results](results/brackets/brackets.html)
 
 | Year | Points |
 |------|--------|
