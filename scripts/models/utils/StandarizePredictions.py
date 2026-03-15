@@ -4,6 +4,10 @@
 def standarize(df):
     """Normalize raw model probabilities to sum to 1 within each matchup group.
 
+    For each round, teams are grouped by their bracket pod and probabilities
+    are rescaled so the group sums to 1, enforcing the constraint that exactly
+    one team from each matchup advances.
+
     Args:
         df: DataFrame with columns Team, Seed, Region, and raw round probabilities
             (Round_2 through Round_7).
@@ -64,17 +68,17 @@ def standarize(df):
 
 
 def standardize_predict(
-    years, predictions, correct_picks, data=None, matchup_predictor=None, threshold=0.6
+    years, predictions, correct_picks, data=None, matchup_predictor=None, thresholds=None
 ):
-    """Normalize predictions, generate picks, apply matchup corrections, score them, and export.
+    """Normalize predictions, generate picks, apply matchup corrections, score them, export results.
 
     Args:
         years: List of backtest training years (test year = year + 1).
         predictions: Nested dict of raw model outputs keyed by test year and round.
         correct_picks: Dict of actual tournament results keyed by year string.
-        data: Full modeling DataFrame. Required if matchup_predictor is provided.
+        data: Full modeling DataFrame.
         matchup_predictor: Optional fitted matchup TabularPredictor.
-        threshold: Probability threshold for matchup model overrides (default 0.6).
+        thresholds: Optional dict mapping round number to threshold.
 
     Returns:
         Tuple of (points_df, accs_df) summarizing backtesting performance.
@@ -141,7 +145,7 @@ def standardize_predict(
                 year_data = data[data["Year"] == test_year][["Team", "Seed", "Region"]]
                 full_year_data = data[data["Year"] == test_year]
                 picks = correct_bracket(
-                    picks, year_data, full_year_data, predictor_for_year, threshold
+                    picks, year_data, full_year_data, predictor_for_year, thresholds=thresholds
                 )
                 # Re-score the corrected bracket
                 from models.utils.MakePicks import real_Bracket

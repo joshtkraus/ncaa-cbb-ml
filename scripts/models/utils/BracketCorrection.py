@@ -19,7 +19,7 @@ _F4_PAIRS = [("West", "East"), ("South", "Midwest")]
 _REGIONS = ["West", "East", "South", "Midwest"]
 
 
-def correct_bracket(picks_dict, team_data, full_data, predictor, threshold=0.5):
+def correct_bracket(picks_dict, team_data, full_data, predictor, thresholds=None, threshold=0.5):
     """Apply forward-pass matchup corrections to a backward-selected bracket.
 
     Args:
@@ -27,18 +27,22 @@ def correct_bracket(picks_dict, team_data, full_data, predictor, threshold=0.5):
         team_data: DataFrame for the current tournament year.
         full_data: Full modeling DataFrame for the current year.
         predictor: Fitted matchup TabularPredictor.
-        threshold: Minimum probability for the matchup model.
+        thresholds: Optional dict mapping round number to threshold. If
+            provided, overrides threshold for each round individually.
+        threshold: Global threshold used when thresholds dict is not provided.
 
     Returns:
         Corrected picks_dict with matchup-model overrides applied.
     """
+    if thresholds is None:
+        thresholds = dict.fromkeys(range(2, 8), threshold)
     picks = copy.deepcopy(picks_dict)
-    _correct_r32(picks, team_data, full_data, predictor, threshold)
-    _correct_s16(picks, full_data, predictor, threshold)
-    _correct_e8(picks, full_data, predictor, threshold)
-    _correct_f4(picks, full_data, predictor, threshold)
-    _correct_ncg(picks, full_data, predictor, threshold)
-    _correct_winner(picks, full_data, predictor, threshold)
+    _correct_r32(picks, team_data, full_data, predictor, thresholds[2])
+    _correct_s16(picks, full_data, predictor, thresholds[3])
+    _correct_e8(picks, full_data, predictor, thresholds[4])
+    _correct_f4(picks, full_data, predictor, thresholds[5])
+    _correct_ncg(picks, full_data, predictor, thresholds[6])
+    _correct_winner(picks, full_data, predictor, thresholds[7])
     return picks
 
 
