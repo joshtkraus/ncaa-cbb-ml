@@ -3,3 +3,5 @@
 __pycache__/
 *.pyc
 .history/
+model/autogluon/
+model/autogluon_matchup/

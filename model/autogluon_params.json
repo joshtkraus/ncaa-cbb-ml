@@ -1,0 +1,111 @@
+{
+  "2": {
+    "model_type": "CAT",
+    "hyperparameters": {
+      "iterations": 10000,
+      "learning_rate": 0.017301189655111057,
+      "allow_writing_files": false,
+      "eval_metric": "Logloss",
+      "depth": 8,
+      "grow_policy": "SymmetricTree",
+      "l2_leaf_reg": 3.3274013177541373,
+      "max_ctr_complexity": 5,
+      "one_hot_max_size": 10,
+      "random_seed": 0
+    }
+  },
+  "3": {
+    "model_type": "RF",
+    "hyperparameters": {
+      "n_estimators": 300,
+      "max_leaf_nodes": 15000,
+      "n_jobs": -1,
+      "bootstrap": true,
+      "criterion": "gini",
+      "random_state": 0
+    }
+  },
+  "4": {
+    "model_type": "XT",
+    "hyperparameters": {
+      "n_estimators": 300,
+      "max_leaf_nodes": 29702,
+      "n_jobs": -1,
+      "bootstrap": true,
+      "max_features": "sqrt",
+      "min_samples_leaf": 2,
+      "random_state": 0
+    }
+  },
+  "5": {
+    "model_type": "NN_TORCH",
+    "hyperparameters": {
+      "num_epochs": 1000,
+      "epochs_wo_improve": null,
+      "activation": "elu",
+      "embedding_size_factor": 1.0,
+      "embed_exponent": 0.56,
+      "max_embedding_dim": 100,
+      "y_range": null,
+      "y_range_extend": 0.05,
+      "dropout_prob": 0.06134755114373829,
+      "optimizer": "adam",
+      "learning_rate": 0.005834535148903801,
+      "weight_decay": 2.0826540090463355e-09,
+      "proc.embed_min_categories": 4,
+      "proc.impute_strategy": "median",
+      "proc.max_category_levels": 100,
+      "proc.skew_threshold": 0.99,
+      "use_ngram_features": false,
+      "num_layers": 5,
+      "hidden_size": 144,
+      "max_batch_size": 512,
+      "use_batchnorm": true,
+      "loss_function": "auto",
+      "seed_value": 0
+    }
+  },
+  "6": {
+    "model_type": "CAT",
+    "hyperparameters": {
+      "iterations": 10000,
+      "learning_rate": 0.036232951900213306,
+      "allow_writing_files": false,
+      "eval_metric": "Logloss",
+      "depth": 8,
+      "grow_policy": "Depthwise",
+      "l2_leaf_reg": 1.640921865280573,
+      "max_ctr_complexity": 3,
+      "one_hot_max_size": 5,
+      "random_seed": 0
+    }
+  },
+  "7": {
+    "model_type": "NN_TORCH",
+    "hyperparameters": {
+      "num_epochs": 1000,
+      "epochs_wo_improve": null,
+      "activation": "relu",
+      "embedding_size_factor": 1.0,
+      "embed_exponent": 0.56,
+      "max_embedding_dim": 100,
+      "y_range": null,
+      "y_range_extend": 0.05,
+      "dropout_prob": 0.36669080773207274,
+      "optimizer": "adam",
+      "learning_rate": 0.015280159186761077,
+      "weight_decay": 1.3082489374636015e-08,
+      "proc.embed_min_categories": 4,
+      "proc.impute_strategy": "median",
+      "proc.max_category_levels": 100,
+      "proc.skew_threshold": 0.99,
+      "use_ngram_features": false,
+      "num_layers": 3,
+      "hidden_size": 95,
+      "max_batch_size": 512,
+      "use_batchnorm": true,
+      "loss_function": "auto",
+      "seed_value": 0
+    }
+  }
+}

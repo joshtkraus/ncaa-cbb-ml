@@ -1,0 +1,28 @@
+{
+  "model_type": "NN_TORCH",
+  "hyperparameters": {
+    "num_epochs": 1000,
+    "epochs_wo_improve": null,
+    "activation": "relu",
+    "embedding_size_factor": 1.0,
+    "embed_exponent": 0.56,
+    "max_embedding_dim": 100,
+    "y_range": null,
+    "y_range_extend": 0.05,
+    "dropout_prob": 0.006531401073483156,
+    "optimizer": "adam",
+    "learning_rate": 0.012418052210914356,
+    "weight_decay": 3.0406866089493607e-05,
+    "proc.embed_min_categories": 4,
+    "proc.impute_strategy": "median",
+    "proc.max_category_levels": 100,
+    "proc.skew_threshold": 0.99,
+    "use_ngram_features": false,
+    "num_layers": 1,
+    "hidden_size": 192,
+    "max_batch_size": 512,
+    "use_batchnorm": true,
+    "loss_function": "auto",
+    "seed_value": 0
+  }
+}

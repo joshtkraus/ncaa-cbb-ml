@@ -1,67 +1,88 @@
-# Combine Component Models
-def combine_model(data,nn_params,gbm_params,weights,correct_picks,backwards_year=2013):
-    print('Combining Models...')
-    # Libraries
+"""Backtesting pipeline using AutoGluon frozen model configs."""
+
+
+def combine_model(
+    data,
+    ag_params,
+    correct_picks,
+    backwards_year=2015,
+    matchup_params=None,
+    matchup_data=None,
+    thresholds=None,
+):
+    """Run walk-forward backtesting with AutoGluon and export results.
+
+    Args:
+        data: Full modeling DataFrame.
+        ag_params: Dict keyed by round number with 'model_type' and 'hyperparameters' keys.
+        correct_picks: Dict of actual tournament results keyed by year string.
+        backwards_year: First year to include in backtest (default 2015).
+        matchup_params: Optional dict with 'model_type' and 'hyperparameters'
+        matchup_data: Optional full matchup DataFrame from build_matchup_dataset.
+        thresholds: Optional dict mapping round number to threshold.
+    """
     import os
-    from models.utils.DataProcessing import create_splits
+    import shutil
+
     from models.utils.backwards_test import run_test
     from models.utils.StandarizePredictions import standardize_predict
 
-    # Years to Backwards Test
-    years = [*range(backwards_year-1,2024)]
+    use_correction = matchup_params is not None and matchup_data is not None
+
+    cwd = os.path.abspath(os.getcwd())
+    max_train_year = data["Year"].max() - 1
+    years = [*range(backwards_year - 1, max_train_year + 1)]
     years.remove(2020)
 
-    # Initialize
     predictions = {}
     for year in years:
-        if year == 2019:
-            test_year = 2021
-        else:
-            test_year = year+1
+        test_year = 2021 if year == 2019 else year + 1
         predictions[test_year] = {}
-        predictions[test_year]['Team'] = data.loc[data['Year']==test_year,'Team'].values
-        predictions[test_year]['Seed'] = data.loc[data['Year']==test_year,'Seed'].values
-        predictions[test_year]['Region'] = data.loc[data['Year']==test_year,'Region'].values
+        predictions[test_year]["Team"] = data.loc[data["Year"] == test_year, "Team"].values
+        predictions[test_year]["Seed"] = data.loc[data["Year"] == test_year, "Seed"].values
+        predictions[test_year]["Region"] = data.loc[data["Year"] == test_year, "Region"].values
 
-    # Iterate Rounds
-    for r in range(2,8):
-        # Data Splits
-        # NN
-        X_SMTL_nn, y_SMTL_nn, years_SMTL_nn = create_splits(data, r, train=True, years_list=True)
-        X_nn, y, years_nn = create_splits(data, r, train=False, years_list=True)
-        # GBM
-        X_SMTL_gbm, y_SMTL_gbm, years_SMTL_gbm = create_splits(data, r, train=True, years_list=True)
-        X_gbm, _, years_gbm = create_splits(data, r, train=False, years_list=True)
+    for r in range(2, 8):
+        print(f"Round {r}")
+        predictions = run_test(data, ag_params, years, r, predictions)
 
-        # Backwards Testing
-        predictions = run_test(
-            data,
-            X_SMTL_nn,
-            y_SMTL_nn,
-            X_nn,
-            X_SMTL_gbm,
-            y_SMTL_gbm,
-            X_gbm,
-            y,
-            nn_params[r],
-            gbm_params[r],
-            weights[r],
-            years,
-            r,
-            predictions,
-            years_SMTL_nn,
-            years_nn,
-            years_SMTL_gbm,
-            years_gbm
-        )
+    # Build a per-year matchup predictor lookup if correction is enabled.
+    matchup_predictors = {}
+    matchup_base_dir = os.path.join(cwd, "model/autogluon_matchup_backtest")
 
-    # Standardize Predictions, Make Picks
-    points_df, accs_df = standardize_predict(years,predictions,correct_picks)   
- 
-    # Export
-    # Picks Accuracy
-    path = os.path.join(os.path.abspath(os.getcwd()), 'results/backwards_test/picks_accuracy.csv')
-    accs_df.to_csv(path,index=False)
-    # Picks Points
-    path = os.path.join(os.path.abspath(os.getcwd()), 'results/backwards_test/picks_points.csv')
-    points_df.to_csv(path,index=False)
+    if use_correction:
+        from models.utils.autogluon_matchup import fit_matchup_autogluon
+
+        # Clean up any previous backtest matchup models
+        if os.path.exists(matchup_base_dir):
+            shutil.rmtree(matchup_base_dir)
+
+        print("\nFitting matchup models for bracket correction...")
+        for year in years:
+            test_year = 2021 if year == 2019 else year + 1
+            train_mask = matchup_data["Year"].values < test_year
+            save_path = os.path.join(matchup_base_dir, str(test_year))
+            os.makedirs(save_path, exist_ok=True)
+            predictor = fit_matchup_autogluon(
+                matchup_data, train_mask, matchup_params, save_path=save_path
+            )
+            matchup_predictors[test_year] = predictor
+
+    points_df, accs_df = standardize_predict(
+        years,
+        predictions,
+        correct_picks,
+        data=data if use_correction else None,
+        matchup_predictor=matchup_predictors if use_correction else None,
+        thresholds=thresholds,
+    )
+
+    # Clean up backtest matchup models after scoring is complete
+    if use_correction and os.path.exists(matchup_base_dir):
+        shutil.rmtree(matchup_base_dir)
+
+    path = os.path.join(cwd, "results/backwards_test/picks_accuracy.csv")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    accs_df.to_csv(path, index=False)
+    path = os.path.join(cwd, "results/backwards_test/picks_points.csv")
+    points_df.to_csv(path, index=False)

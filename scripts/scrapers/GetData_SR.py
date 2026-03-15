@@ -1,301 +1,454 @@
-# Web Scraper for Sports Reference
+"""Web scraper for Sports Reference NCAA tournament data."""
 
-# Unit Tests
+import json
+import os
+import re
+import time
+from urllib.parse import urlparse
+
+import numpy as np
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        " (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.google.com",
+}
+
+_DEFAULT_YEARS = [y for y in range(2007, 2026) if y != 2020]
+
+_ALL_REGIONS = [
+    "east",
+    "west",
+    "midwest",
+    "south",
+    "southeast",
+    "southwest",
+    "minneapolis",
+    "atlanta",
+    "oakland",
+    "washington",
+    "syracuse",
+    "albuquerque",
+    "austin",
+    "chicago",
+    "stlouis",
+    "eastrutherford",
+    "phoenix",
+]
+
+_REGIONS_CONVERT = {
+    2025: {"south": "West", "west": "East", "east": "South", "midwest": "Midwest"},
+    2024: {"east": "West", "west": "East", "south": "South", "midwest": "Midwest"},
+    2023: {"south": "West", "east": "East", "midwest": "South", "west": "Midwest"},
+    2022: {"west": "West", "east": "East", "south": "South", "midwest": "Midwest"},
+    2021: {"west": "West", "east": "East", "south": "South", "midwest": "Midwest"},
+    2019: {"east": "West", "west": "East", "south": "South", "midwest": "Midwest"},
+    2018: {"south": "West", "west": "East", "east": "South", "midwest": "Midwest"},
+    2017: {"east": "West", "west": "East", "midwest": "South", "south": "Midwest"},
+    2016: {"south": "West", "west": "East", "east": "South", "midwest": "Midwest"},
+    2015: {"midwest": "West", "west": "East", "east": "South", "south": "Midwest"},
+    2014: {"south": "West", "east": "East", "west": "South", "midwest": "Midwest"},
+    2013: {"midwest": "West", "west": "East", "south": "South", "east": "Midwest"},
+    2012: {"south": "West", "west": "East", "east": "South", "midwest": "Midwest"},
+    2011: {"east": "West", "west": "East", "southwest": "South", "southeast": "Midwest"},
+    2010: {"midwest": "West", "west": "East", "east": "South", "south": "Midwest"},
+    2009: {"midwest": "West", "west": "East", "east": "South", "south": "Midwest"},
+    2008: {"east": "West", "midwest": "East", "south": "South", "west": "Midwest"},
+    2007: {"midwest": "West", "west": "East", "east": "South", "south": "Midwest"},
+    2006: {
+        "atlanta": "West",
+        "oakland": "East",
+        "washington": "South",
+        "minneapolis": "Midwest",
+    },
+    2005: {
+        "chicago": "West",
+        "albuquerque": "East",
+        "syracuse": "South",
+        "austin": "Midwest",
+    },
+    2004: {
+        "stlouis": "West",
+        "eastrutherford": "East",
+        "atlanta": "South",
+        "phoenix": "Midwest",
+    },
+    2003: {"midwest": "West", "west": "East", "south": "South", "east": "Midwest"},
+    2002: {"south": "West", "west": "East", "east": "South", "midwest": "Midwest"},
+}
+
+_ROUND_DICT = {1: "R64", 2: "R32", 3: "S16", 4: "E8", 5: "F4"}
+
+
+# ---------------------------------------------------------------------------
+# Unit tests
+# ---------------------------------------------------------------------------
+
+
 def check_year_length_df(df):
+    """Validate that exactly 64 teams are present for a given year.
+
+    Args:
+        df: DataFrame subset for a single tournament year.
+
+    Raises:
+        ValueError: If the number of rows is not exactly 64.
+    """
     if len(df) < 64:
-        raise ValueError('< 64 Teams, # of Teams is: '+str(len(df)))
+        raise ValueError("< 64 Teams, # of Teams is: " + str(len(df)))
     elif len(df) > 64:
-        raise ValueError('> 64 Teams, # of Teams is: '+str(len(df)))
+        raise ValueError("> 64 Teams, # of Teams is: " + str(len(df)))
+
+
+def _check_region_round(region, round_name, teams):
+    """Validate team count for a single region/round combination.
+
+    Args:
+        region: Region name string used in error messages.
+        round_name: Round identifier string (R64, R32, S16, E8, F4).
+        teams: List or dict of teams for this round.
+
+    Raises:
+        ValueError: If the team count does not match the expected value for the round.
+    """
+    expected = {"F4": 1, "E8": 2, "S16": 4, "R32": 8, "R64": 16}
+    n = expected.get(round_name, 16)
+    if len(teams) != n:
+        raise ValueError(f"{region} {round_name} Incorrect, # of Teams is: {len(teams)}")
+
+
 def check_year_round_length_dict(picks_dict):
+    """Validate team counts for every region and round in the bracket dict.
+
+    Args:
+        picks_dict: Nested dict of bracket results for a single year, keyed by
+            region then round name.
+
+    Raises:
+        ValueError: If any region/round has an unexpected number of teams.
+    """
     for region, rounds in picks_dict.items():
-        if region == 'Winner':
-            if type(rounds) != str:
-                raise ValueError('Winner Incorrect, # of Teams is: '+str(len(rounds)))
-        elif region == 'NCG':
+        if region == "Winner":
+            if not isinstance(rounds, str):
+                raise ValueError("Winner Incorrect, # of Teams is: " + str(len(rounds)))
+        elif region == "NCG":
             if len(rounds) != 2:
-                raise ValueError('NCG Incorrect, # of Teams is: '+str(len(rounds)))
+                raise ValueError("NCG Incorrect, # of Teams is: " + str(len(rounds)))
         else:
-            for round, teams in rounds.items():
-                if round == 'F4':
-                    if len(teams) != 1:
-                        raise ValueError(region + ' F4 Incorrect, # of Teams is: '+str(len(teams)))
-                elif round == 'E8':
-                    if len(teams) != 2:
-                        raise ValueError(region + ' E8 Incorrect, # of Teams is: '+str(len(teams)))
-                elif round == 'S16':
-                    if len(teams) != 4:
-                        raise ValueError(region + ' S16 Incorrect, # of Teams is: '+str(len(teams)))
-                elif round == 'R32':
-                    if len(teams) != 8:
-                        raise ValueError(region + ' R32 Incorrect, # of Teams is: '+str(len(teams)))
-                else:
-                    if len(teams) != 16:
-                        raise ValueError(region + ' R64 Incorrect, # of Teams is: '+str(len(teams)))
+            for round_name, teams in rounds.items():
+                _check_region_round(region, round_name, teams)
+
+
+# ---------------------------------------------------------------------------
+# Scraping helpers
+# ---------------------------------------------------------------------------
+
+
+def _get_soup(url):
+    """Fetch a URL and return a parsed BeautifulSoup object.
+
+    Args:
+        url: Full URL string to fetch.
+
+    Returns:
+        Parsed BeautifulSoup object for the page HTML.
+    """
+    time.sleep(5)
+    html = requests.get(url, headers=_HEADERS).text
+    return BeautifulSoup(html, features="html.parser")
+
+
+def _team_names_from_round(round_tag):
+    """Extract and format team name strings from a bracket round HTML element.
+
+    Args:
+        round_tag: BeautifulSoup tag for a single bracket round div.
+
+    Returns:
+        List of title-cased team name strings.
+    """
+    teams = round_tag.find_all("a", href=lambda href: href and "schools" in href)
+    names = [urlparse(t["href"]).path.split("/")[3] for t in teams]
+    return [re.sub(r"-", " ", name.title()) for name in names]
+
+
+def _parse_f4(year_soup, year, bracket_data):
+    """Parse Final Four and championship game results into bracket_data.
+
+    Args:
+        year_soup: Parsed BeautifulSoup object for the tournament year page.
+        year: Integer tournament year.
+        bracket_data: Dict to store results into, modified in place.
+    """
+    bracket_data[year]["NCG"] = []
+    f4_region = year_soup.select_one("div#national")
+    bracket = f4_region.find(id="bracket")
+    rounds = bracket.find_all(class_="round")
+    for idx, round_tag in enumerate(rounds, start=1):
+        if idx == 1:
+            continue
+        team_names = _team_names_from_round(round_tag)
+        if idx == 2:
+            bracket_data[year]["NCG"] = team_names
+        else:
+            bracket_data[year]["Winner"] = "Connecticut" if year == 2024 else team_names[0]
+
+
+def _parse_region_bracket(year_soup, year, region, bracket_data):
+    """Parse all round results for a single bracket region.
+
+    Args:
+        year_soup: Parsed BeautifulSoup object for the tournament year page.
+        year: Integer tournament year.
+        region: Lowercase region name string (e.g. 'east').
+        bracket_data: Dict to store results into, modified in place.
+
+    Returns:
+        The tourney_region BeautifulSoup tag, or None if the region was not found.
+    """
+    tourney_region = year_soup.select_one(f"div#{region}")
+    if tourney_region is None:
+        return None
+
+    std_region = _REGIONS_CONVERT[year][region]
+    bracket_data[year][std_region] = {}
+    bracket = tourney_region.find(id="bracket")
+    rounds = bracket.find_all(class_="round")
+    for idx, round_tag in enumerate(rounds, start=1):
+        team_names = _team_names_from_round(round_tag)
+        bracket_data[year][std_region][_ROUND_DICT[idx]] = team_names
+
+    return tourney_region
+
+
+def _determine_round(homepage_text, year):
+    """Determine the tournament round a team reached from their homepage text.
+
+    Args:
+        homepage_text: List of paragraph text strings from the team's SR page.
+        year: Integer tournament year (affects round labelling for 2011-2015).
+
+    Returns:
+        Integer round number (1–7), or None if the round could not be determined.
+    """
+    if any("Won National Final" in t for t in homepage_text):
+        return 7
+    if any("Lost National Final" in t for t in homepage_text):
+        return 6
+    if any("National Semifinal" in t for t in homepage_text):
+        return 5
+    if any("Regional Final" in t for t in homepage_text):
+        return 4
+    if any("Regional Semifinal" in t for t in homepage_text):
+        return 3
+    if year in range(2011, 2016):
+        if any("Third Round" in t for t in homepage_text):
+            return 3
+        if any("Second Round" in t for t in homepage_text):
+            return 2
+        return 1
+    if any("Second Round" in t for t in homepage_text):
+        return 2
+    return 1
+
+
+def _get_win_streak_stats(links, headers_dict):
+    """Scrape and compute win streak statistics from a team's schedule page.
+
+    Args:
+        links: Relative URL path string to the team's season page.
+        headers_dict: HTTP headers dict to use for the request.
+
+    Returns:
+        Tuple of (current_win_streak, last_10_wins, mean_streak, std_streak).
+    """
+    sched_url = "https://www.sports-reference.com" + links[:-5] + "-schedule.html"
+    sched_html = requests.get(sched_url, headers=headers_dict).text
+    sched_soup = BeautifulSoup(sched_html, features="html.parser")
+    games = sched_soup.select_one("div#all_schedule")
+    g_type = games.find_all("td", {"data-stat": "game_type"})
+    type_data = [d.getText() for d in g_type]
+    streak = games.find_all("td", {"data-stat": "game_streak"})
+    mask = [d != "NCAA" for d in type_data]
+    streak = [x for x, m in zip(list(streak), mask, strict=False) if m]
+    streak_data = [
+        0 if len(d.getText()) == 0 else int(d.getText()[2:]) if d.getText()[0] == "W" else 0
+        for d in streak
+    ]
+    win_result = [
+        1 if streak_data[i] < streak_data[i + 1] else 0 for i in range(len(streak_data) - 1)
+    ]
+    return (
+        streak_data[-1],
+        int(np.sum(win_result[-10:])),
+        float(np.mean(streak_data)),
+        float(np.std(streak_data)),
+    )
+
+
+def _scrape_team_page(team_url, year, region, regions_convert, seeddata):
+    """Scrape a single team's SR page and append their data to seeddata.
+
+    Args:
+        team_url: Full URL string for the team's season page.
+        year: Integer tournament year.
+        region: Lowercase region name string.
+        regions_convert: Dict mapping year to region name conversion dict.
+        seeddata: DataFrame accumulating all scraped team rows.
+
+    Returns:
+        Updated seeddata DataFrame with the team's row appended if seed was found.
+    """
+    time.sleep(5)
+    team_html = requests.get(team_url, headers=_HEADERS).text
+    team_soup = BeautifulSoup(team_html, features="html.parser")
+
+    part_url = re.sub("https://www.sports-reference.com/cbb/schools/", "", team_url)
+    team_key = re.sub(r"/(\d+).html", "", part_url).title()
+
+    homepage = team_soup.select_one("div#info")
+    homepage_text = [hp.getText() for hp in homepage.findAll("p")]
+
+    conf_match = re.search(r"\bin\s+(.*?)\s+MBB", homepage_text[2])
+    conf = conf_match.group(1) if conf_match is not None else ""
+    round_num = _determine_round(homepage_text, year)
+
+    wins_raw = int(homepage_text[2][9:11]) - (round_num - 1)
+
+    import_text = [im.getText() for im in homepage.findAll("a")]
+    conf_tourney = 1 if any("Tourney Champ" in t for t in import_text) else 0
+
+    std_region = regions_convert[year][region]
+
+    homepage_text_last = homepage_text[-1]
+    seeds = re.search(r"(\d+) seed", homepage_text_last)
+
+    vcu_key = "Virginia-Commonwealth/Men"
+    is_vcu_2021 = (year == 2021) and (team_key == vcu_key)
+    if is_vcu_2021:
+        seeds = "10"
+
+    if seeds is None:
+        return seeddata
+
+    seed_val = "10" if is_vcu_2021 else seeds.group(0).replace(" seed", "")
+
+    links_tag = team_soup.select_one("div#info a[href*='/cbb/schools/']")
+    links = links_tag["href"] if links_tag else None
+
+    if links is None:
+        return seeddata
+
+    win_streak, last10, streak_avg, streak_sd = _get_win_streak_stats(
+        links,
+        _HEADERS,
+    )
+
+    row = {
+        "Year": year,
+        "Team": team_key.replace("/Men", "").replace("-", " "),
+        "Conf": conf,
+        "Round": round_num,
+        "Wins": wins_raw,
+        "Conf Tourney": conf_tourney,
+        "Region": std_region,
+        "Seed": int(seed_val),
+        "WinStreak": win_streak,
+        "Last10": last10,
+        "WinStreak_Avg": streak_avg,
+        "WinStreak_SD": streak_sd,
+    }
+    seeddata = pd.concat([seeddata, pd.DataFrame([row])], ignore_index=True)
+    return seeddata
+
+
+def _scrape_region_teams(tourney_region, year, region, seeddata):
+    """Scrape all 16 tournament teams from a single bracket region.
+
+    Args:
+        tourney_region: BeautifulSoup tag for the region's bracket div.
+        year: Integer tournament year.
+        region: Lowercase region name string.
+        seeddata: DataFrame accumulating all scraped team rows.
+
+    Returns:
+        Updated seeddata DataFrame with all region teams appended.
+    """
+    first_round_div = tourney_region.select_one("div.round")
+    for link_tag in first_round_div.find_all("a"):
+        links = link_tag.get("href")
+        if links.startswith("/cbb/s"):
+            team_url = "https://www.sports-reference.com" + links
+            seeddata = _scrape_team_page(team_url, year, region, _REGIONS_CONVERT, seeddata)
+    return seeddata
+
+
+# ---------------------------------------------------------------------------
+# Public entry point
+# ---------------------------------------------------------------------------
+
 
 def run_scraper(years=None, export=True):
-    # Libraries
-    import os
-    import numpy as np
-    import pandas as pd
-    import requests
-    from bs4 import BeautifulSoup
-    import re
-    import time
-    from urllib.parse import urlparse
-    import json
+    """Scrape NCAA tournament data from Sports Reference for the given years.
 
-    # Initialize
+    For each year, scrapes team stats, bracket results, seeds, win streaks,
+    and conference tournament data. Optionally exports to CSV and JSON.
+
+    Args:
+        years: Optional list of integer years to scrape. Defaults to all years
+            from 2007 to 2025, excluding 2020.
+        export: If True, write results to disk and return None. If False,
+            return the scraped DataFrame directly.
+
+    Returns:
+        DataFrame of scraped team data if export is False, otherwise None.
+    """
     seeddata = pd.DataFrame()
     bracket_data = {}
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Referer": "https://www.google.com"
-    }
 
-    # Years to scrape
-    if years == None:
-        years = [*range(2007,2026)]
-        years.remove(2020)
+    if years is None:
+        years = list(_DEFAULT_YEARS)
 
-    # All possible region names
-    regions = ['east', 'west', 'midwest', 'south', 'southeast', 'southwest','minneapolis','atlanta',
-                'oakland','washington','syracuse','albuquerque','austin','chicago','stlouis',
-                'eastrutherford','phoenix']
-    # Standardize Region Naming
-    regions_convert = {
-                        2025:{'south':'West','west':'East','east':'South','midwest':'Midwest'},
-                        2024:{'east':'West','west':'East','south':'South','midwest':'Midwest'},
-                        2023:{'south':'West','east':'East','midwest':'South','west':'Midwest'},
-                        2022:{'west':'West','east':'East','south':'South','midwest':'Midwest'},
-                        2021:{'west':'West','east':'East','south':'South','midwest':'Midwest'},
-                        2019:{'east':'West','west':'East','south':'South','midwest':'Midwest'},
-                        2018:{'south':'West','west':'East','east':'South','midwest':'Midwest'},
-                        2017:{'east':'West','west':'East','midwest':'South','south':'Midwest'},
-                        2016:{'south':'West','west':'East','east':'South','midwest':'Midwest'},
-                        2015:{'midwest':'West','west':'East','east':'South','south':'Midwest'},
-                        2014:{'south':'West','east':'East','west':'South','midwest':'Midwest'},
-                        2013:{'midwest':'West','west':'East','south':'South','east':'Midwest'},
-                        2012:{'south':'West','west':'East','east':'South','midwest':'Midwest'},
-                        2011:{'east':'West','west':'East','southwest':'South','southeast':'Midwest'},
-                        2010:{'midwest':'West','west':'East','east':'South','south':'Midwest'},
-                        2009:{'midwest':'West','west':'East','east':'South','south':'Midwest'},
-                        2008:{'east':'West','midwest':'East','south':'South','west':'Midwest'},
-                        2007:{'midwest':'West','west':'East','east':'South','south':'Midwest'},
-                        2006:{'atlanta':'West','oakland':'East','washington':'South','minneapolis':'Midwest'},
-                        2005:{'chicago':'West','albuquerque':'East','syracuse':'South','austin':'Midwest'},
-                        2004:{'stlouis':'West','eastrutherford':'East','atlanta':'South','phoenix':'Midwest'},
-                        2003:{'midwest':'West','west':'East','south':'South','east':'Midwest'},
-                        2002:{'south':'West','west':'East','east':'South','midwest':'Midwest'}
-                        }
-
-    # Round Num to Name
-    round_dict = {
-        1:'R64',
-        2:'R32',
-        3:'S16',
-        4:'E8',
-        5:'F4'
-        }
-
-    # Iterate years
-    print('Scraping Sports Reference...')
+    print("Scraping Sports Reference...")
     for year in years:
         print(year)
-        # Sleep
         time.sleep(5)
-        # Open url
-        year_url = "https://www.sports-reference.com/cbb/postseason/{}-ncaa.html".format(year)
-        year_html = requests.get(year_url, headers=headers).text
-        # Parse html
-        year_soup = BeautifulSoup(year_html, features='html.parser')
+        year_url = f"https://www.sports-reference.com/cbb/postseason/{year}-ncaa.html"
+        year_html = requests.get(year_url, headers=_HEADERS).text
+        year_soup = BeautifulSoup(year_html, features="html.parser")
 
-        # Initialize Year
         bracket_data[year] = {}
-        bracket_data[year]['NCG'] = []
-        
-        # Final 4
-        f4_region = year_soup.select_one("div#{}".format('national'))
-        # Go through all rounds and grab team name
-        bracket = f4_region.find(id='bracket')
-        rounds = bracket.find_all(class_="round")
-        for idx, round in enumerate(rounds, start=1):
-            if idx == 1:
+
+        # Parse Final Four / championship
+        _parse_f4(year_soup, year, bracket_data)
+
+        # Parse each regional bracket
+        for region in _ALL_REGIONS:
+            tourney_region = _parse_region_bracket(year_soup, year, region, bracket_data)
+            if tourney_region is None:
                 continue
-            elif idx == 2:
-                teams = round.find_all("a", href=lambda href: href and "schools" in href)
-                team_names = [urlparse(team['href']).path.split('/')[3] for team in teams]
-                team_names = [re.sub(r'-'," ", team.title()) for team in team_names]
-                bracket_data[year]['NCG'] = team_names
-            else:
-                teams = round.find_all("a", href=lambda href: href and "schools" in href)
-                team_names = [urlparse(team['href']).path.split('/')[3] for team in teams]
-                team_names = [re.sub(r'-'," ", team.title()) for team in team_names]
-                # 2024 Winner missing for some reason
-                if year == 2024:
-                    bracket_data[year]['Winner'] = 'Connecticut'
-                else:
-                    bracket_data[year]['Winner'] = team_names[0]
+            seeddata = _scrape_region_teams(tourney_region, year, region, seeddata)
 
-        # Try all region names
-        for region in regions:
-            # Get div for region
-            tourney_region = year_soup.select_one("div#{}".format(region))
-
-            # If region exists
-            if tourney_region != None:      
-                # go through all rounds and grab team name
-                bracket_data[year][regions_convert[year][region]] = {}
-                bracket = tourney_region.find(id='bracket')
-                rounds = bracket.find_all(class_="round")
-                for idx, round in enumerate(rounds, start=1):                
-                    teams = round.find_all("a", href=lambda href: href and "schools" in href)
-                    team_names = [urlparse(team['href']).path.split('/')[3] for team in teams]
-                    team_names = [re.sub(r'-'," ", team.title()) for team in team_names]
-                    bracket_data[year][regions_convert[year][region]][round_dict[idx]] = team_names
-
-                # Only select 16 teams (exclude play-in)
-                t = 0
-                while t <= 16:
-                    tourney_team = tourney_region.select_one("div.round")
-                    t = t + 1
-                else:
-                    # Get each teams individual page
-                    for link in tourney_team.find_all('a'):
-                        links = link.get('href')
-                        if links.startswith('/cbb/s') == True:
-                            # Sleep
-                            time.sleep(5)
-                            # Open url, get data
-                            team_url = 'https://www.sports-reference.com' + links
-                            team_html = requests.get(team_url, headers=headers).text
-                            team_soup = BeautifulSoup(team_html, features='html.parser')
-
-                            # Create a dictionary to store scraped data
-                            yeardict = {}
-                            yeardict[year] = {}  
-
-                            # Store team name
-                            part_url = re.sub('https://www.sports-reference.com/cbb/schools/','',team_url)
-                            yeardict[year][re.sub('/(\d+).html','',part_url).title()] = {}
-
-                            # Homepage Text
-                            homepage = team_soup.select_one('div#info')
-                            homepage_text= [hp.getText()for hp in homepage.findAll('p')]
-
-                            # Conference
-                            yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Conf'] = re.search(r'\bin\s+(.*?)\s+MBB', homepage_text[2]).group(1)
-
-                            # Determine which round each team made it to
-                            if any('Won National Final' in text for text in homepage_text):
-                                yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round'] = 7
-                            elif any('Lost National Final' in text for text in homepage_text):
-                                yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round'] = 6 
-                            elif any('National Semifinal' in text for text in homepage_text):
-                                yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round'] = 5
-                            elif any('Regional Final' in text for text in homepage_text):
-                                yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round'] = 4
-                            elif any('Regional Semifinal' in text for text in homepage_text):
-                                yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round'] = 3
-
-                            # 2015-2011 tournaments use 2nd round as 1st & 3rd as 2nd (play-in treated as 1st round)
-                            elif year in range(2011,2016):
-                                if any('Third Round' in text for text in homepage_text):
-                                    yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round'] = 2
-                                else:
-                                    yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round'] = 1
-                            else:
-                                if any('Second Round' in text for text in homepage_text):
-                                    yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round'] = 2
-                                else:
-                                    yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round'] = 1
-                            
-                            # Adjust Wins by Rounds in Tournament
-                            yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Wins'] = int(homepage_text[2][9:11]) - (yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Round']-1)
-                            
-                            # Determine if team won conference tourney
-                            import_text = [im.getText()for im in homepage.findAll('a')]
-                            if any('Tourney Champ' in text for text in import_text):
-                                yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Conf Tourney'] = 1
-                            else:
-                                yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Conf Tourney'] = 0
-
-                            # Add Region in Tourney
-                            yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Region'] = regions_convert[year][region]
-
-                            # Determine each team's seed in the tournamen
-                            homepage_text= homepage_text[-1]
-                            seeds = re.search('(\d+) seed', homepage_text)
-                            # Weird instance where team forfeited
-                            if (year == 2021) & (re.sub('/(\d+).html','',part_url).title() == 'Virginia-Commonwealth/Men'):
-                                seeds = '10'
-                            if seeds is not None:
-                                if (year == 2021) & (re.sub('/(\d+).html','',part_url).title() == 'Virginia-Commonwealth/Men'):
-                                    yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Seed'] = '10'
-                                else:
-                                    yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Seed'] = seeds.group(0).replace(' seed','')
-
-                                # Get Win History
-                                # Schedule Page
-                                sched_url = 'https://www.sports-reference.com' + links[:-5] + '-schedule.html'
-                                sched_html = requests.get(sched_url, headers=headers).text
-                                sched_soup = BeautifulSoup(sched_html, features='html.parser')
-                                games = sched_soup.select_one('div#all_schedule')
-                                # Game Types
-                                g_type = games.find_all('td',{'data-stat':'game_type'})
-                                type_data = [d.getText() for d in g_type]
-                                # Streak Data
-                                streak = games.find_all('td',{'data-stat':'game_streak'})
-                                # Filter Out NCAA
-                                mask = [d != 'NCAA' for d in type_data]
-                                streak = [x for x, m in zip(streak, mask) if m]
-                                # Get Streaks
-                                streak_data = [0 if len(d.getText()) == 0 else int(d.getText()[2:]) if d.getText()[0] == 'W' else 0 for d in streak]
-                                # Current Win Streak
-                                yeardict[year][re.sub('/(\d+).html','',part_url).title()]['WinStreak'] = streak_data[-1]
-                                # Last 10
-                                win_result = []
-                                for i in range(len(streak_data)-1):
-                                    if streak_data[i] >= streak_data[i+1]:
-                                        win_result.append(0)
-                                    else:
-                                        win_result.append(1)
-                                yeardict[year][re.sub('/(\d+).html','',part_url).title()]['Last10'] = np.sum(win_result[-10:])
-                                # Streak Stats
-                                yeardict[year][re.sub('/(\d+).html','',part_url).title()]['WinStreak_Avg'] = np.mean(streak_data)
-                                yeardict[year][re.sub('/(\d+).html','',part_url).title()]['WinStreak_SD'] = np.std(streak_data)
-                                
-                                # Create df from dict
-                                yeardata = pd.DataFrame.from_dict({(i,j): yeardict[i][j] 
-                                                        for i in yeardict.keys() 
-                                                        for j in yeardict[i].keys()},
-                                                    orient='index')
-                                yeardata.reset_index(inplace=True)
-                                yeardata.columns = ['Year','Team','Conf','Round','Wins','Conf Tourney','Region','Seed','WinStreak','Last10','WinStreak_Avg','WinStreak_SD']
-
-                                # Convert Dtypes
-                                yeardata[['Round','Wins','Conf Tourney','Seed']] = yeardata[['Round','Wins','Conf Tourney','Seed']].astype(int)
-
-                                # Standardize Naming
-                                yeardata['Team'] = yeardata['Team'].str.replace('/Men','')
-                                yeardata['Team'] = yeardata['Team'].str.replace('-',' ')
-
-                                # Create a DataFrame of the full data by appending all the dataframes created in the for loop
-                                seeddata = pd.concat([seeddata,yeardata])
-        
-        # Unit Tests
-        check_year_length_df(seeddata[seeddata['Year'] == year])
+        # Unit tests
+        check_year_length_df(seeddata[seeddata["Year"] == year])
         check_year_round_length_dict(bracket_data[year])
 
-    if export == True:
-        # Export Data
-        # Get File Path
-        data_path = os.path.join(os.path.abspath(os.getcwd()), 'data/raw/sportsreference.csv')
-        bracket_path = os.path.join(os.path.abspath(os.getcwd()), 'data/raw/results.json')
-        # Export DF
-        seeddata.to_csv(data_path,index=False)
-        # Export Dictionary
-        with open(bracket_path, 'w') as f:
+    if export:
+        data_path = os.path.join(os.path.abspath(os.getcwd()), "data/raw/sportsreference.csv")
+        bracket_path = os.path.join(os.path.abspath(os.getcwd()), "data/raw/results.json")
+        seeddata.to_csv(data_path, index=False)
+        with open(bracket_path, "w") as f:
             json.dump(bracket_data, f)
-    else:
-        return seeddata
+        return None
+
+    return seeddata

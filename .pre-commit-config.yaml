@@ -1,0 +1,40 @@
+repos:
+  # Prevent commits directly to main/master
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: no-commit-to-branch
+        args: ["--branch", "main", "--branch", "master"]
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+
+  # Ruff — linting and formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.2
+    hooks:
+      - id: ruff
+        args: ["--fix", "--exit-non-zero-on-fix"]
+      - id: ruff-format
+
+  # Mypy — static type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.15.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - pandas-stubs
+          - numpy
+        args: ["--ignore-missing-imports"]
+
+  # Pydoclint — docstring argument/return consistency
+  - repo: https://github.com/jsh9/pydoclint
+    rev: 0.5.9
+    hooks:
+      - id: pydoclint
+        args:
+          - "--style=google"
+          - "--skip-checking-short-docstrings=False"
+          - "--allow-init-docstring=True"

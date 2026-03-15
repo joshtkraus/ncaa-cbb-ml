@@ -1,70 +1,38 @@
-def run_test(
-            data,
-            X_SMTL_nn,
-            y_SMTL_nn,
-            X_nn,
-            X_SMTL_gbm,
-            y_SMTL_gbm,
-            X_gbm,
-            y,
-            nn_params,
-            gbm_params,
-            weights,
-            years,
-            r,
-            predictions,
-            years_SMTL_nn,
-            years_nn,
-            years_SMTL_gbm,
-            years_gbm
-            ):
-    # Libraries
-    import numpy as np
-    import pandas as pd
-    from models.utils.DataProcessing import create_splits
-    from models.utils.nn import tuned_nn
-    from models.utils.gbm import tuned_gbm
-    import xgboost as xgb
+"""Walk-forward backtesting using a frozen AutoGluon model config per round."""
 
-    # Scaled Years
-    full_years = [*range(data['Year'].min(),data['Year'].max()+1)]
-    full_years.remove(2020)    
-    _, _, years_scaled = create_splits(data, r, train=False,years_list=True)
-    years_scaled = sorted(np.unique(years_scaled))
 
-    # Iterate years
+def run_test(data, ag_params, years, r, predictions):
+    """Run walk-forward backtesting for a single round using AutoGluon.
+
+    Args:
+        data: Full modeling DataFrame.
+        ag_params: Dict keyed by round number, each with 'model_type' and 'hyperparameters'.
+        years: List of backtest training years to iterate over.
+        r: Tournament round number.
+        predictions: Dict to store per-year round predictions.
+
+    Returns:
+        Updated predictions dict with Round_{r} arrays added for each test year.
+    """
+    import tempfile
+
+    from models.utils.autogluon import _make_test_df, _make_train_df, fit_autogluon
+
+    params = ag_params[r]
+
     for year in years:
-        # Get Test Year
-        if year == 2019:
-            test_year = 2021
-        else:
-            test_year = year+1
-        idx = np.where(np.array(full_years)==test_year)[0][0]
+        test_year = 2021 if year == 2019 else year + 1
 
-        # Create Splits                
-        X_train_nn, X_test_nn = X_SMTL_nn[years_SMTL_nn < years_scaled[idx]], X_nn[years_nn == years_scaled[idx]]
-        y_train_nn = y_SMTL_nn[years_SMTL_nn < years_scaled[idx]]
-        X_train_gbm, X_test_gbm = X_SMTL_gbm[years_SMTL_gbm < years_scaled[idx]], X_gbm[years_gbm == years_scaled[idx]]
-        y_train_gbm = y_SMTL_gbm[years_SMTL_gbm < years_scaled[idx]]
+        train_mask = data["Year"].values < test_year
+        test_mask = data["Year"].values == test_year
 
-        # Create & Fit
-        # NN
-        nn = tuned_nn(nn_params,
-                        X_train_nn, y_train_nn)
-        # GBM
-        gbm = tuned_gbm(gbm_params,
-                        X_train_gbm, y_train_gbm)
+        train_df = _make_train_df(data, r, train_mask)
+        test_df = _make_test_df(data, r, test_mask)
 
-        # Create Probabilities
-        # NN
-        prob_nn = nn.predict(X_test_nn, verbose=0).flatten()
-        # GBM
-        dtest = xgb.DMatrix(X_test_gbm)
-        prob_gbm = gbm.predict(dtest)
-        # Combine Probabilities
-        y_pred = prob_nn * weights['NN'] + prob_gbm * weights['GBM']
-        
-        # Store Averaged Results
-        predictions[test_year]['Round_'+str(r)] = y_pred
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            predictor = fit_autogluon(train_df, params, save_path=tmp_dir)
+            prob = predictor.predict_proba(test_df)[1].values
+
+        predictions[test_year]["Round_" + str(r)] = prob
 
     return predictions
