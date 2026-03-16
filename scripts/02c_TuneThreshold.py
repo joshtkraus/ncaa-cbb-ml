@@ -93,7 +93,8 @@ def _build_bracket_lookups(data, predictions, test_years, correct_picks, tuning_
             + pred_df["NCG"] * 160
             + pred_df["Winner"] * 320
         )
-        backward_picks[test_year] = predict_bracket(points_df, calc_correct=False)
+        # backward_picks[test_year] = predict_bracket(points_df, calc_correct=False)
+        backward_picks[test_year] = predict_bracket(pred_df, calc_correct=False, sim=True)
         year_data_lookup[test_year] = {
             "team_data": data[data["Year"] == test_year][["Team", "Seed", "Region"]],
             "full_data": data[data["Year"] == test_year],

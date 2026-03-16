@@ -127,7 +127,8 @@ def standardize_predict(
         )
 
         # Generate initial backward-selection bracket
-        picks, point, acc = predict_bracket(points_df, correct_picks[str(test_year)])
+        # picks, point, acc = predict_bracket(points_df, correct_picks[str(test_year)])
+        picks, point, acc = predict_bracket(pred_df, correct_picks[str(test_year)], sim=True)
         assert isinstance(acc, dict)
 
         # Apply forward-pass matchup corrections if predictor is available.

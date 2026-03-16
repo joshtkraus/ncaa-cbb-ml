@@ -6,7 +6,7 @@ import tempfile
 
 import pandas as pd
 from models.utils.autogluon import _make_test_df, _make_train_df, fit_autogluon
-from models.utils.MakePicks import create_picks
+from models.utils.SimulatePicks import simulate_picks
 from models.utils.StandarizePredictions import standarize
 from scrapers.GetData_SR import run_scraper
 from utils.GetSeedProb import calc_seed_prob
@@ -306,16 +306,18 @@ pred_df = pred_df[
 ]
 pred_df = standarize(pred_df)
 
-points_df = pred_df.copy()
-points_df["R32"] = points_df["R32"] * 10
-points_df["S16"] = points_df["R32"] + points_df["S16"] * 20
-points_df["E8"] = points_df["S16"] + points_df["E8"] * 40
-points_df["F4"] = points_df["E8"] + points_df["F4"] * 80
-points_df["NCG"] = points_df["F4"] + points_df["NCG"] * 160
-points_df["Winner"] = points_df["NCG"] + points_df["Winner"] * 320
+# points_df = pred_df.copy()
+# points_df["R32"] = points_df["R32"] * 10
+# points_df["S16"] = points_df["R32"] + points_df["S16"] * 20
+# points_df["E8"] = points_df["S16"] + points_df["E8"] * 40
+# points_df["F4"] = points_df["E8"] + points_df["F4"] * 80
+# points_df["NCG"] = points_df["F4"] + points_df["NCG"] * 160
+# points_df["Winner"] = points_df["NCG"] + points_df["Winner"] * 320
 
-# Generate initial backward-selection bracket
-picks = create_picks(points_df)
+# # Generate initial backward-selection bracket
+# picks = create_picks(points_df)
+
+picks = simulate_picks(pred_df)
 
 # Apply forward-pass matchup corrections if matchup model is available
 if matchup_predictor is not None:
