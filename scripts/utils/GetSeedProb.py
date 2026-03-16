@@ -86,6 +86,12 @@ def calc_seed_prob(df, lag=None, ind_col=True):
     NCG = pd.concat(NCG_Full)
     Winner = pd.concat(Winner_Full)
 
+    # Drop any pre-existing _Actual_ columns to avoid merge conflicts when
+    # called on a DataFrame that already contains these columns (e.g. when
+    # recomputing derived features in 05_MakePredictions.py after concat).
+    existing = [c for c in df.columns if "_Actual_" in c or c == "First_Year"]
+    df = df.drop(columns=existing)
+
     df = df.merge(R32, on=["Year", "Seed"], how="left")
     df = df.merge(S16, on=["Year", "Seed"], how="left")
     df = df.merge(E8, on=["Year", "Seed"], how="left")

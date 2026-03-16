@@ -14,8 +14,8 @@ from utils.GroupedMetrics import get_grouped_metrics
 from utils.NameCleaner_KP import clean_KP
 from utils.NameCleaner_SR import clean_SR
 
-scraper_ind = True
-year = 2025
+scraper_ind = False
+year = 2026
 
 
 def check_data_join(data, SR, KP):
@@ -54,7 +54,16 @@ else:
         index_col=False,
     )
 
-playin_KP = ["Saint Francis", "Texas", "American", "San Diego St."]
+# playin = [
+#     "North Carolina State", "Texas",
+#     "SMU", "Miami OH",
+#     "Howard", "UMBC",
+#     "Lehigh", "Prairie View A&M"
+# ]
+# playin = ["Texas", "Miami OH", "Howard", "Lehigh"]
+# playin = ["Texas", "SMU", "Howard", "Lehigh"]
+# playin = ["North Carolina State", "Miami OH", "Howard", "Lehigh"]
+playin = ["North Carolina State", "SMU", "Howard", "Lehigh"]
 
 summary_temp = pd.read_csv(
     os.path.join(os.path.abspath(os.getcwd()), "data/prediction/KP/summary.csv"), index_col=False
@@ -154,7 +163,6 @@ roster_temp.columns = pd.Index([
     "DR1Rank",
 ])
 
-summary_temp = summary_temp[~summary_temp["Team"].isin(playin_KP)]
 KP = summary_temp.merge(points_temp, on=["Year", "Team"])
 KP = KP.merge(roster_temp, on=["Year", "Team"])
 
@@ -165,6 +173,8 @@ data.drop_duplicates(inplace=True)
 data.dropna(inplace=True)
 check_data_join(data, SR, KP)
 
+data = data[~data["Team"].isin(playin)]
+
 # ---------------------------------------------------------------------------
 # Merge with historical modeling data and compute derived features
 # ---------------------------------------------------------------------------
@@ -173,7 +183,8 @@ data_path = os.path.join(os.path.abspath(os.getcwd()), "data/processed/data.csv"
 modeling_data = pd.read_csv(data_path)
 modeling_data = modeling_data[modeling_data["Year"] != year]
 
-data = data[modeling_data.columns]
+raw_cols = [c for c in modeling_data.columns if c in data.columns]
+data = data[raw_cols]
 data = pd.concat([modeling_data, data], ignore_index=True)
 data.drop_duplicates(inplace=True)
 
@@ -272,7 +283,7 @@ for r in range(2, 8):
     test_df = _make_test_df(data, r, test_mask)
 
     with tempfile.TemporaryDirectory() as tmp_dir:
-        predictor = fit_autogluon(train_df, test_df, ag_params[r], save_path=tmp_dir)
+        predictor = fit_autogluon(train_df, ag_params[r], save_path=tmp_dir)
         predictions["Round_" + str(r)] = predictor.predict_proba(test_df)[1].values
 
 # ---------------------------------------------------------------------------
