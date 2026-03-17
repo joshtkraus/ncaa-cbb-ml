@@ -1,7 +1,5 @@
 """Bracket pick generation and scoring utilities."""
 
-from models.utils.SimulatePicks import simulate_picks
-
 
 def R32(picks_dict, rg, sd, tm):
     """Assign a team to the correct R32 matchup slot based on seed.
@@ -412,22 +410,18 @@ def real_Bracket(picks, real):
     return total, accuracy
 
 
-def predict_bracket(team_data, real_picks=None, calc_correct=True, sim=False):
+def predict_bracket(team_data, real_picks=None, calc_correct=True):
     """Generate bracket picks and optionally score them against actual results.
 
     Args:
         team_data: DataFrame with expected points per round per team.
         real_picks: Optional dict of actual results for scoring.
         calc_correct: If True, score picks against real_picks and return accuracy.
-        sim: If True, simulate picks instead of deterministic selection.
 
     Returns:
         picks dict if calc_correct is False, else (picks, points, accuracy) tuple.
     """
-    if not sim:
-        picks = create_picks(team_data)
-    else:
-        picks = simulate_picks(team_data)
+    picks = create_picks(team_data)
 
     if calc_correct:
         points, accs = real_Bracket(picks, real_picks)

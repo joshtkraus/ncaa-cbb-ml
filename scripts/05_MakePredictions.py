@@ -255,14 +255,10 @@ if os.path.exists(matchup_params_path) and os.path.exists(matchup_data_path):
             thresholds = {int(k): v for k, v in json.load(f)["thresholds"].items()}
     # Fit matchup model on all historical data (all years prior to current year)
     train_mask = matchup_data["Year"].to_numpy() < year
-    print(f"Fitting matchup model on all historical data (thresholds={thresholds})...")
     matchup_save_path = os.path.join(cwd, "model/autogluon_matchup_prediction")
     matchup_predictor = fit_matchup_autogluon(
         matchup_data, train_mask, matchup_params, save_path=matchup_save_path
     )
-    print("Matchup model ready — bracket correction will be applied.")
-else:
-    print("No matchup model found — running without bracket correction.")
 
 # ---------------------------------------------------------------------------
 # Generate predictions — refit one model per round on all historical data,
@@ -317,17 +313,12 @@ pred_df = standarize(pred_df)
 # # Generate initial backward-selection bracket
 # picks = create_picks(points_df)
 
-picks = simulate_picks(pred_df)
-
-# Apply forward-pass matchup corrections if matchup model is available
-if matchup_predictor is not None:
-    from models.utils.BracketCorrection import correct_bracket
-
-    year_data = data[data["Year"] == year][["Team", "Seed", "Region"]]
-    full_year_data = data[data["Year"] == year]
-    picks = correct_bracket(
-        picks, year_data, full_year_data, matchup_predictor, thresholds=thresholds
-    )
+full_year_data = data[data["Year"] == year]
+picks = simulate_picks(
+    pred_df,
+    predictor=matchup_predictor,
+    full_data=full_year_data,
+)
 
 path = os.path.join(cwd, "prediction/probabilities.csv")
 os.makedirs(os.path.dirname(path), exist_ok=True)

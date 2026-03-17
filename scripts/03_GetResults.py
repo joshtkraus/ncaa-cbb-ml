@@ -96,28 +96,17 @@ with open(params_path, "r") as f:
     ag_params = json.load(f)
 ag_params = {int(k): v for k, v in ag_params.items()}
 
-# Load matchup params, data, and threshold if available
+# Load matchup params and data if available
 matchup_params = None
 matchup_data = None
-thresholds = dict.fromkeys(range(2, 8), 0.5)  # default if no tuned thresholds found
 
-threshold_path = os.path.join(cwd, "model/matchup_threshold.json")
 if os.path.exists(matchup_params_path) and os.path.exists(matchup_data_path):
     with open(matchup_params_path, "r") as f:
         matchup_params = json.load(f)
     matchup_data = pd.read_csv(matchup_data_path)
-    if os.path.exists(threshold_path):
-        with open(threshold_path, "r") as f:
-            thresholds = {int(k): v for k, v in json.load(f)["thresholds"].items()}
-        print(
-            f"Matchup model found — bracket correction will be applied (thresholds={thresholds})."
-        )
-    else:
-        print(
-            "Matchup model found — bracket correction will be applied (threshold=0.5, not tuned)."
-        )
+    print("Matchup model found — simulation will blend by-round and matchup models.")
 else:
-    print("No matchup model found — running without bracket correction.")
+    print("No matchup model found — simulation will use by-round model only.")
 
 # ---------------------------------------------------------------------------
 # Backtest and update README
@@ -129,6 +118,5 @@ combine_model(
     correct_picks,
     matchup_params=matchup_params,
     matchup_data=matchup_data,
-    thresholds=thresholds,
 )
 _update_readme_results(points_path, accs_path, readme_path)

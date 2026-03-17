@@ -8,7 +8,6 @@ def combine_model(
     backwards_year=2015,
     matchup_params=None,
     matchup_data=None,
-    thresholds=None,
 ):
     """Run walk-forward backtesting with AutoGluon and export results.
 
@@ -17,9 +16,8 @@ def combine_model(
         ag_params: Dict keyed by round number with 'model_type' and 'hyperparameters' keys.
         correct_picks: Dict of actual tournament results keyed by year string.
         backwards_year: First year to include in backtest (default 2015).
-        matchup_params: Optional dict with 'model_type' and 'hyperparameters'
+        matchup_params: Optional dict with 'model_type' and 'hyperparameters'.
         matchup_data: Optional full matchup DataFrame from build_matchup_dataset.
-        thresholds: Optional dict mapping round number to threshold.
     """
     import os
     import shutil
@@ -74,7 +72,6 @@ def combine_model(
         correct_picks,
         data=data if use_correction else None,
         matchup_predictor=matchup_predictors if use_correction else None,
-        thresholds=thresholds,
     )
 
     # Clean up backtest matchup models after scoring is complete
