@@ -114,11 +114,19 @@ def standardize_predict(years, predictions, correct_picks, data=None, matchup_pr
         full_year_data = data[data["Year"] == test_year] if use_matchup else None
 
         # Generate bracket via simulation (blends by-round and matchup models)
+        import time
+
+        start_time = time.perf_counter()
+
         picks = simulate_picks(
             pred_df,
             predictor=predictor_for_year,
             full_data=full_year_data,
         )
+
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Total time elapsed: {elapsed_time:.4f} seconds")
 
         point, acc = real_Bracket(picks, correct_picks[str(test_year)])
 

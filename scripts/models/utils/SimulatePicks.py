@@ -1,15 +1,28 @@
 """Tournament bracket simulation for joint-probability-aware pick selection.
 
-Simulates N full tournaments using a two-signal blend of the matchup model
-and by-round model conditional ratio. For each game, weights are drawn from
-Uniform(0, 1) and normalised to sum to 1, independently per round per
-simulation. This explores the full blend spectrum without constraints.
+Uses two separate simulation pools:
 
-The bracket that maximises expected points across all simulations is selected,
-accounting for the joint dependence of picks rather than maximising each
-slot independently.
+1. **Candidate brackets** (N simulations): generated using a two-signal blend
+   of the matchup model and by-round model conditional ratio. Weights are drawn
+   from Uniform(0, 1) normalised to sum to 1, independently per round per
+   simulation. Every simulated bracket is evaluated as a candidate.
 
-If no matchup predictor is provided, falls back to the conditional ratio only.
+2. **Scoring simulations** (M simulations): generated using a two-stage blend
+   that incorporates historical seed survival rates. Stage 1 blends the two
+   models (as above). Stage 2 blends the Stage 1 result with historical
+   _Actual_Full seed survival rates. Both blend weights are drawn independently
+   from Uniform(0, 1). This produces a historically-grounded distribution that
+   rewards realistic upset frequencies rather than chalk outcomes.
+
+All N candidate brackets are scored against all M scoring simulations. The
+candidate with the highest mean score is returned.
+
+Separating the two pools breaks the convergence-to-chalk problem: increasing
+M now stabilises the scoring distribution toward historical realism rather
+than toward model-biased chalk.
+
+If no matchup predictor or full_data is provided, both pools fall back to
+the conditional ratio only.
 """
 
 import numpy as np
@@ -41,6 +54,16 @@ _STAGE_TO_COL = {
     "F4": "NCG",
     "NCG": "Winner",
     "Winner": "Winner",
+}
+
+# _Actual_Full column for the round being advanced TO at each game stage
+_STAGE_TO_ACTUAL = {
+    "R64": "R32_Actual_Full",
+    "S16": "S16_Actual_Full",
+    "E8": "E8_Actual_Full",
+    "F4": "F4_Actual_Full",
+    "NCG": "NCG_Actual_Full",
+    "Winner": "Winner_Actual_Full",
 }
 
 # Round number passed to matchup model at each game stage
@@ -81,6 +104,32 @@ def _conditional_ratio(team_a, team_b, col, probs_by_team):
     """
     pa = _get_prob(probs_by_team, team_a, col)
     pb = _get_prob(probs_by_team, team_b, col)
+    total = pa + pb
+    return pa / total if total > 0 else 0.5
+
+
+def _actual_ratio(team_a, team_b, stage, actual_by_team):
+    """p(A wins | both in game) from historical _Actual_Full seed survival rates.
+
+    Uses the seed-level _Actual_Full column for the round being advanced to.
+    All teams of the same seed share the same historical rate. This signal
+    anchors scoring simulations to realistic upset frequencies.
+
+    Args:
+        team_a: First team name.
+        team_b: Second team name.
+        stage: Game stage string ('R64', 'S16', 'E8', 'F4', 'NCG', 'Winner').
+        actual_by_team: Dict keyed by team name -> full_data feature Series
+            containing _Actual_Full columns.
+
+    Returns:
+        Float probability of team_a winning, in (0, 1).
+    """
+    col = _STAGE_TO_ACTUAL[stage]
+    row_a = actual_by_team.get(team_a)
+    row_b = actual_by_team.get(team_b)
+    pa = float(row_a[col]) if row_a is not None else 0.0
+    pb = float(row_b[col]) if row_b is not None else 0.0
     total = pa + pb
     return pa / total if total > 0 else 0.5
 
@@ -143,10 +192,13 @@ def _matchup_prob(team_a, team_b, round_num, team_rows, predictor, numeric_cols,
     return prob_a
 
 
-def _blend(
+def _blend_candidate(
     team_a, team_b, stage, weights, probs_by_team, team_rows, predictor, numeric_cols, cache
 ):
-    """Two-signal blended win probability: matchup model + conditional ratio.
+    """Two-signal blended win probability for candidate bracket generation.
+
+    Blends matchup model and conditional ratio using weights drawn from
+    Uniform(0, 1) normalised to sum to 1.
 
     Args:
         team_a: First team name.
@@ -174,12 +226,70 @@ def _blend(
     return w_matchup * mp + w_ratio * ratio
 
 
-def _simulate_once(region_teams, probs_by_team, rng, team_rows, predictor, numeric_cols, cache):
-    """Simulate one full tournament bracket outcome.
+def _blend_scoring(
+    team_a,
+    team_b,
+    stage,
+    w_model,
+    w_actual,
+    probs_by_team,
+    actual_by_team,
+    team_rows,
+    predictor,
+    numeric_cols,
+    cache,
+):
+    """Two-stage blended win probability for scoring simulation generation.
 
-    All games use a two-signal blend of matchup model and conditional ratio,
-    with weights drawn from Uniform(0, 1) normalised to sum to 1,
-    independently per round per simulation.
+    Stage 1: blend matchup model and conditional ratio.
+    Stage 2: blend Stage 1 result with historical _Actual_Full seed survival rates.
+
+    Both blend weights are drawn independently from Uniform(0, 1). This
+    produces a historically-grounded win probability that rewards realistic
+    upset frequencies rather than chalk outcomes.
+
+    Args:
+        team_a: First team name.
+        team_b: Second team name.
+        stage: Game stage string ('R64', 'S16', 'E8', 'F4', 'NCG', 'Winner').
+        w_model: Weight for the model blend in Stage 2 (1 - w_actual).
+        w_actual: Weight for the historical rate in Stage 2.
+        probs_by_team: Dict keyed by team name -> pred_df probability Series.
+        actual_by_team: Dict keyed by team name -> full_data feature Series.
+        team_rows: Dict keyed by team name -> feature Series for matchup model.
+        predictor: Fitted matchup TabularPredictor, or None.
+        numeric_cols: Pre-computed numeric feature column names.
+        cache: Matchup probability cache dict (shared with candidate pool).
+
+    Returns:
+        Float probability of team_a winning in (0, 1).
+    """
+    # Stage 1: blend the two models with their own random weights
+    col = _STAGE_TO_COL[stage]
+    ratio = _conditional_ratio(team_a, team_b, col, probs_by_team)
+
+    if predictor is not None:
+        rnum = _STAGE_TO_ROUND[stage]
+        mp = _matchup_prob(team_a, team_b, rnum, team_rows, predictor, numeric_cols, cache)
+        # Inner weights for model blend drawn earlier and stored in w_model/w_actual context
+        # Use ratio of ratio vs mp drawn fresh — reuse w_model as inner alpha
+        model_prob = w_model * mp + (1.0 - w_model) * ratio
+    else:
+        model_prob = ratio
+
+    # Stage 2: blend model probability with historical rate
+    # w_actual is the weight on the historical rate (beta ~ Uniform(0,1))
+    # so historical gets equal expected weight to model across simulations
+    if actual_by_team:
+        hist = _actual_ratio(team_a, team_b, stage, actual_by_team)
+        return (1.0 - w_actual) * model_prob + w_actual * hist
+    return model_prob
+
+
+def _simulate_once_candidate(
+    region_teams, probs_by_team, rng, team_rows, predictor, numeric_cols, cache
+):
+    """Simulate one candidate bracket using the two-signal model blend.
 
     Args:
         region_teams: Dict mapping region -> dict mapping seed -> team name.
@@ -198,77 +308,226 @@ def _simulate_once(region_teams, probs_by_team, rng, team_rows, predictor, numer
     result["NCG"] = []
     result["Winner"] = None
 
-    # Draw weights from Uniform(0,1) Dirichlet per round
-    def _dirichlet_weights():
+    def _dw():
         w = rng.random(2)
         return w / w.sum()
 
-    w_r64 = _dirichlet_weights()
-    w_s16 = _dirichlet_weights()
-    w_e8 = _dirichlet_weights()
-    w_f4 = _dirichlet_weights()
-    w_ncg = _dirichlet_weights()
-    w_win = _dirichlet_weights()
+    w_r64 = _dw()
+    w_s16 = _dw()
+    w_e8 = _dw()
+    w_f4 = _dw()
+    w_ncg = _dw()
+    w_win = _dw()
 
     f4_teams = {}
-
     for region in _REGIONS:
         teams = region_teams[region]
 
-        # R64 -> R32
         r32_winners = {}
         for slot, (s_hi, s_lo) in _R64_PODS.items():
             t_hi = teams[s_hi]
             t_lo = teams[s_lo]
-            p_hi = _blend(
+            p = _blend_candidate(
                 t_hi, t_lo, "R64", w_r64, probs_by_team, team_rows, predictor, numeric_cols, cache
             )
-            w = t_hi if rng.random() < p_hi else t_lo
+            w = t_hi if rng.random() < p else t_lo
             r32_winners[slot] = w
             result[region]["R32"][slot] = w
 
-        # R32 -> S16
         for slot_a, slot_b in _S16_PODS:
             ta = r32_winners[slot_a]
             tb = r32_winners[slot_b]
             result[region]["S16"][slot_a] = ta
             result[region]["S16"][slot_b] = tb
-            p = _blend(
+            p = _blend_candidate(
                 ta, tb, "S16", w_s16, probs_by_team, team_rows, predictor, numeric_cols, cache
             )
             result[region]["E8"][_S16_TO_E8[slot_a]] = ta if rng.random() < p else tb
 
-        # E8 game
         upper = result[region]["E8"]["Upper"]
         lower = result[region]["E8"]["Lower"]
-        p = _blend(
+        p = _blend_candidate(
             upper, lower, "E8", w_e8, probs_by_team, team_rows, predictor, numeric_cols, cache
         )
         f4w = upper if rng.random() < p else lower
         result[region]["F4"] = f4w
         f4_teams[region] = f4w
 
-    # F4 games
     ncg_teams = []
     for reg_a, reg_b in _F4_PAIRS:
         ta = f4_teams[reg_a]
         tb = f4_teams[reg_b]
-        p = _blend(ta, tb, "F4", w_f4, probs_by_team, team_rows, predictor, numeric_cols, cache)
+        p = _blend_candidate(
+            ta, tb, "F4", w_f4, probs_by_team, team_rows, predictor, numeric_cols, cache
+        )
         ncg_teams.append(ta if rng.random() < p else tb)
     result["NCG"] = ncg_teams
 
-    # NCG game
     ta, tb = ncg_teams
-    p = _blend(ta, tb, "NCG", w_ncg, probs_by_team, team_rows, predictor, numeric_cols, cache)
+    p = _blend_candidate(
+        ta, tb, "NCG", w_ncg, probs_by_team, team_rows, predictor, numeric_cols, cache
+    )
     champ = ta if rng.random() < p else tb
 
-    # Championship game
     loser = tb if champ == ta else ta
-    p = _blend(
+    p = _blend_candidate(
         champ, loser, "Winner", w_win, probs_by_team, team_rows, predictor, numeric_cols, cache
     )
     result["Winner"] = champ if rng.random() < p else loser
+    return result
 
+
+def _simulate_once_scoring(
+    region_teams, probs_by_team, actual_by_team, rng, team_rows, predictor, numeric_cols, cache
+):
+    """Simulate one scoring bracket using the two-stage historical blend.
+
+    Stage 1 blends the two models with random weights. Stage 2 blends the
+    Stage 1 result with historical _Actual_Full seed survival rates using
+    independent random weights. This produces historically-grounded outcomes
+    that reflect realistic upset frequencies.
+
+    Args:
+        region_teams: Dict mapping region -> dict mapping seed -> team name.
+        probs_by_team: Dict keyed by team name -> probability Series.
+        actual_by_team: Dict keyed by team name -> full_data feature Series
+            containing _Actual_Full columns. May be empty dict if unavailable.
+        rng: numpy random Generator instance.
+        team_rows: Dict keyed by team name -> feature Series from full_data.
+        predictor: Fitted matchup TabularPredictor, or None for ratio-only.
+        numeric_cols: Pre-computed numeric feature column names.
+        cache: Shared matchup probability cache dict, modified in place.
+
+    Returns:
+        Dict representing one simulated tournament outcome with keys for each
+        region (R32, S16, E8, F4), NCG, and Winner.
+    """
+    result = {r: {"F4": None, "E8": {}, "S16": {}, "R32": {}} for r in _REGIONS}
+    result["NCG"] = []
+    result["Winner"] = None
+
+    # Per-round weights: w_model is inner model blend alpha, w_actual is Stage 2 beta
+    def _stage_weights():
+        w_model = rng.random()  # inner blend weight for matchup vs ratio
+        w_actual = rng.random()  # Stage 2 weight: model_prob vs historical_rate
+        return w_model, w_actual
+
+    wr64 = _stage_weights()
+    ws16 = _stage_weights()
+    we8 = _stage_weights()
+    wf4 = _stage_weights()
+    wncg = _stage_weights()
+    wwin = _stage_weights()
+
+    f4_teams = {}
+    for region in _REGIONS:
+        teams = region_teams[region]
+
+        r32_winners = {}
+        for slot, (s_hi, s_lo) in _R64_PODS.items():
+            t_hi = teams[s_hi]
+            t_lo = teams[s_lo]
+            p = _blend_scoring(
+                t_hi,
+                t_lo,
+                "R64",
+                *wr64,
+                probs_by_team,
+                actual_by_team,
+                team_rows,
+                predictor,
+                numeric_cols,
+                cache,
+            )
+            w = t_hi if rng.random() < p else t_lo
+            r32_winners[slot] = w
+            result[region]["R32"][slot] = w
+
+        for slot_a, slot_b in _S16_PODS:
+            ta = r32_winners[slot_a]
+            tb = r32_winners[slot_b]
+            result[region]["S16"][slot_a] = ta
+            result[region]["S16"][slot_b] = tb
+            p = _blend_scoring(
+                ta,
+                tb,
+                "S16",
+                *ws16,
+                probs_by_team,
+                actual_by_team,
+                team_rows,
+                predictor,
+                numeric_cols,
+                cache,
+            )
+            result[region]["E8"][_S16_TO_E8[slot_a]] = ta if rng.random() < p else tb
+
+        upper = result[region]["E8"]["Upper"]
+        lower = result[region]["E8"]["Lower"]
+        p = _blend_scoring(
+            upper,
+            lower,
+            "E8",
+            *we8,
+            probs_by_team,
+            actual_by_team,
+            team_rows,
+            predictor,
+            numeric_cols,
+            cache,
+        )
+        f4w = upper if rng.random() < p else lower
+        result[region]["F4"] = f4w
+        f4_teams[region] = f4w
+
+    ncg_teams = []
+    for reg_a, reg_b in _F4_PAIRS:
+        ta = f4_teams[reg_a]
+        tb = f4_teams[reg_b]
+        p = _blend_scoring(
+            ta,
+            tb,
+            "F4",
+            *wf4,
+            probs_by_team,
+            actual_by_team,
+            team_rows,
+            predictor,
+            numeric_cols,
+            cache,
+        )
+        ncg_teams.append(ta if rng.random() < p else tb)
+    result["NCG"] = ncg_teams
+
+    ta, tb = ncg_teams
+    p = _blend_scoring(
+        ta,
+        tb,
+        "NCG",
+        *wncg,
+        probs_by_team,
+        actual_by_team,
+        team_rows,
+        predictor,
+        numeric_cols,
+        cache,
+    )
+    champ = ta if rng.random() < p else tb
+
+    loser = tb if champ == ta else ta
+    p = _blend_scoring(
+        champ,
+        loser,
+        "Winner",
+        *wwin,
+        probs_by_team,
+        actual_by_team,
+        team_rows,
+        predictor,
+        numeric_cols,
+        cache,
+    )
+    result["Winner"] = champ if rng.random() < p else loser
     return result
 
 
@@ -278,7 +537,8 @@ def _bracket_to_flat(sim, team_to_int):
     Slot ordering: R32 (32), S16 (16), E8 (8), F4 (4), NCG (2), Winner (1).
 
     Args:
-        sim: Simulation result dict from _simulate_once.
+        sim: Simulation result dict from _simulate_once_candidate or
+            _simulate_once_scoring.
         team_to_int: Dict mapping team name -> integer ID.
 
     Returns:
@@ -302,25 +562,31 @@ def _bracket_to_flat(sim, team_to_int):
     return np.array([team_to_int.get(t, 0) if t else 0 for t in slots], dtype=np.int16)
 
 
-def _select_optimal_bracket(simulations, n_candidates, rng):
-    """Return the simulated bracket with highest mean score across all sims.
+def _select_optimal_bracket(candidates, scoring_sims):
+    """Score all candidate brackets against all scoring simulations.
 
-    Candidates are randomly sampled without replacement and deduplicated
-    to ensure genuine bracket diversity before scoring.
+    All N candidate brackets are evaluated against all M scoring simulations.
+    The candidate with the highest mean score is returned. Because candidates
+    and scoring simulations come from separate distributions, increasing M
+    stabilises the scoring distribution toward historical realism rather than
+    toward model-biased chalk.
 
     Args:
-        simulations: List of simulated outcome dicts from _simulate_once.
-        n_candidates: Number of candidate brackets to evaluate.
-        rng: numpy random Generator instance (shared with simulation loop).
+        candidates: List of candidate bracket dicts from _simulate_once_candidate.
+        scoring_sims: List of scoring simulation dicts from _simulate_once_scoring.
 
     Returns:
         The best candidate bracket dict.
     """
-    n_sims = len(simulations)
+    n_cands = len(candidates)
+    n_scores = len(scoring_sims)
+
+    # Build a unified team->int mapping across both pools
     all_teams = sorted(
         {
             t
-            for sim in simulations
+            for pool in [candidates, scoring_sims]
+            for sim in pool
             for r in _REGIONS
             for t in [
                 *sim[r]["R32"].values(),
@@ -330,44 +596,38 @@ def _select_optimal_bracket(simulations, n_candidates, rng):
             ]
             if t
         }
-        | {t for sim in simulations for t in [*sim["NCG"], sim["Winner"]] if t}
+        | {
+            t
+            for pool in [candidates, scoring_sims]
+            for sim in pool
+            for t in [*sim["NCG"], sim["Winner"]]
+            if t
+        }
     )
     team_to_int = {t: i + 1 for i, t in enumerate(all_teams)}
 
-    sim_arrays = np.array([_bracket_to_flat(s, team_to_int) for s in simulations], dtype=np.int16)
-
-    # Random sample without replacement for diversity
-    sample_size = min(n_candidates * 4, n_sims)
-    sampled_idx = rng.choice(n_sims, size=sample_size, replace=False)
-    sampled_arrays = sim_arrays[sampled_idx]
-
-    # Deduplicate
-    _, unique_idx = np.unique(sampled_arrays, axis=0, return_index=True)
-    unique_arrays = sampled_arrays[unique_idx]
-    unique_sims = [simulations[sampled_idx[i]] for i in unique_idx]
-
-    k = min(n_candidates, len(unique_arrays))
-    cand_arrays = unique_arrays[:k]
-    cand_sims = unique_sims[:k]
-
-    n_dupes = sample_size - len(unique_arrays)
-    print(
-        f"    Candidates: {len(unique_arrays)} unique from {sample_size} sampled "
-        f"({n_dupes} duplicates removed, {k} evaluated)"
+    cand_arrays = np.array([_bracket_to_flat(s, team_to_int) for s in candidates], dtype=np.int16)
+    score_arrays = np.array(
+        [_bracket_to_flat(s, team_to_int) for s in scoring_sims], dtype=np.int16
     )
 
-    scores = np.zeros((k, n_sims), dtype=np.float32)
-    for s in range(63):
-        scores += (cand_arrays[:, s : s + 1] == sim_arrays[np.newaxis, :, s]) * _POINTS[s]
+    print(
+        f"    Scoring {n_cands} candidates against {n_scores} scoring sims "
+        f"({n_cands * n_scores:,} comparisons)"
+    )
 
-    return cand_sims[int(np.argmax(scores.mean(axis=1)))]
+    scores = np.zeros((n_cands, n_scores), dtype=np.float32)
+    for s in range(63):
+        scores += (cand_arrays[:, s : s + 1] == score_arrays[np.newaxis, :, s]) * _POINTS[s]
+
+    return candidates[int(np.argmax(scores.mean(axis=1)))]
 
 
 def _format_picks(bracket):
     """Convert simulation result dict to standard picks_dict format.
 
     Args:
-        bracket: Simulation result dict from _simulate_once.
+        bracket: Simulation result dict from _simulate_once_candidate.
 
     Returns:
         Picks dict compatible with real_Bracket, where each slot value is
@@ -419,29 +679,38 @@ def _build_numeric_cols(full_data):
 
 
 def simulate_picks(
-    pred_df, n_sims=20000, n_candidates=1000, seed=23, predictor=None, full_data=None
+    pred_df,
+    n_sims=5000,
+    n_scoring_sims=20000,
+    seed=23,
+    predictor=None,
+    full_data=None,
 ):
-    """Generate bracket picks using tournament simulation.
+    """Generate bracket picks using decoupled candidate and scoring simulations.
 
-    Simulates n_sims full tournaments. For each game, blends the matchup
-    model probability with the by-round model conditional ratio using weights
-    drawn from Uniform(0, 1) normalised to sum to 1, independently per round
-    per simulation.
+    Generates N candidate brackets using the two-signal model blend, then
+    generates M scoring brackets using a two-stage blend that incorporates
+    historical _Actual_Full seed survival rates. All N candidates are scored
+    against all M scoring simulations. The candidate with the highest mean
+    score is returned.
 
-    The bracket that maximises expected points across all simulations is
-    returned, accounting for the joint dependence of picks.
+    Increasing n_scoring_sims stabilises the scoring distribution toward
+    historical realism rather than toward model-biased chalk, solving the
+    convergence-to-chalk problem that occurs when candidates and scoring
+    simulations share the same pool.
 
-    If predictor is None or full_data is None, falls back to the conditional
-    ratio only.
+    If predictor is None or full_data is None, both pools fall back to the
+    conditional ratio only, and scoring simulations use no historical blend.
 
     Args:
         pred_df: DataFrame with columns Team, Seed, Region, R32, S16, E8,
             F4, NCG, Winner as produced by standarize().
-        n_sims: Number of tournament simulations. Default 20000.
-        n_candidates: Number of candidate brackets to evaluate. Default 1000.
-        seed: Random seed for reproducibility. Default 42.
+        n_sims: Number of candidate bracket simulations. Default 5000.
+        n_scoring_sims: Number of scoring simulations. Default 20000.
+        seed: Random seed for reproducibility. Default 23.
         predictor: Fitted matchup TabularPredictor, or None.
-        full_data: Current-year modeling DataFrame for matchup features, or None.
+        full_data: Current-year modeling DataFrame for matchup features and
+            _Actual_Full historical survival rates, or None.
 
     Returns:
         Picks dict in the standard bracket format used by real_Bracket.
@@ -460,10 +729,19 @@ def simulate_picks(
     use_matchup = predictor is not None and full_data is not None
     team_rows = {row["Team"]: row for _, row in full_data.iterrows()} if use_matchup else {}
     numeric_cols = _build_numeric_cols(full_data) if use_matchup else []
+
+    # actual_by_team provides _Actual_Full columns for scoring simulations
+    actual_by_team = (
+        {row["Team"]: row for _, row in full_data.iterrows()} if full_data is not None else {}
+    )
+
+    # Shared matchup cache across both simulation pools
     cache: dict = {}
 
-    simulations = [
-        _simulate_once(
+    # --- Candidate brackets (two-signal model blend) ---
+    print(f"    Generating {n_sims} candidate brackets...")
+    candidates = [
+        _simulate_once_candidate(
             region_teams,
             probs_by_team,
             rng,
@@ -475,7 +753,23 @@ def simulate_picks(
         for _ in range(n_sims)
     ]
 
+    # --- Scoring simulations (two-stage historical blend) ---
+    print(f"    Generating {n_scoring_sims} scoring simulations...")
+    scoring_sims = [
+        _simulate_once_scoring(
+            region_teams,
+            probs_by_team,
+            actual_by_team,
+            rng,
+            team_rows,
+            predictor if use_matchup else None,
+            numeric_cols,
+            cache,
+        )
+        for _ in range(n_scoring_sims)
+    ]
+
     print(f"    Matchup cache: {len(cache)} unique predictions cached")
 
-    best_bracket = _select_optimal_bracket(simulations, n_candidates, rng)
+    best_bracket = _select_optimal_bracket(candidates, scoring_sims)
     return _format_picks(best_bracket)
