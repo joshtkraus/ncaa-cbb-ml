@@ -92,15 +92,15 @@ python 05_MakePredictions.py
 
 | Year | Points |
 |------|--------|
-| 2015 | 1350 |
+| 2015 | 940 |
 | 2016 | 670 |
-| 2017 | 950 |
+| 2017 | 1010 |
 | 2018 | 1070 |
-| 2019 | 950 |
+| 2019 | 1230 |
 | 2021 | 850 |
 | 2022 | 580 |
-| 2023 | 480 |
-| 2024 | 1200 |
+| 2023 | 500 |
+| 2024 | 1360 |
 | 2025 | 1200 |
 
-**Mean: 930 pts** &nbsp;|&nbsp; **SD: 272 pts** &nbsp;|&nbsp; **Overall pick accuracy: 62.5%**
+**Mean: 941 pts** &nbsp;|&nbsp; **SD: 275 pts** &nbsp;|&nbsp; **Overall pick accuracy: 63.0%**

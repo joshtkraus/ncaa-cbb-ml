@@ -27,6 +27,7 @@ the conditional ratio only.
 
 import numpy as np
 import pandas as pd
+from scipy.stats import binom
 
 _R64_PODS = {
     "1": (1, 16),
@@ -112,8 +113,7 @@ def _actual_ratio(team_a, team_b, stage, actual_by_team):
     """p(A wins | both in game) from historical _Actual_Full seed survival rates.
 
     Uses the seed-level _Actual_Full column for the round being advanced to.
-    All teams of the same seed share the same historical rate. This signal
-    anchors scoring simulations to realistic upset frequencies.
+    All teams of the same seed share the same historical rate.
 
     Args:
         team_a: First team name.
@@ -264,22 +264,18 @@ def _blend_scoring(
     Returns:
         Float probability of team_a winning in (0, 1).
     """
-    # Stage 1: blend the two models with their own random weights
+    # Stage 1: blend the two models on the log-odds scale
     col = _STAGE_TO_COL[stage]
     ratio = _conditional_ratio(team_a, team_b, col, probs_by_team)
 
     if predictor is not None:
         rnum = _STAGE_TO_ROUND[stage]
         mp = _matchup_prob(team_a, team_b, rnum, team_rows, predictor, numeric_cols, cache)
-        # Inner weights for model blend drawn earlier and stored in w_model/w_actual context
-        # Use ratio of ratio vs mp drawn fresh — reuse w_model as inner alpha
         model_prob = w_model * mp + (1.0 - w_model) * ratio
     else:
         model_prob = ratio
 
     # Stage 2: blend model probability with historical rate
-    # w_actual is the weight on the historical rate (beta ~ Uniform(0,1))
-    # so historical gets equal expected weight to model across simulations
     if actual_by_team:
         hist = _actual_ratio(team_a, team_b, stage, actual_by_team)
         return (1.0 - w_actual) * model_prob + w_actual * hist
@@ -562,18 +558,112 @@ def _bracket_to_flat(sim, team_to_int):
     return np.array([team_to_int.get(t, 0) if t else 0 for t in slots], dtype=np.int16)
 
 
-def _select_optimal_bracket(candidates, scoring_sims):
+def _build_rate_tables(actual_by_team, team_to_seed):
+    """Pre-compute seed->rate lookup tables for fast log-likelihood computation.
+
+    Called once before the candidate scoring loop. Returns a dict of
+    {round_name: {seed: rate}} for use in _bracket_log_likelihood_fast.
+
+    Args:
+        actual_by_team: Dict keyed by team name -> full_data feature Series.
+        team_to_seed: Dict mapping team name -> seed number.
+
+    Returns:
+        Dict keyed by round name -> dict keyed by seed -> float rate.
+        Returns empty dict if actual_by_team is empty.
+    """
+    if not actual_by_team:
+        return {}
+
+    _ROUND_ACTUAL_COL = {
+        "R32": "R32_Actual_Full",
+        "S16": "S16_Actual_Full",
+        "E8": "E8_Actual_Full",
+        "F4": "F4_Actual_Full",
+        "NCG": "NCG_Actual_Full",
+        "Winner": "Winner_Actual_Full",
+    }
+    tables: dict = {rd: {} for rd in _ROUND_ACTUAL_COL}
+    for team, row in actual_by_team.items():
+        seed = team_to_seed.get(team)
+        if seed is None:
+            continue
+        for rd, col in _ROUND_ACTUAL_COL.items():
+            if seed not in tables[rd]:
+                try:
+                    p = float(row[col])
+                    tables[rd][seed] = max(1e-6, min(1.0 - 1e-6, p))
+                except (KeyError, TypeError):
+                    tables[rd][seed] = 0.5
+    return tables
+
+
+def _bracket_log_likelihood(candidate, team_to_seed, rate_tables):
+    """Compute binomial log-likelihood of a bracket's seed distribution.
+
+    For each round and each seed, counts how many teams of that seed appear
+    in the bracket's picks and computes the binomial log-probability of that
+    count given the historical _Actual_Full survival rate. The full bracket
+    log-likelihood is the sum across all rounds and seeds.
+
+    Uses pre-computed rate_tables from _build_rate_tables for speed.
+
+    Args:
+        candidate: Candidate bracket dict from _simulate_once_candidate.
+        team_to_seed: Dict mapping team name -> seed number.
+        rate_tables: Dict keyed by round -> seed -> rate, from _build_rate_tables.
+
+    Returns:
+        Float log-likelihood. Higher (less negative) values indicate more
+        historically realistic seed distributions.
+    """
+    if not rate_tables:
+        return 0.0
+
+    _ROUND_TEAMS = (
+        ("R32", [t for r in _REGIONS for t in candidate[r]["R32"].values()], 4),
+        ("S16", [t for r in _REGIONS for t in candidate[r]["S16"].values()], 4),
+        ("E8", [t for r in _REGIONS for t in candidate[r]["E8"].values()], 4),
+        ("F4", [candidate[r]["F4"] for r in _REGIONS if candidate[r]["F4"]], 4),
+        ("NCG", list(candidate["NCG"]), 2),
+        ("Winner", [candidate["Winner"]] if candidate["Winner"] else [], 1),
+    )
+
+    log_lik = 0.0
+    for rd, teams, n in _ROUND_TEAMS:
+        seed_counts: dict = {}
+        for t in teams:
+            s = team_to_seed.get(t)
+            if s is not None:
+                seed_counts[s] = seed_counts.get(s, 0) + 1
+        rd_rates = rate_tables.get(rd, {})
+        for seed, count in seed_counts.items():
+            p = rd_rates.get(seed, 0.5)
+            log_lik += binom.logpmf(count, n, p)
+
+    return log_lik
+
+
+def _select_optimal_bracket(candidates, scoring_sims, rate_tables=None, team_to_seed=None):
     """Score all candidate brackets against all scoring simulations.
 
     All N candidate brackets are evaluated against all M scoring simulations.
-    The candidate with the highest mean score is returned. Because candidates
-    and scoring simulations come from separate distributions, increasing M
-    stabilises the scoring distribution toward historical realism rather than
-    toward model-biased chalk.
+    Each candidate's final score is:
+
+        log(mean_points) + log_likelihood
+
+    where log_likelihood is the binomial log-likelihood of the bracket's
+    seed distribution against historical _Actual_Full rates. This penalises
+    brackets whose seed distribution deviates from historical expectations —
+    e.g. all four 1-seeds in the F4 — without discarding team-specific signal.
 
     Args:
         candidates: List of candidate bracket dicts from _simulate_once_candidate.
         scoring_sims: List of scoring simulation dicts from _simulate_once_scoring.
+        rate_tables: Pre-computed seed->rate lookup tables from _build_rate_tables.
+            If None, no likelihood weighting is applied.
+        team_to_seed: Dict mapping team name -> seed number. Required when
+            rate_tables is provided.
 
     Returns:
         The best candidate bracket dict.
@@ -620,7 +710,40 @@ def _select_optimal_bracket(candidates, scoring_sims):
     for s in range(63):
         scores += (cand_arrays[:, s : s + 1] == score_arrays[np.newaxis, :, s]) * _POINTS[s]
 
-    return candidates[int(np.argmax(scores.mean(axis=1)))]
+    mean_scores = scores.mean(axis=1)
+
+    # Compute log-likelihood weight for each candidate and combine with
+    # normalised expected points score using equal weighting.
+    # Both terms are z-score normalised before combining so neither dominates.
+    if rate_tables and team_to_seed:
+        log_liks = np.array(
+            [_bracket_log_likelihood(c, team_to_seed, rate_tables) for c in candidates],
+            dtype=np.float64,
+        )
+
+        # Z-score normalise both terms independently
+        def _zscore(arr):
+            std = arr.std()
+            return (arr - arr.mean()) / std if std > 0 else arr - arr.mean()
+
+        z_scores = _zscore(mean_scores.astype(np.float64))
+        z_liks = _zscore(log_liks)
+
+        # Equal-weight combination
+        combined = 0.5 * z_scores + 0.5 * z_liks
+
+        print(
+            f"    Log-likelihood range: [{log_liks.min():.2f}, {log_liks.max():.2f}]  "
+            f"mean={log_liks.mean():.2f}"
+        )
+        print(
+            f"    Z-score ranges — points: [{z_scores.min():.2f}, {z_scores.max():.2f}]  "
+            f"ll: [{z_liks.min():.2f}, {z_liks.max():.2f}]"
+        )
+    else:
+        combined = mean_scores
+
+    return candidates[int(np.argmax(combined))]
 
 
 def _format_picks(bracket):
@@ -771,5 +894,35 @@ def simulate_picks(
 
     print(f"    Matchup cache: {len(cache)} unique predictions cached")
 
-    best_bracket = _select_optimal_bracket(candidates, scoring_sims)
+    # Diagnostic: fraction of brackets with all four 1-seeds in F4
+    team_to_seed_diag = {row["Team"]: int(row["Seed"]) for _, row in pred_df.iterrows()}
+
+    def _all_ones(sims):
+        return sum(
+            1
+            for sim in sims
+            if all(team_to_seed_diag.get(sim[r]["F4"], 0) == 1 for r in _REGIONS if sim[r]["F4"])
+        )
+
+    n_cand = _all_ones(candidates)
+    n_score = _all_ones(scoring_sims)
+    print(
+        f"    Candidate  F4 all-1-seeds: {n_cand}/{len(candidates)} "
+        f"({100 * n_cand / len(candidates):.1f}%)"
+    )
+    print(
+        f"    Scoring sim F4 all-1-seeds: {n_score}/{len(scoring_sims)} "
+        f"({100 * n_score / len(scoring_sims):.1f}%)"
+    )
+
+    # Build team_to_seed and pre-compute rate tables for log-likelihood
+    team_to_seed = {row["Team"]: int(row["Seed"]) for _, row in pred_df.iterrows()}
+    rate_tables = _build_rate_tables(actual_by_team, team_to_seed)
+
+    best_bracket = _select_optimal_bracket(
+        candidates,
+        scoring_sims,
+        rate_tables=rate_tables,
+        team_to_seed=team_to_seed,
+    )
     return _format_picks(best_bracket)
