@@ -1,5 +1,7 @@
 """Team name standardization for KenPom data."""
 
+import pandas as pd
+
 
 def clean_KP(df):
     """Standardize team names in a KenPom DataFrame to match SportsReference conventions.
@@ -10,8 +12,6 @@ def clean_KP(df):
     Returns:
         DataFrame with normalized team names.
     """
-    import pandas as pd
-
     pd.options.mode.chained_assignment = None
     df.loc[:, "Team"] = df["Team"].str.replace(r"^St\.", "Saint", regex=True)
     df.loc[:, "Team"] = df["Team"].str.replace(

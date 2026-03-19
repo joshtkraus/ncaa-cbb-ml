@@ -1,33 +1,8 @@
-"""Tournament bracket simulation for joint-probability-aware pick selection.
-
-Uses two separate simulation pools:
-
-1. **Candidate brackets** (N simulations): generated using a two-signal blend
-   of the matchup model and by-round model conditional ratio. Weights are drawn
-   from Uniform(0, 1) normalised to sum to 1, independently per round per
-   simulation. Every simulated bracket is evaluated as a candidate.
-
-2. **Scoring simulations** (M simulations): generated using a two-stage blend
-   that incorporates historical seed survival rates. Stage 1 blends the two
-   models (as above). Stage 2 blends the Stage 1 result with historical
-   _Actual_Full seed survival rates. Both blend weights are drawn independently
-   from Uniform(0, 1). This produces a historically-grounded distribution that
-   rewards realistic upset frequencies rather than chalk outcomes.
-
-All N candidate brackets are scored against all M scoring simulations. The
-candidate with the highest mean score is returned.
-
-Separating the two pools breaks the convergence-to-chalk problem: increasing
-M now stabilises the scoring distribution toward historical realism rather
-than toward model-biased chalk.
-
-If no matchup predictor or full_data is provided, both pools fall back to
-the conditional ratio only.
-"""
+"""Tournament bracket simulation for probability-aware pick selection."""
 
 import numpy as np
 import pandas as pd
-from scipy.stats import binom
+from models.utils.DataProcessing_matchup import _assign_team_a, _base_features
 
 _R64_PODS = {
     "1": (1, 16),
@@ -47,7 +22,7 @@ _R32_SLOTS = ["1", "8", "5", "4", "6", "3", "7", "2"]
 _S16_SLOTS = ["1", "4", "3", "2"]
 _E8_HALVES = ["Upper", "Lower"]
 
-# Column advanced TO at each game stage (used for conditional ratio)
+# Column advanced to
 _STAGE_TO_COL = {
     "R64": "R32",
     "S16": "E8",
@@ -57,7 +32,7 @@ _STAGE_TO_COL = {
     "Winner": "Winner",
 }
 
-# _Actual_Full column for the round being advanced TO at each game stage
+# Historical column for the round being advanced to
 _STAGE_TO_ACTUAL = {
     "R64": "R32_Actual_Full",
     "S16": "S16_Actual_Full",
@@ -67,10 +42,10 @@ _STAGE_TO_ACTUAL = {
     "Winner": "Winner_Actual_Full",
 }
 
-# Round number passed to matchup model at each game stage
+# Round number for matchup model
 _STAGE_TO_ROUND = {"R64": 2, "S16": 3, "E8": 4, "F4": 5, "NCG": 6, "Winner": 7}
 
-# Flat array slot ordering: R32(32) + S16(16) + E8(8) + F4(4) + NCG(2) + Winner(1) = 63
+# Flat array slot ordering
 _POINTS = np.array(
     [10] * 32 + [20] * 16 + [40] * 8 + [80] * 4 + [160] * 2 + [320] * 1, dtype=np.float32
 )
@@ -80,7 +55,7 @@ def _get_prob(probs_by_team, team, col):
     """Safely retrieve a probability value for a team.
 
     Args:
-        probs_by_team: Dict keyed by team name -> probability Series.
+        probs_by_team: Dict keyed by team name: probability Series.
         team: Team name string.
         col: Column name to retrieve (e.g. 'R32', 'E8').
 
@@ -98,7 +73,7 @@ def _conditional_ratio(team_a, team_b, col, probs_by_team):
         team_a: First team name.
         team_b: Second team name.
         col: Round probability column for the round being advanced to.
-        probs_by_team: Dict keyed by team name -> probability Series.
+        probs_by_team: Dict keyed by team name: probability Series.
 
     Returns:
         Float probability of team_a winning, in (0, 1).
@@ -112,15 +87,11 @@ def _conditional_ratio(team_a, team_b, col, probs_by_team):
 def _actual_ratio(team_a, team_b, stage, actual_by_team):
     """p(A wins | both in game) from historical _Actual_Full seed survival rates.
 
-    Uses the seed-level _Actual_Full column for the round being advanced to.
-    All teams of the same seed share the same historical rate.
-
     Args:
         team_a: First team name.
         team_b: Second team name.
         stage: Game stage string ('R64', 'S16', 'E8', 'F4', 'NCG', 'Winner').
-        actual_by_team: Dict keyed by team name -> full_data feature Series
-            containing _Actual_Full columns.
+        actual_by_team: Dict keyed by team name: Series with _Actual_Full.
 
     Returns:
         Float probability of team_a winning, in (0, 1).
@@ -137,22 +108,18 @@ def _actual_ratio(team_a, team_b, stage, actual_by_team):
 def _matchup_prob(team_a, team_b, round_num, team_rows, predictor, numeric_cols, cache):
     """Get matchup model win probability for team_a, using lazy cache.
 
-    Caches both (A,B) and (B,A) = 1 - (A,B) to avoid redundant calls.
-
     Args:
         team_a: First team name.
         team_b: Second team name.
         round_num: Tournament round number (2-7).
-        team_rows: Dict keyed by team name -> feature Series from full_data.
+        team_rows: Dict keyed by team name: feature Series from full_data.
         predictor: Fitted matchup TabularPredictor.
         numeric_cols: Pre-computed list of numeric feature column names.
-        cache: Dict keyed by (team_a, team_b, round_num) -> float probability.
+        cache: Dict keyed by (team_a, team_b, round_num): float probability.
 
     Returns:
         Float probability of team_a winning in [0, 1].
     """
-    from models.utils.DataProcessing_matchup import _assign_team_a
-
     key = (team_a, team_b, round_num)
     if key in cache:
         return cache[key]
@@ -197,16 +164,13 @@ def _blend_candidate(
 ):
     """Two-signal blended win probability for candidate bracket generation.
 
-    Blends matchup model and conditional ratio using weights drawn from
-    Uniform(0, 1) normalised to sum to 1.
-
     Args:
         team_a: First team name.
         team_b: Second team name.
         stage: Game stage string ('R64', 'S16', 'E8', 'F4', 'NCG', 'Winner').
         weights: Tuple of (w_matchup, w_ratio) summing to 1.0.
-        probs_by_team: Dict keyed by team name -> pred_df probability Series.
-        team_rows: Dict keyed by team name -> feature Series for matchup model.
+        probs_by_team: Dict keyed by team name: pred_df probability Series.
+        team_rows: Dict keyed by team name: feature Series for matchup model.
         predictor: Fitted matchup TabularPredictor, or None.
         numeric_cols: Pre-computed numeric feature column names.
         cache: Matchup probability cache dict.
@@ -241,22 +205,15 @@ def _blend_scoring(
 ):
     """Two-stage blended win probability for scoring simulation generation.
 
-    Stage 1: blend matchup model and conditional ratio.
-    Stage 2: blend Stage 1 result with historical _Actual_Full seed survival rates.
-
-    Both blend weights are drawn independently from Uniform(0, 1). This
-    produces a historically-grounded win probability that rewards realistic
-    upset frequencies rather than chalk outcomes.
-
     Args:
         team_a: First team name.
         team_b: Second team name.
         stage: Game stage string ('R64', 'S16', 'E8', 'F4', 'NCG', 'Winner').
         w_model: Weight for the model blend in Stage 2 (1 - w_actual).
         w_actual: Weight for the historical rate in Stage 2.
-        probs_by_team: Dict keyed by team name -> pred_df probability Series.
-        actual_by_team: Dict keyed by team name -> full_data feature Series.
-        team_rows: Dict keyed by team name -> feature Series for matchup model.
+        probs_by_team: Dict keyed by team name: pred_df probability Series.
+        actual_by_team: Dict keyed by team name: full_data feature Series.
+        team_rows: Dict keyed by team name: feature Series for matchup model.
         predictor: Fitted matchup TabularPredictor, or None.
         numeric_cols: Pre-computed numeric feature column names.
         cache: Matchup probability cache dict (shared with candidate pool).
@@ -288,10 +245,10 @@ def _simulate_once_candidate(
     """Simulate one candidate bracket using the two-signal model blend.
 
     Args:
-        region_teams: Dict mapping region -> dict mapping seed -> team name.
-        probs_by_team: Dict keyed by team name -> probability Series.
+        region_teams: Dict mapping region: dict mapping seed: team name.
+        probs_by_team: Dict keyed by team name: probability Series.
         rng: numpy random Generator instance.
-        team_rows: Dict keyed by team name -> feature Series from full_data.
+        team_rows: Dict keyed by team name: feature Series from full_data.
         predictor: Fitted matchup TabularPredictor, or None for ratio-only.
         numeric_cols: Pre-computed numeric feature column names.
         cache: Shared matchup probability cache dict, modified in place.
@@ -378,18 +335,12 @@ def _simulate_once_scoring(
 ):
     """Simulate one scoring bracket using the two-stage historical blend.
 
-    Stage 1 blends the two models with random weights. Stage 2 blends the
-    Stage 1 result with historical _Actual_Full seed survival rates using
-    independent random weights. This produces historically-grounded outcomes
-    that reflect realistic upset frequencies.
-
     Args:
-        region_teams: Dict mapping region -> dict mapping seed -> team name.
-        probs_by_team: Dict keyed by team name -> probability Series.
-        actual_by_team: Dict keyed by team name -> full_data feature Series
-            containing _Actual_Full columns. May be empty dict if unavailable.
+        region_teams: Dict mapping region: dict mapping seed: team name.
+        probs_by_team: Dict keyed by team name: probability Series.
+        actual_by_team: Dict keyed by team name: Series with _Actual_Full.
         rng: numpy random Generator instance.
-        team_rows: Dict keyed by team name -> feature Series from full_data.
+        team_rows: Dict keyed by team name: feature Series from full_data.
         predictor: Fitted matchup TabularPredictor, or None for ratio-only.
         numeric_cols: Pre-computed numeric feature column names.
         cache: Shared matchup probability cache dict, modified in place.
@@ -402,7 +353,7 @@ def _simulate_once_scoring(
     result["NCG"] = []
     result["Winner"] = None
 
-    # Per-round weights: w_model is inner model blend alpha, w_actual is Stage 2 beta
+    # Per-round weights
     def _stage_weights():
         w_model = rng.random()  # inner blend weight for matchup vs ratio
         w_actual = rng.random()  # Stage 2 weight: model_prob vs historical_rate
@@ -528,14 +479,11 @@ def _simulate_once_scoring(
 
 
 def _bracket_to_flat(sim, team_to_int):
-    """Convert simulation result dict to a flat int16 array of length 63.
-
-    Slot ordering: R32 (32), S16 (16), E8 (8), F4 (4), NCG (2), Winner (1).
+    """Convert simulation result dict to a flat array of length 63.
 
     Args:
-        sim: Simulation result dict from _simulate_once_candidate or
-            _simulate_once_scoring.
-        team_to_int: Dict mapping team name -> integer ID.
+        sim: Simulation result dict
+        team_to_int: Dict mapping team name to integer ID.
 
     Returns:
         numpy int16 array of length 63.
@@ -559,17 +507,14 @@ def _bracket_to_flat(sim, team_to_int):
 
 
 def _build_rate_tables(actual_by_team, team_to_seed):
-    """Pre-compute seed->rate lookup tables for fast log-likelihood computation.
-
-    Called once before the candidate scoring loop. Returns a dict of
-    {round_name: {seed: rate}} for use in _bracket_log_likelihood_fast.
+    """Pre-compute seed to rate lookup tables for fast log-likelihood computation.
 
     Args:
-        actual_by_team: Dict keyed by team name -> full_data feature Series.
-        team_to_seed: Dict mapping team name -> seed number.
+        actual_by_team: Dict keyed by team name: full_data feature Series.
+        team_to_seed: Dict mapping team name: seed number.
 
     Returns:
-        Dict keyed by round name -> dict keyed by seed -> float rate.
+        Dict keyed by round name: dict keyed by seed: float rate.
         Returns empty dict if actual_by_team is empty.
     """
     if not actual_by_team:
@@ -598,80 +543,165 @@ def _build_rate_tables(actual_by_team, team_to_seed):
     return tables
 
 
-def _bracket_log_likelihood(candidate, team_to_seed, rate_tables):
-    """Compute binomial log-likelihood of a bracket's seed distribution.
-
-    For each round and each seed, counts how many teams of that seed appear
-    in the bracket's picks and computes the binomial log-probability of that
-    count given the historical _Actual_Full survival rate. The full bracket
-    log-likelihood is the sum across all rounds and seeds.
-
-    Uses pre-computed rate_tables from _build_rate_tables for speed.
+def _clamp(p):
+    """Clamp probability to (1e-6, 1-1e-6) to avoid log(0).
 
     Args:
-        candidate: Candidate bracket dict from _simulate_once_candidate.
-        team_to_seed: Dict mapping team name -> seed number.
-        rate_tables: Dict keyed by round -> seed -> rate, from _build_rate_tables.
+        p: Float probability.
 
     Returns:
-        Float log-likelihood. Higher (less negative) values indicate more
-        historically realistic seed distributions.
+        Float probability clamped away from 0 and 1.
     """
-    if not rate_tables:
-        return 0.0
+    return max(1e-6, min(1.0 - 1e-6, p))
 
-    _ROUND_TEAMS = (
-        ("R32", [t for r in _REGIONS for t in candidate[r]["R32"].values()], 4),
-        ("S16", [t for r in _REGIONS for t in candidate[r]["S16"].values()], 4),
-        ("E8", [t for r in _REGIONS for t in candidate[r]["E8"].values()], 4),
-        ("F4", [candidate[r]["F4"] for r in _REGIONS if candidate[r]["F4"]], 4),
-        ("NCG", list(candidate["NCG"]), 2),
-        ("Winner", [candidate["Winner"]] if candidate["Winner"] else [], 1),
-    )
 
+def _ll_r32(candidate, team_to_seed, rate_tables):
+    """Log-likelihood contribution from R32: did the favored seed (1-8) win?
+
+    Args:
+        candidate: Candidate bracket dict.
+        team_to_seed: Dict mapping team name: seed number.
+        rate_tables: Dict keyed by round: seed: rate.
+
+    Returns:
+        Float log-likelihood contribution from R32.
+    """
+    r32_rates = rate_tables.get("R32", {})
     log_lik = 0.0
-    for rd, teams, n in _ROUND_TEAMS:
-        seed_counts: dict = {}
-        for t in teams:
-            s = team_to_seed.get(t)
-            if s is not None:
-                seed_counts[s] = seed_counts.get(s, 0) + 1
-        rd_rates = rate_tables.get(rd, {})
-        for seed, count in seed_counts.items():
-            p = rd_rates.get(seed, 0.5)
-            log_lik += binom.logpmf(count, n, p)
+    for region in _REGIONS:
+        for slot, (s_hi, s_lo) in _R64_PODS.items():
+            winner = candidate[region]["R32"].get(slot)
+            if winner is None:
+                continue
+            winner_seed = team_to_seed.get(winner, s_lo)
+            p = _clamp(r32_rates.get(s_hi, 0.5))
+            log_lik += np.log(p) if winner_seed == s_hi else np.log(1.0 - p)
+    return log_lik
+
+
+def _ll_s16(candidate, team_to_seed, rate_tables):
+    """Log-likelihood contribution from S16: did the pod's top seed (1-4) win?
+
+    Args:
+        candidate: Candidate bracket dict.
+        team_to_seed: Dict mapping team name: seed number.
+        rate_tables: Dict keyed by round: seed: rate.
+
+    Returns:
+        Float log-likelihood contribution from S16.
+    """
+    s16_rates = rate_tables.get("S16", {})
+    _S16_FAVORED = {"1": 1, "4": 4, "3": 3, "2": 2}
+    log_lik = 0.0
+    for region in _REGIONS:
+        for slot_a, _ in _S16_PODS:
+            e8_winner = candidate[region]["E8"].get(_S16_TO_E8[slot_a])
+            if e8_winner is None:
+                continue
+            winner_seed = team_to_seed.get(e8_winner, 99)
+            fav_seed = _S16_FAVORED[slot_a]
+            p = _clamp(s16_rates.get(fav_seed, 0.5))
+            log_lik += np.log(p) if winner_seed == fav_seed else np.log(1.0 - p)
+    return log_lik
+
+
+def _ll_e8(candidate, team_to_seed, rate_tables):
+    """Log-likelihood contribution from E8: did the upper-half winner advance?
+
+    Args:
+        candidate: Candidate bracket dict.
+        team_to_seed: Dict mapping team name: seed number.
+        rate_tables: Dict keyed by round: seed: rate.
+
+    Returns:
+        Float log-likelihood contribution from E8.
+    """
+    e8_rates = rate_tables.get("E8", {})
+    log_lik = 0.0
+    for region in _REGIONS:
+        f4_team = candidate[region]["F4"]
+        upper = candidate[region]["E8"].get("Upper")
+        if f4_team is None or upper is None:
+            continue
+        upper_seed = team_to_seed.get(upper, 99)
+        p = _clamp(e8_rates.get(upper_seed, 0.5))
+        log_lik += np.log(p) if f4_team == upper else np.log(1.0 - p)
+    return log_lik
+
+
+def _ll_late(candidate, team_to_seed, rate_tables):
+    """Log-likelihood contribution from F4, NCG, and Winner.
+
+    Args:
+        candidate: Candidate bracket dict.
+        team_to_seed: Dict mapping team name: seed number.
+        rate_tables: Dict keyed by round: seed: rate.
+
+    Returns:
+        Float log-likelihood contribution from F4, NCG, and Winner.
+    """
+    f4_rates = rate_tables.get("F4", {})
+    ncg_rates = rate_tables.get("NCG", {})
+    winner_rates = rate_tables.get("Winner", {})
+    log_lik = 0.0
+
+    for region in _REGIONS:
+        f4_team = candidate[region]["F4"]
+        if f4_team is None:
+            continue
+        p = _clamp(f4_rates.get(team_to_seed.get(f4_team, 99), 0.5))
+        log_lik += np.log(p)
+
+    for t in candidate["NCG"]:
+        p = _clamp(ncg_rates.get(team_to_seed.get(t, 99), 0.5))
+        log_lik += np.log(p)
+
+    winner = candidate["Winner"]
+    if winner:
+        p = _clamp(winner_rates.get(team_to_seed.get(winner, 99), 0.5))
+        log_lik += np.log(p)
 
     return log_lik
 
 
-def _select_optimal_bracket(candidates, scoring_sims, rate_tables=None, team_to_seed=None):
+def _bracket_log_likelihood(candidate, team_to_seed, rate_tables):
+    """Compute log-likelihood of a bracket using favored-seed binary outcomes.
+
+    Args:
+        candidate: Candidate bracket dict from _simulate_once_candidate.
+        team_to_seed: Dict mapping team name: seed number.
+        rate_tables: Dict keyed by round: seed: rate, from _build_rate_tables.
+
+    Returns:
+        Float log-likelihood. Higher (less negative) = more historically likely.
+    """
+    if not rate_tables:
+        return 0.0
+    return (
+        _ll_r32(candidate, team_to_seed, rate_tables)
+        + _ll_s16(candidate, team_to_seed, rate_tables)
+        + _ll_e8(candidate, team_to_seed, rate_tables)
+        + _ll_late(candidate, team_to_seed, rate_tables)
+    )
+
+
+def _select_optimal_bracket(candidates, scoring_sims, rate_tables=None, team_to_seed=None, n_top=1):
     """Score all candidate brackets against all scoring simulations.
-
-    All N candidate brackets are evaluated against all M scoring simulations.
-    Each candidate's final score is:
-
-        log(mean_points) + log_likelihood
-
-    where log_likelihood is the binomial log-likelihood of the bracket's
-    seed distribution against historical _Actual_Full rates. This penalises
-    brackets whose seed distribution deviates from historical expectations —
-    e.g. all four 1-seeds in the F4 — without discarding team-specific signal.
 
     Args:
         candidates: List of candidate bracket dicts from _simulate_once_candidate.
         scoring_sims: List of scoring simulation dicts from _simulate_once_scoring.
-        rate_tables: Pre-computed seed->rate lookup tables from _build_rate_tables.
-            If None, no likelihood weighting is applied.
-        team_to_seed: Dict mapping team name -> seed number. Required when
-            rate_tables is provided.
+        rate_tables: Pre-computed seed to rate lookup tables from _build_rate_tables.
+        team_to_seed: Dict mapping team name to seed number.
+        n_top: Number of top-ranked brackets to return. Default 1.
 
     Returns:
-        The best candidate bracket dict.
+        List of the top n_top candidate bracket dicts, ranked by combined score
+        descending. Length is min(n_top, len(candidates)).
     """
     n_cands = len(candidates)
     n_scores = len(scoring_sims)
 
-    # Build a unified team->int mapping across both pools
     all_teams = sorted(
         {
             t
@@ -701,10 +731,7 @@ def _select_optimal_bracket(candidates, scoring_sims, rate_tables=None, team_to_
         [_bracket_to_flat(s, team_to_int) for s in scoring_sims], dtype=np.int16
     )
 
-    print(
-        f"    Scoring {n_cands} candidates against {n_scores} scoring sims "
-        f"({n_cands * n_scores:,} comparisons)"
-    )
+    print(f"    Scoring {n_cands} candidates against {n_scores} scoring sims")
 
     scores = np.zeros((n_cands, n_scores), dtype=np.float32)
     for s in range(63):
@@ -712,38 +739,25 @@ def _select_optimal_bracket(candidates, scoring_sims, rate_tables=None, team_to_
 
     mean_scores = scores.mean(axis=1)
 
-    # Compute log-likelihood weight for each candidate and combine with
-    # normalised expected points score using equal weighting.
-    # Both terms are z-score normalised before combining so neither dominates.
+    # Combine mean score with log-likelihood using z-score normalization
     if rate_tables and team_to_seed:
         log_liks = np.array(
             [_bracket_log_likelihood(c, team_to_seed, rate_tables) for c in candidates],
             dtype=np.float64,
         )
 
-        # Z-score normalise both terms independently
         def _zscore(arr):
             std = arr.std()
             return (arr - arr.mean()) / std if std > 0 else arr - arr.mean()
 
         z_scores = _zscore(mean_scores.astype(np.float64))
         z_liks = _zscore(log_liks)
-
-        # Equal-weight combination
         combined = 0.5 * z_scores + 0.5 * z_liks
-
-        print(
-            f"    Log-likelihood range: [{log_liks.min():.2f}, {log_liks.max():.2f}]  "
-            f"mean={log_liks.mean():.2f}"
-        )
-        print(
-            f"    Z-score ranges — points: [{z_scores.min():.2f}, {z_scores.max():.2f}]  "
-            f"ll: [{z_liks.min():.2f}, {z_liks.max():.2f}]"
-        )
     else:
         combined = mean_scores
 
-    return candidates[int(np.argmax(combined))]
+    ranked_idx = np.argsort(combined)[::-1]
+    return [candidates[i] for i in ranked_idx[:n_top]]
 
 
 def _format_picks(bracket):
@@ -759,19 +773,19 @@ def _format_picks(bracket):
     picks = {}
     for region in _REGIONS:
         picks[region] = {
-            "F4": bracket[region]["F4"] or "",
-            "E8": {
-                h: [bracket[region]["E8"].get(h)] if bracket[region]["E8"].get(h) else []
-                for h in _E8_HALVES
+            "R32": {
+                s: [bracket[region]["R32"].get(s)] if bracket[region]["R32"].get(s) else []
+                for s in _R32_SLOTS
             },
             "S16": {
                 s: [bracket[region]["S16"].get(s)] if bracket[region]["S16"].get(s) else []
                 for s in _S16_SLOTS
             },
-            "R32": {
-                s: [bracket[region]["R32"].get(s)] if bracket[region]["R32"].get(s) else []
-                for s in _R32_SLOTS
+            "E8": {
+                h: [bracket[region]["E8"].get(h)] if bracket[region]["E8"].get(h) else []
+                for h in _E8_HALVES
             },
+            "F4": bracket[region]["F4"] or "",
         }
     picks["NCG"] = [t for t in bracket["NCG"] if t]
     picks["Winner"] = [bracket["Winner"]] if bracket["Winner"] else []
@@ -781,17 +795,12 @@ def _format_picks(bracket):
 def _build_numeric_cols(full_data):
     """Pre-compute numeric feature columns for matchup prediction.
 
-    Computed once before the simulation loop to avoid repeating _base_features
-    on every predict_proba call.
-
     Args:
         full_data: Full modeling DataFrame for the current year.
 
     Returns:
         List of numeric feature column names.
     """
-    from models.utils.DataProcessing_matchup import _base_features
-
     base = _base_features(full_data)
     return [
         c
@@ -806,37 +815,24 @@ def simulate_picks(
     n_sims=5000,
     n_scoring_sims=20000,
     seed=23,
+    n_top=1,
     predictor=None,
     full_data=None,
 ):
-    """Generate bracket picks using decoupled candidate and scoring simulations.
-
-    Generates N candidate brackets using the two-signal model blend, then
-    generates M scoring brackets using a two-stage blend that incorporates
-    historical _Actual_Full seed survival rates. All N candidates are scored
-    against all M scoring simulations. The candidate with the highest mean
-    score is returned.
-
-    Increasing n_scoring_sims stabilises the scoring distribution toward
-    historical realism rather than toward model-biased chalk, solving the
-    convergence-to-chalk problem that occurs when candidates and scoring
-    simulations share the same pool.
-
-    If predictor is None or full_data is None, both pools fall back to the
-    conditional ratio only, and scoring simulations use no historical blend.
+    """Generate bracket picks using candidate and scoring simulations.
 
     Args:
-        pred_df: DataFrame with columns Team, Seed, Region, R32, S16, E8,
-            F4, NCG, Winner as produced by standarize().
+        pred_df: DataFrame as produced by standarize().
         n_sims: Number of candidate bracket simulations. Default 5000.
         n_scoring_sims: Number of scoring simulations. Default 20000.
         seed: Random seed for reproducibility. Default 23.
+        n_top: Number of top-ranked brackets to return. Default 1.
         predictor: Fitted matchup TabularPredictor, or None.
-        full_data: Current-year modeling DataFrame for matchup features and
-            _Actual_Full historical survival rates, or None.
+        full_data: Current-year modeling DataFrame for matchup features.
 
     Returns:
-        Picks dict in the standard bracket format used by real_Bracket.
+        If n_top == 1: single picks dict in the standard bracket format.
+        If n_top > 1:  list of picks dicts ranked by combined score descending.
     """
     rng = np.random.default_rng(seed)
 
@@ -853,7 +849,7 @@ def simulate_picks(
     team_rows = {row["Team"]: row for _, row in full_data.iterrows()} if use_matchup else {}
     numeric_cols = _build_numeric_cols(full_data) if use_matchup else []
 
-    # actual_by_team provides _Actual_Full columns for scoring simulations
+    # _Actual_Full columns for scoring simulations
     actual_by_team = (
         {row["Team"]: row for _, row in full_data.iterrows()} if full_data is not None else {}
     )
@@ -861,7 +857,7 @@ def simulate_picks(
     # Shared matchup cache across both simulation pools
     cache: dict = {}
 
-    # --- Candidate brackets (two-signal model blend) ---
+    # --- Candidate brackets ---
     print(f"    Generating {n_sims} candidate brackets...")
     candidates = [
         _simulate_once_candidate(
@@ -876,7 +872,7 @@ def simulate_picks(
         for _ in range(n_sims)
     ]
 
-    # --- Scoring simulations (two-stage historical blend) ---
+    # --- Scoring simulations ---
     print(f"    Generating {n_scoring_sims} scoring simulations...")
     scoring_sims = [
         _simulate_once_scoring(
@@ -892,37 +888,16 @@ def simulate_picks(
         for _ in range(n_scoring_sims)
     ]
 
-    print(f"    Matchup cache: {len(cache)} unique predictions cached")
-
-    # Diagnostic: fraction of brackets with all four 1-seeds in F4
-    team_to_seed_diag = {row["Team"]: int(row["Seed"]) for _, row in pred_df.iterrows()}
-
-    def _all_ones(sims):
-        return sum(
-            1
-            for sim in sims
-            if all(team_to_seed_diag.get(sim[r]["F4"], 0) == 1 for r in _REGIONS if sim[r]["F4"])
-        )
-
-    n_cand = _all_ones(candidates)
-    n_score = _all_ones(scoring_sims)
-    print(
-        f"    Candidate  F4 all-1-seeds: {n_cand}/{len(candidates)} "
-        f"({100 * n_cand / len(candidates):.1f}%)"
-    )
-    print(
-        f"    Scoring sim F4 all-1-seeds: {n_score}/{len(scoring_sims)} "
-        f"({100 * n_score / len(scoring_sims):.1f}%)"
-    )
-
     # Build team_to_seed and pre-compute rate tables for log-likelihood
     team_to_seed = {row["Team"]: int(row["Seed"]) for _, row in pred_df.iterrows()}
     rate_tables = _build_rate_tables(actual_by_team, team_to_seed)
 
-    best_bracket = _select_optimal_bracket(
+    top_brackets = _select_optimal_bracket(
         candidates,
         scoring_sims,
         rate_tables=rate_tables,
         team_to_seed=team_to_seed,
+        n_top=n_top,
     )
-    return _format_picks(best_bracket)
+    formatted = [_format_picks(b) for b in top_brackets]
+    return formatted[0] if n_top == 1 else formatted

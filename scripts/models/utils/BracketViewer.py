@@ -6,12 +6,11 @@ import os
 import pandas as pd
 
 _SLOT_ORDER = ["1", "8", "5", "4", "6", "3", "7", "2"]
-_REGIONS = ["West", "East", "South", "Midwest"]
 _SLOT_TO_R64_IDX = {slot: i for i, slot in enumerate(_SLOT_ORDER)}
 
 
 def _load_seed_map(data_path):
-    """Return dict keyed by (year, team) -> seed.
+    """Return dict keyed by (year, team): seed.
 
     Args:
         data_path: Path to data.csv.
@@ -77,7 +76,7 @@ def _build_region_html(region, picks, results_year, seed_map, year, side):
     def seed(team):
         return seed_map.get((year, team), "?")
 
-    # R64 column — just shows both teams playing, no pick
+    # R64
     r64_col = []
     for slot in _SLOT_ORDER:
         idx = _SLOT_TO_R64_IDX[slot]
@@ -93,7 +92,7 @@ def _build_region_html(region, picks, results_year, seed_map, year, side):
             f"</div>"
         )
 
-    # R32 column — pick for each R64 game
+    # R32
     r32_col = []
     for slot in _SLOT_ORDER:
         idx = _SLOT_TO_R64_IDX[slot]
@@ -114,14 +113,14 @@ def _build_region_html(region, picks, results_year, seed_map, year, side):
             + "</div>"
         )
 
-    # S16 column
+    # S16
     s16_col = []
     for pod in ["1", "4", "3", "2"]:
         pick = (picks[region]["S16"][pod] or [None])[0]
         correct = pick in s16_set if pick else False
         # actual S16 winner for this pod: find the real S16 team from the same pod group
         pod_r32_teams = {
-            "1": r64[0:4],  # slots 1,8 -> r64 indices 0-3
+            "1": r64[0:4],  # slots 1,8 to r64 indices 0-3
             "4": r64[4:8],  # slots 5,4
             "3": r64[8:12],  # slots 6,3
             "2": r64[12:16],  # slots 7,2
@@ -138,9 +137,9 @@ def _build_region_html(region, picks, results_year, seed_map, year, side):
             + "</div>"
         )
 
-    # E8 column
+    # E8
     e8_col = []
-    for half, _pods in [("Upper", ["1", "4"]), ("Lower", ["3", "2"])]:
+    for half, _ in [("Upper", ["1", "4"]), ("Lower", ["3", "2"])]:
         pick = (picks[region]["E8"][half] or [None])[0]
         correct = pick in e8_set if pick else False
         half_r64 = r64[0:8] if half == "Upper" else r64[8:16]
@@ -155,7 +154,7 @@ def _build_region_html(region, picks, results_year, seed_map, year, side):
             + "</div>"
         )
 
-    # F4 column
+    # F4
     pick_f4 = picks[region]["F4"]
     if isinstance(pick_f4, list):
         pick_f4 = pick_f4[0] if pick_f4 else None
@@ -228,9 +227,6 @@ def _build_year_bracket(year_str, picks, results, seed_map):
     winner_correct = winner_pick == winner_str if winner_pick else False
 
     # Derive the correct finalist per slot by matching each pick's bracket side.
-    # We look at which F4 pick the user made per region to determine which side
-    # each NCG slot belongs to, then find the actual finalist from that side.
-    # This is robust regardless of list order in picks["NCG"].
     f4_we = {r[reg]["F4"][0] for reg in ("West", "East")}
     f4_sm = {r[reg]["F4"][0] for reg in ("South", "Midwest")}
     actual_finalist_we = next((t for t in r["NCG"] if t in f4_we), None)
@@ -255,8 +251,7 @@ def _build_year_bracket(year_str, picks, results, seed_map):
             return actual_finalist_we
         if pick in pick_f4_sm:
             return actual_finalist_sm
-        # Pick didn't make F4 — infer side from whichever finalist is not
-        # already assigned to the other pick
+        # Pick didn't make F4, infer side from whichever finalist is not
         other_pick = ncg_pick_2 if pick == ncg_pick_1 else ncg_pick_1
         other_side = (
             actual_finalist_we

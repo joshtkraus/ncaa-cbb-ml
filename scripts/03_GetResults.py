@@ -1,6 +1,5 @@
 """Get Results."""
 
-# Libraries
 import json
 import os
 import re
@@ -11,17 +10,6 @@ from models.ModelPipeline import combine_model
 
 def _update_readme_results(points_path, accs_path, readme_path):
     """Rewrite the Backtested Results table in README.md from backtest CSVs.
-
-    Reads picks_points.csv and picks_accuracy.csv produced by combine_model,
-    formats each year and its total points as a Markdown table row, and
-    appends a weighted overall pick accuracy. Replaces the existing table block
-    in the README in-place. The block is identified by the '## Backtested
-    Results' heading and replaced up to (but not including) the next '## '
-    heading or end of file.
-
-    Weighted accuracy = sum(round_acc * games_in_round) / 63, averaged across
-    all backtest years. Games per round: R32=32, S16=16, E8=8, F4=4, NCG=2,
-    Winner=1.
 
     Args:
         points_path: Path to picks_points.csv.
@@ -104,9 +92,6 @@ if os.path.exists(matchup_params_path) and os.path.exists(matchup_data_path):
     with open(matchup_params_path, "r") as f:
         matchup_params = json.load(f)
     matchup_data = pd.read_csv(matchup_data_path)
-    print("Matchup model found — simulation will blend by-round and matchup models.")
-else:
-    print("No matchup model found — simulation will use by-round model only.")
 
 # ---------------------------------------------------------------------------
 # Backtest and update README

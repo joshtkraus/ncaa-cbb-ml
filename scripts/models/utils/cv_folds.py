@@ -1,5 +1,7 @@
 """Walk-forward cross-validation fold generation for hyperparameter tuning."""
 
+import numpy as np
+
 # Number of folds
 _N_FOLDS = 3
 
@@ -12,12 +14,8 @@ def make_folds(data, n_folds=_N_FOLDS):
         n_folds: Number of folds (default 5).
 
     Returns:
-        List of dicts, each with keys:
-            'train_years': sorted list of training years for this fold.
-            'val_years':   sorted list of validation years for this fold.
+        List of dicts, each with keys: 'train_years' and 'val_years'.
     """
-    import numpy as np
-
     years = sorted(data["Year"].unique())
 
     # Assign each year to a fold index

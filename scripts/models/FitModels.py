@@ -1,5 +1,11 @@
 """AutoGluon tuning using walk-forward CV per round."""
 
+import json
+import os
+
+from models.utils.autogluon import tune_autogluon
+from models.utils.cv_folds import make_folds
+
 
 def train_models(data):
     """Tune AutoGluon per round and save the best model config for each.
@@ -7,13 +13,7 @@ def train_models(data):
     Args:
         data: Full modeling DataFrame.
     """
-    import json
-    import os
-
-    from models.utils.autogluon import tune_autogluon
-    from models.utils.cv_folds import make_folds
-
-    print("Tuning Models...")
+    print("Tuning By-Round Models...")
 
     folds = make_folds(data, n_folds=3)
 

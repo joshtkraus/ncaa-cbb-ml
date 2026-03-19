@@ -1,37 +1,73 @@
 # NCAA College Basketball Tournament Predictive Modeling
 
 ## Overview
-This project builds a predictive model for the NCAA Men's Basketball Tournament. Rather than predicting head-to-head matchups, it models each round independently and fills the bracket recursively from champion backward — maximizing **expected points** under the standard scoring structure where point values double each round.
+This project builds a predictive model for the NCAA Men's Basketball Tournament using a two-model architecture and a simulation-based bracket selection strategy that maximizes **expected points** under the standard scoring structure where point values double each round.
 
 ## Modeling Approach
 
-### Round-by-Round Classification
-A binary classifier is trained per round (R32 through Championship). The outcome for each team is whether they reached that round or beyond. This produces a probability for each team at each stage, which feeds directly into the pick selection strategy.
+### Round-by-Round Classification (By-Round Model)
+A binary classifier is trained per round (R32 through Championship). The outcome for each team is whether they reached that round or beyond. This produces a marginal advancement probability for each team at each stage, which feeds into the simulation pipeline.
+
+### Matchup Model
+A head-to-head binary classifier trained on differential features between two tournament opponents. Predicts the win probability for a specific matchup directly, capturing features that the by-round model cannot.
 
 ### Model
-[AutoGluon](https://auto.ml/autogluon) `TabularPredictor` with `best_quality` preset. Bagging and stacking are disabled so an explicit walk-forward validation split can be used. The best-performing base model type and exact hyperparameters are selected via walk-forward cross-validation, then frozen for backtesting. Class imbalance is handled via balanced class weights.
+[AutoGluon](https://auto.ml/autogluon) `TabularPredictor` with `best_quality` preset. The best-performing base model type and exact hyperparameters are selected via walk-forward cross-validation, then frozen for backtesting.
 
 ### Cross-Validation
-Walk-forward CV with 3 folds. Each fold's training set consists of all years prior to the validation window, respecting temporal ordering and preventing data leakage. The model with the highest mean val-set ROC-AUC across folds is selected per round.
+Walk-forward CV with 3 folds. Each fold's training set consists of all years prior to the validation window, respecting temporal ordering and preventing data leakage.
 
 ### Backtesting
-Walk-forward backtesting from 2013 onward. For each test year, the frozen model config is refit on all prior years and evaluated on the held-out year. 2020 is excluded (no tournament).
+Walk-forward backtesting from 2015 onward. For each test year, the frozen model configs are refit on all prior years and evaluated on the held-out year. 2020 is excluded (no tournament).
 
-### Pick Selection
-Each team's expected points are computed as:
+---
+
+## Pick Selection
+
+Bracket picks are generated via a decoupled two-pool simulation architecture in `SimulatePicks.py`.
+
+### Candidate Brackets (N simulations)
+Each simulation produces one complete bracket outcome using a two-signal blend:
 
 ```
-E = p(R32)×10 + p(S16)×20 + p(E8)×40 + p(F4)×80 + p(NCG)×160 + p(Winner)×320
+p(A wins) = α × matchup_prob + (1−α) × conditional_ratio
 ```
 
-The bracket is filled by selecting the highest expected-points team at each position, working from champion backward.
+where `α ~ Uniform(0, 1)` is drawn independently per round per simulation, and `conditional_ratio = p_A / (p_A + p_B)` from the by-round model's marginal probabilities. This explores the full blend spectrum without constraints. Every simulated bracket is a candidate.
 
-### Data
+### Scoring Simulations (M simulations)
+A separate pool of M scoring simulations is generated using a two-stage blend that incorporates historical seed survival rates:
+
+- **Stage 1:** blend matchup model and conditional ratio with random weight `α`
+- **Stage 2:** blend Stage 1 result with historical `_Actual_Full` seed survival rates with independent random weight `β ~ Uniform(0, 1)`
+
+This produces a historically-grounded scoring distribution that reflects realistic upset frequencies. Because the two pools are decoupled, increasing M stabilises the scoring distribution toward historical realism rather than toward model-biased chalk.
+
+### Candidate Selection
+All N candidates are scored against all M scoring simulations. Each candidate's final score combines two signals via z-score normalisation:
+
+```
+combined = 0.5 × z_score(mean_points) + 0.5 × z_score(log_likelihood)
+```
+
+The **log-likelihood** is computed using favored-seed binary outcomes: for each pod at each round, it checks whether the lower-numbered (favored) seed advanced and contributes `log(p)` if they did, `log(1−p)` if not. This penalises brackets whose seed distribution deviates from historical expectations without discarding team-specific signal from the scoring step.
+
+Pods evaluated:
+- **R32:** seeds 1–8 (favored seed in each of the 8 matchup pairs per region)
+- **S16:** seeds 1–4 (top seed from each of the 4 pods per region)
+- **E8:** seeds 1–2 (upper-half winner per region)
+- **F4 / NCG / Winner:** log-probability of whoever advanced at each stage
+
+---
+
+## Data
+
 Per-team features for each tournament year scraped from [SportsReference](https://www.sports-reference.com/cbb/) and [KenPom](https://kenpom.com/):
+
 - **Metadata:** conference, seed, region, wins, conference tournament result
 - **Efficiency:** adjusted offensive/defensive efficiency, tempo, strength of schedule
 - **Points/Roster:** offensive/defensive point distributions, height, experience, bench depth
-- **Derived:** historical seed survival rates (full history, 12-year, 6-year windows), grouped KenPom averages by tournament round and region
+- **Derived:** historical seed survival rates, grouped KenPom averages by tournament round and region
 
 ---
 
@@ -66,19 +102,31 @@ Scrapes and processes historical tournament data into `data/processed/data.csv`.
 python 01_GetData.py
 ```
 
-### 2. Tune models
+### 2. Train by-round models
 Runs walk-forward CV per round, selects the best AutoGluon model config, and saves frozen hyperparameters to `model/autogluon_params.json`. Re-run this when new tournament data is added.
 ```bash
 python 02_TrainModels.py
 ```
 
-### 3. Backtest
+### 3. Train matchup model
+Trains the head-to-head matchup classifier and saves to `model/matchup/`.
+```bash
+python 02b_TrainMatchupModel.py
+```
+
+### 4. Backtest
 Refits the frozen model configs in a walk-forward backtest from 2013 onward and exports accuracy and points results to `results/backwards_test/`.
 ```bash
 python 03_GetResults.py
 ```
 
-### 4. Generate predictions
+### 4. Visualize Brackets (Optional)
+Visualized the backtested picks in a typical bracket format, denoting when picks are correct or not. Saves brackets to `results/brackets/`
+```bash
+python 04_CreateBrackets.py
+```
+
+### 5. Generate predictions
 Scrapes current-year data, refits models on all historical data, and outputs bracket probabilities and picks to `prediction/`.
 ```bash
 python 05_MakePredictions.py
@@ -92,15 +140,15 @@ python 05_MakePredictions.py
 
 | Year | Points |
 |------|--------|
-| 2015 | 940 |
+| 2015 | 1350 |
 | 2016 | 670 |
-| 2017 | 1010 |
+| 2017 | 1430 |
 | 2018 | 1070 |
-| 2019 | 1230 |
+| 2019 | 960 |
 | 2021 | 850 |
 | 2022 | 580 |
-| 2023 | 500 |
+| 2023 | 480 |
 | 2024 | 1360 |
 | 2025 | 1200 |
 
-**Mean: 941 pts** &nbsp;|&nbsp; **SD: 275 pts** &nbsp;|&nbsp; **Overall pick accuracy: 63.0%**
+**Mean: 995 pts** &nbsp;|&nbsp; **SD: 326 pts** &nbsp;|&nbsp; **Overall pick accuracy: 63.2%**

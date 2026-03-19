@@ -1,12 +1,15 @@
 """Utilities for normalizing model predictions and computing expected bracket points."""
 
+import json
+import os
+
+import pandas as pd
+from models.utils.MakePicks import real_Bracket
+from models.utils.SimulatePicks import simulate_picks
+
 
 def standarize(df):
     """Normalize raw model probabilities to sum to 1 within each matchup group.
-
-    For each round, teams are grouped by their bracket pod and probabilities
-    are rescaled so the group sums to 1, enforcing the constraint that exactly
-    one team from each matchup advances.
 
     Args:
         df: DataFrame with columns Team, Seed, Region, and raw round probabilities
@@ -15,8 +18,6 @@ def standarize(df):
     Returns:
         DataFrame with normalized columns R32, S16, E8, F4, NCG, Winner.
     """
-    import pandas as pd  # noqa: F401
-
     df.columns = ["Team", "Seed", "Region", "R32", "S16", "E8", "F4", "NCG", "Winner"]
 
     df["R32_Group"] = 0
@@ -75,19 +76,11 @@ def standardize_predict(years, predictions, correct_picks, data=None, matchup_pr
         predictions: Nested dict of raw model outputs keyed by test year and round.
         correct_picks: Dict of actual tournament results keyed by year string.
         data: Full modeling DataFrame. Required when matchup_predictor is provided.
-        matchup_predictor: Optional dict mapping test year -> fitted matchup
-            TabularPredictor, or a single predictor applied to all years.
+        matchup_predictor: Optional dict mapping test year to fitted matchup TabularPredictor.
 
     Returns:
         Tuple of (points_df, accs_df) summarizing backtesting performance.
     """
-    import json
-    import os
-
-    import pandas as pd
-    from models.utils.MakePicks import real_Bracket
-    from models.utils.SimulatePicks import simulate_picks
-
     use_matchup = matchup_predictor is not None and data is not None
 
     points = {}
@@ -113,20 +106,12 @@ def standardize_predict(years, predictions, correct_picks, data=None, matchup_pr
 
         full_year_data = data[data["Year"] == test_year] if use_matchup else None
 
-        # Generate bracket via simulation (blends by-round and matchup models)
-        import time
-
-        start_time = time.perf_counter()
-
+        # Generate bracket via simulation
         picks = simulate_picks(
             pred_df,
             predictor=predictor_for_year,
             full_data=full_year_data,
         )
-
-        end_time = time.perf_counter()
-        elapsed_time = end_time - start_time
-        print(f"Total time elapsed: {elapsed_time:.4f} seconds")
 
         point, acc = real_Bracket(picks, correct_picks[str(test_year)])
 

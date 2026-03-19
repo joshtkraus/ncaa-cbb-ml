@@ -1,4 +1,4 @@
-"""Scrape win streak stats for 2026 tournament teams using URLs from sportsreference.csv."""
+"""Scrape win streak stats for tournament teams using URLs from sportsreference.csv."""
 
 import time
 
@@ -21,7 +21,7 @@ def _get_win_streak_stats(team_url):
     """Scrape win streak stats from a team's schedule page.
 
     Args:
-        team_url: Full URL to the team's season page (e.g. .../duke/men/2026.html).
+        team_url: Full URL to the team's season page.
 
     Returns:
         Tuple of (win_streak, last10, streak_avg, streak_sd), or None on failure.
@@ -80,9 +80,7 @@ def run(input_path, output_path):
     df["WinStreak_SD"] = None
 
     for i, row in df.iterrows():
-        team = row["Team"]
         url = row["URL"]
-        print(f"[{i + 1}/{len(df)}] {team}")
         time.sleep(5)
 
         result = _get_win_streak_stats(url)
@@ -92,7 +90,7 @@ def run(input_path, output_path):
             df.at[i, "WinStreak_Avg"] = result[2]
             df.at[i, "WinStreak_SD"] = result[3]
 
-        # Save after every team in case of interruption
+        # Save after every team
         df.drop(columns=["URL"]).to_csv(output_path, index=False)
 
     missing = df[df["WinStreak"].isna()]["Team"].tolist()

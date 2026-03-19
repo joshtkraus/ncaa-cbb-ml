@@ -1,5 +1,12 @@
 """Backtesting pipeline using AutoGluon frozen model configs."""
 
+import os
+import shutil
+
+from models.utils.autogluon_matchup import fit_matchup_autogluon
+from models.utils.backwards_test import run_test
+from models.utils.StandarizePredictions import standardize_predict
+
 
 def combine_model(
     data,
@@ -19,13 +26,7 @@ def combine_model(
         matchup_params: Optional dict with 'model_type' and 'hyperparameters'.
         matchup_data: Optional full matchup DataFrame from build_matchup_dataset.
     """
-    import os
-    import shutil
-
-    from models.utils.backwards_test import run_test
-    from models.utils.StandarizePredictions import standardize_predict
-
-    use_correction = matchup_params is not None and matchup_data is not None
+    use_matchup = matchup_params is not None and matchup_data is not None
 
     cwd = os.path.abspath(os.getcwd())
     max_train_year = data["Year"].max() - 1
@@ -40,22 +41,21 @@ def combine_model(
         predictions[test_year]["Seed"] = data.loc[data["Year"] == test_year, "Seed"].values
         predictions[test_year]["Region"] = data.loc[data["Year"] == test_year, "Region"].values
 
+    print("\nFitting by-round model...")
     for r in range(2, 8):
         print(f"Round {r}")
         predictions = run_test(data, ag_params, years, r, predictions)
 
-    # Build a per-year matchup predictor lookup if correction is enabled.
+    # Build a per-year matchup predictor lookup
     matchup_predictors = {}
     matchup_base_dir = os.path.join(cwd, "model/autogluon_matchup_backtest")
 
-    if use_correction:
-        from models.utils.autogluon_matchup import fit_matchup_autogluon
-
+    if use_matchup:
         # Clean up any previous backtest matchup models
         if os.path.exists(matchup_base_dir):
             shutil.rmtree(matchup_base_dir)
 
-        print("\nFitting matchup models for bracket correction...")
+        print("\nFitting matchup model...")
         for year in years:
             test_year = 2021 if year == 2019 else year + 1
             train_mask = matchup_data["Year"].values < test_year
@@ -70,12 +70,12 @@ def combine_model(
         years,
         predictions,
         correct_picks,
-        data=data if use_correction else None,
-        matchup_predictor=matchup_predictors if use_correction else None,
+        data=data if use_matchup else None,
+        matchup_predictor=matchup_predictors if use_matchup else None,
     )
 
     # Clean up backtest matchup models after scoring is complete
-    if use_correction and os.path.exists(matchup_base_dir):
+    if use_matchup and os.path.exists(matchup_base_dir):
         shutil.rmtree(matchup_base_dir)
 
     path = os.path.join(cwd, "results/backwards_test/picks_accuracy.csv")

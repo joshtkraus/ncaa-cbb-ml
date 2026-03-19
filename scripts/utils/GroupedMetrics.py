@@ -1,5 +1,11 @@
 """Bracket-pod-relative feature engineering for tournament modeling."""
 
+from warnings import simplefilter
+
+import pandas as pd
+
+simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
+
 _COLS = [
     "Tempo",
     "RankTempo",
@@ -92,10 +98,6 @@ _GROUP_KEYS = [
 def _leave_one_out_avgs(df, group_keys, prefix):
     """Compute leave-one-out group averages for all metric columns under one groupby.
 
-    For each column the leave-one-out mean is: (group_mean * n - value) / (n - 1).
-    The sign of the difference depends on whether the column is a rank (lower is
-    better, so loo - value) or a raw metric (higher is better, so value - loo).
-
     Args:
         df: DataFrame to operate on, modified in place.
         group_keys: Column name strings to group by.
@@ -139,22 +141,12 @@ def _seed_avgs(df):
 def get_grouped_metrics(df):
     """Compute leave-one-out group averages for each team relative to its bracket pod.
 
-    For each KenPom metric, calculates how a team compares to the average of
-    other teams it could face at each round stage (R32, S16, E8, F4, NCG, Winner).
-    Also computes a seed-group average for baseline comparison.
-
     Args:
         df: DataFrame containing all KenPom features, Year, Region, and Seed columns.
 
     Returns:
         DataFrame with additional difference columns for each metric and round stage.
     """
-    from warnings import simplefilter
-
-    import pandas as pd
-
-    simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
-
     df["R32_Group"] = 0
     df.loc[df["Seed"].isin([1, 16]), "R32_Group"] = 1
     df.loc[df["Seed"].isin([2, 15]), "R32_Group"] = 2

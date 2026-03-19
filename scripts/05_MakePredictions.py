@@ -6,6 +6,7 @@ import tempfile
 
 import pandas as pd
 from models.utils.autogluon import _make_test_df, _make_train_df, fit_autogluon
+from models.utils.autogluon_matchup import fit_matchup_autogluon
 from models.utils.SimulatePicks import simulate_picks
 from models.utils.StandarizePredictions import standarize
 from scrapers.GetData_SR import run_scraper
@@ -16,6 +17,11 @@ from utils.NameCleaner_SR import clean_SR
 
 scraper_ind = False
 year = 2026
+
+n_top = 25  # number of brakcets to save
+
+playin = ["Texas", "Miami OH", "Howard", "Prairie View A&M"]
+# playin = ["Texas", "SMU", "Howard","Prairie View A&M"]
 
 
 def check_data_join(data, SR, KP):
@@ -53,17 +59,6 @@ else:
         os.path.join(os.path.abspath(os.getcwd()), "data/prediction/sportsreference.csv"),
         index_col=False,
     )
-
-# playin = [
-#     "North Carolina State", "Texas",
-#     "SMU", "Miami OH",
-#     "Howard", "UMBC",
-#     "Lehigh", "Prairie View A&M"
-# ]
-# playin = ["Texas", "Miami OH", "Howard", "Lehigh"]
-# playin = ["Texas", "SMU", "Howard", "Lehigh"]
-# playin = ["North Carolina State", "Miami OH", "Howard", "Lehigh"]
-playin = ["North Carolina State", "SMU", "Howard", "Lehigh"]
 
 summary_temp = pd.read_csv(
     os.path.join(os.path.abspath(os.getcwd()), "data/prediction/KP/summary.csv"), index_col=False
@@ -226,7 +221,7 @@ data_path = os.path.join(os.path.abspath(os.getcwd()), "data/prediction/data.csv
 data.to_csv(data_path, index=False)
 
 # ---------------------------------------------------------------------------
-# Load frozen AutoGluon params
+# Load frozen AutoGluon params and data
 # ---------------------------------------------------------------------------
 
 cwd = os.path.abspath(os.getcwd())
@@ -235,25 +230,22 @@ with open(params_path, "r") as f:
     ag_params = json.load(f)
 ag_params = {int(k): v for k, v in ag_params.items()}
 
-# Load matchup params and data if available — bracket correction is optional
+# Load matchup params and data
 matchup_params = None
 matchup_predictor = None
 matchup_data_path = os.path.join(cwd, "data/processed/data_matchup.csv")
 matchup_params_path = os.path.join(cwd, "model/autogluon_matchup_params.json")
 
-thresholds = dict.fromkeys(range(2, 8), 0.5)  # default if no tuned thresholds found
-threshold_path = os.path.join(cwd, "model/matchup_threshold.json")
+# ---------------------------------------------------------------------------
+# Fit matchup model
+# ---------------------------------------------------------------------------
 
+# Fit matchup model on all historical data
+print("Fitting matchup model...")
 if os.path.exists(matchup_params_path) and os.path.exists(matchup_data_path):
-    from models.utils.autogluon_matchup import fit_matchup_autogluon
-
     with open(matchup_params_path, "r") as f:
         matchup_params = json.load(f)
     matchup_data = pd.read_csv(matchup_data_path)
-    if os.path.exists(threshold_path):
-        with open(threshold_path, "r") as f:
-            thresholds = {int(k): v for k, v in json.load(f)["thresholds"].items()}
-    # Fit matchup model on all historical data (all years prior to current year)
     train_mask = matchup_data["Year"].to_numpy() < year
     matchup_save_path = os.path.join(cwd, "model/autogluon_matchup_prediction")
     matchup_predictor = fit_matchup_autogluon(
@@ -261,8 +253,7 @@ if os.path.exists(matchup_params_path) and os.path.exists(matchup_data_path):
     )
 
 # ---------------------------------------------------------------------------
-# Generate predictions — refit one model per round on all historical data,
-# predict on the current tournament year.
+# Fit by-round models, generate probabilities
 # ---------------------------------------------------------------------------
 
 predictions = {}
@@ -270,6 +261,7 @@ predictions["Team"] = data.loc[data["Year"] == year, "Team"].values
 predictions["Seed"] = data.loc[data["Year"] == year, "Seed"].values
 predictions["Region"] = data.loc[data["Year"] == year, "Region"].values
 
+print("Fitting by-round models...")
 for r in range(2, 8):
     print(f"Round {r}")
     train_mask = data["Year"].to_numpy() < year
@@ -283,7 +275,7 @@ for r in range(2, 8):
         predictions["Round_" + str(r)] = predictor.predict_proba(test_df)[1].values
 
 # ---------------------------------------------------------------------------
-# Standardize, apply matchup correction, and generate bracket picks
+# Standardize, simualte, and generate bracket picks
 # ---------------------------------------------------------------------------
 
 pred_df = pd.DataFrame.from_dict(predictions)
@@ -302,27 +294,24 @@ pred_df = pred_df[
 ]
 pred_df = standarize(pred_df)
 
-# points_df = pred_df.copy()
-# points_df["R32"] = points_df["R32"] * 10
-# points_df["S16"] = points_df["R32"] + points_df["S16"] * 20
-# points_df["E8"] = points_df["S16"] + points_df["E8"] * 40
-# points_df["F4"] = points_df["E8"] + points_df["F4"] * 80
-# points_df["NCG"] = points_df["F4"] + points_df["NCG"] * 160
-# points_df["Winner"] = points_df["NCG"] + points_df["Winner"] * 320
-
-# # Generate initial backward-selection bracket
-# picks = create_picks(points_df)
-
 full_year_data = data[data["Year"] == year]
-picks = simulate_picks(
+results = simulate_picks(
     pred_df,
+    n_top=n_top,
     predictor=matchup_predictor,
     full_data=full_year_data,
 )
 
+# Save probabilities
 path = os.path.join(cwd, "prediction/probabilities.csv")
 os.makedirs(os.path.dirname(path), exist_ok=True)
 pred_df.to_csv(path, index=False)
-path = os.path.join(cwd, "prediction/picks.json")
-with open(path, "w") as f:
-    json.dump(picks, f)
+
+# Save brackets
+picks_list = results if isinstance(results, list) else [results]
+picks_dir = os.path.join(cwd, "prediction/picks")
+os.makedirs(picks_dir, exist_ok=True)
+for rank, picks in enumerate(picks_list, start=1):
+    path = os.path.join(picks_dir, f"{rank}.json")
+    with open(path, "w") as f:
+        json.dump(picks, f, indent=2)
