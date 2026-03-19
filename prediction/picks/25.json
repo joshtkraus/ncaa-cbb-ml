@@ -5,7 +5,7 @@
         "Duke"
       ],
       "8": [
-        "Ohio State"
+        "TCU"
       ],
       "5": [
         "Saint John's"
@@ -14,7 +14,7 @@
         "Kansas"
       ],
       "6": [
-        "Louisville"
+        "South Florida"
       ],
       "3": [
         "Michigan State"
@@ -45,7 +45,7 @@
         "Duke"
       ],
       "Lower": [
-        "Michigan State"
+        "Connecticut"
       ]
     },
     "F4": "Duke"
@@ -71,7 +71,7 @@
         "Illinois"
       ],
       "7": [
-        "Texas A&M"
+        "Saint Mary's"
       ],
       "2": [
         "Houston"
@@ -99,7 +99,7 @@
         "Houston"
       ]
     },
-    "F4": "Houston"
+    "F4": "Florida"
   },
   "South": {
     "R32": {
@@ -116,7 +116,7 @@
         "Arkansas"
       ],
       "6": [
-        "Texas"
+        "BYU"
       ],
       "3": [
         "Gonzaga"
@@ -147,10 +147,10 @@
         "Arizona"
       ],
       "Lower": [
-        "Gonzaga"
+        "Purdue"
       ]
     },
-    "F4": "Arizona"
+    "F4": "Purdue"
   },
   "Midwest": {
     "R32": {
@@ -158,7 +158,7 @@
         "Michigan"
       ],
       "8": [
-        "Saint Louis"
+        "Georgia"
       ],
       "5": [
         "Texas Tech"
@@ -173,7 +173,7 @@
         "Virginia"
       ],
       "7": [
-        "Kentucky"
+        "Santa Clara"
       ],
       "2": [
         "Iowa State"

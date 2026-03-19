@@ -72,6 +72,7 @@ def run(input_path, output_path):
         input_path: Path to sportsreference.csv with URL column.
         output_path: Path to write the updated CSV with win streak columns added.
     """
+    print("Scraping Win Streak Data...")
     df = pd.read_csv(input_path)
 
     df["WinStreak"] = None
