@@ -5,3 +5,4 @@ __pycache__/
 .history/
 model/autogluon/
 model/autogluon_matchup/
+model/autogluon_matchup_prediction/
