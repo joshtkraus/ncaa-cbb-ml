@@ -1,16 +1,15 @@
 """Entry point for matchup model tuning."""
 
+import json
 import multiprocessing as mp
+import os
+
+import pandas as pd
+from models.FitModels_matchup import train_matchup_model
 
 
 def run():
     """Build matchup dataset, tune AutoGluon, and save frozen params."""
-    import json
-    import os
-
-    import pandas as pd
-    from models.FitModels_matchup import train_matchup_model
-
     data_path = os.path.join(os.path.abspath(os.getcwd()), "data/processed/data.csv")
     data = pd.read_csv(data_path)
 

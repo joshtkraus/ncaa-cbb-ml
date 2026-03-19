@@ -1,5 +1,10 @@
 """Utilities for creating train/test data splits with SMOTE resampling."""
 
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.utils.class_weight import compute_class_weight
+
 # Maps each tournament round to the grouped-average prefix
 _ROUND_PREFIX = {2: "R32", 3: "S16", 4: "E8", 5: "F4", 6: "NCG", 7: "Winner"}
 
@@ -118,10 +123,6 @@ def create_splits(data, r, val_start=None, get_features=False, drop_cols=None):
         If val_start is None, returns (X_raw, y_raw, years_raw).
         Otherwise returns (X_train, X_val, y_train, y_val, scaler).
     """
-    import numpy as np
-    import pandas as pd
-    from sklearn.preprocessing import MinMaxScaler
-
     mod_data = data.copy()
     mod_data["Outcome"] = 0
     mod_data.loc[mod_data["Round"] < r, "Outcome"] = 0
@@ -177,10 +178,6 @@ def create_fold_splits(data, r, fold, drop_cols=None):
     Returns:
         Tuple of (X_train, X_val, y_train, y_val) as scaled numpy arrays.
     """
-    import numpy as np
-    import pandas as pd
-    from sklearn.preprocessing import MinMaxScaler
-
     mod_data = data.copy()
     mod_data["Outcome"] = 0
     mod_data.loc[mod_data["Round"] < r, "Outcome"] = 0
@@ -228,9 +225,6 @@ def get_class_weights(y_train):
     Returns:
         Numpy array of per-sample weights aligned to y_train.
     """
-    import numpy as np
-    from sklearn.utils.class_weight import compute_class_weight
-
     classes = np.unique(y_train)
     weights = compute_class_weight(class_weight="balanced", classes=classes, y=y_train)
     class_weight_dict = dict(zip(classes, weights, strict=False))

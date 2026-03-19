@@ -1,13 +1,16 @@
 """AutoGluon model tuning and fitting for tournament round prediction."""
 
 import os
+import warnings
 
-# Suppress Ray's FutureWarning
+import numpy as np
+import pandas as pd
+from autogluon.tabular import TabularPredictor
+from models.utils.DataProcessing import _mismatched_avg_cols
+from sklearn.utils.class_weight import compute_class_weight
+
+# Suppress warnings
 os.environ.setdefault("RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO", "0")
-
-import warnings  # noqa: E402
-
-# Suppress sklearn FutureWarning from AutoGluon's internal ColumnTransformer usage
 warnings.filterwarnings(
     "ignore",
     message="The parameter `force_int_remainder_cols` is deprecated",
@@ -38,10 +41,6 @@ def _make_train_df(data, r, year_mask, weight_col="sample_weight"):
     Returns:
         DataFrame with features, 'Outcome' label column, and weight column.
     """
-    import numpy as np
-    from models.utils.DataProcessing import _mismatched_avg_cols
-    from sklearn.utils.class_weight import compute_class_weight
-
     subset = data[year_mask].copy()
     subset["Outcome"] = (subset["Round"] >= r).astype(int)
     subset = subset.drop(columns=["Team", "Round"])
@@ -69,8 +68,6 @@ def _make_test_df(data, r, year_mask):
     Returns:
         DataFrame with features only (no label, no weight column).
     """
-    from models.utils.DataProcessing import _mismatched_avg_cols
-
     subset = data[year_mask].copy()
     subset = subset.drop(columns=["Team", "Round"])
 
@@ -93,9 +90,6 @@ def tune_autogluon(data, r, folds):
             'model_type': AutoGluon model type string (e.g. 'XGBoost').
             'hyperparameters': Exact hyperparameter dict for that model instance.
     """
-    import numpy as np
-    from autogluon.tabular import TabularPredictor
-
     weight_col = "sample_weight"
     model_scores = {}
     fold_leaderboards = []  # leaderboard DataFrame per fold
@@ -157,8 +151,6 @@ def tune_autogluon(data, r, folds):
     print(f"    Best model: {best_model_name}  (mean AUC: {mean_scores[best_model_name]:.4f})")
 
     # Average leaderboard metrics across folds
-    import pandas as pd
-
     cwd = os.path.abspath(os.getcwd())
 
     all_lb = pd.concat(fold_leaderboards, ignore_index=True)
@@ -169,7 +161,6 @@ def tune_autogluon(data, r, folds):
     leaderboard_path = os.path.join(cwd, _LEADERBOARD_DIR, f"round_{r}.csv")
     os.makedirs(os.path.dirname(leaderboard_path), exist_ok=True)
     avg_leaderboard.to_csv(leaderboard_path, index=False)
-    print(f"    Saved averaged leaderboard to {leaderboard_path}")
 
     # Average feature importance across folds
     all_imp = pd.concat(fold_importances)
@@ -182,7 +173,6 @@ def tune_autogluon(data, r, folds):
     importance_path = os.path.join(cwd, _IMPORTANCE_DIR, f"round_{r}.csv")
     os.makedirs(os.path.dirname(importance_path), exist_ok=True)
     avg_importance.to_csv(importance_path)
-    print(f"    Saved averaged feature importance to {importance_path}")
 
     # Derive the AutoGluon hyperparameters key from the best model name
     _NAME_TO_KEY = {
@@ -225,8 +215,6 @@ def fit_autogluon(train_df, ag_params, save_path, weight_col="sample_weight"):
     Returns:
         Fitted TabularPredictor instance.
     """
-    from autogluon.tabular import TabularPredictor
-
     predictor = TabularPredictor(
         label="Outcome",
         problem_type="binary",

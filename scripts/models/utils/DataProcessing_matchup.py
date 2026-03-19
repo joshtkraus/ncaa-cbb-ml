@@ -72,15 +72,11 @@ def _make_matchup_row(team_a, team_b, round_num, winner, numeric_cols):
     }
     for col in numeric_cols:
         row[f"{col}_diff"] = float(team_a[col]) - float(team_b[col])
-    # AdjEM vs seed expectation differential: captures whether each team is
-    # over- or under-performing relative to their seed peers. Dropped from
-    # numeric_cols by _base_features so must be added explicitly.
+    # AdjEM vs seed expectation differential
     row["AdjEM_vs_Seed_diff"] = float(team_a["AdjEM_Seed_Avg"]) - float(team_b["AdjEM_Seed_Avg"])
-    # Tempo mismatch: absolute pace differential. Large mismatches favour the
-    # team whose style dominates — not captured by the signed AdjTempo_diff.
+    # Tempo mismatch
     row["Tempo_Mismatch"] = abs(float(team_a["AdjTempo"]) - float(team_b["AdjTempo"]))
-    # Defensive/offensive matchup: how well each team's defense neutralises the
-    # opponent's offense. Lower AdjDE is better; higher AdjOE is better.
+    # Defensive/offensive matchup
     row["DefOff_Matchup_A"] = float(team_a["AdjDE"]) - float(team_b["AdjOE"])
     row["DefOff_Matchup_B"] = float(team_b["AdjDE"]) - float(team_a["AdjOE"])
     return row
@@ -90,7 +86,7 @@ def _get_team_row(lookup, team, year):
     """Retrieve a team's feature row from a year-keyed lookup dict.
 
     Args:
-        lookup: Dict keyed by (year, team) -> pd.Series.
+        lookup: Dict keyed by (year, team): pd.Series.
         team: Team name.
         year: Tournament year.
 
@@ -106,7 +102,7 @@ def _collect_regional_games(bracket, year, lookup, numeric_cols):
     Args:
         bracket: Single-year bracket dict from results.json.
         year: Tournament year.
-        lookup: Dict keyed by (year, team) -> feature Series.
+        lookup: Dict keyed by (year, team): feature Series.
         numeric_cols: Numeric columns to difference.
 
     Returns:
@@ -135,7 +131,7 @@ def _collect_e8_games(bracket, year, lookup, numeric_cols):
     Args:
         bracket: Single-year bracket dict from results.json.
         year: Tournament year.
-        lookup: Dict keyed by (year, team) -> feature Series.
+        lookup: Dict keyed by (year, team): feature Series.
         numeric_cols: Numeric columns to difference.
 
     Returns:
@@ -160,7 +156,7 @@ def _collect_f4_games(bracket, year, lookup, numeric_cols):
     Args:
         bracket: Single-year bracket dict from results.json.
         year: Tournament year.
-        lookup: Dict keyed by (year, team) -> feature Series.
+        lookup: Dict keyed by (year, team): feature Series.
         numeric_cols: Numeric columns to difference.
 
     Returns:
@@ -187,7 +183,7 @@ def _collect_ncg_game(bracket, year, lookup, numeric_cols):
     Args:
         bracket: Single-year bracket dict from results.json.
         year: Tournament year.
-        lookup: Dict keyed by (year, team) -> feature Series.
+        lookup: Dict keyed by (year, team): feature Series.
         numeric_cols: Numeric columns to difference.
 
     Returns:
@@ -224,8 +220,6 @@ def build_matchup_dataset(data, results):
         if c not in ["Year", "Team", "Conf", "Region", "Seed"]
         and pd.api.types.is_numeric_dtype(base[c])
     ]
-    # Build lookup from the full data so engineered features that are stripped
-    # by _base_features (e.g. AdjEM_Seed_Avg) remain accessible in each row.
     lookup = {(int(row["Year"]), row["Team"]): row for _, row in data.iterrows()}
 
     rows: list[dict] = []

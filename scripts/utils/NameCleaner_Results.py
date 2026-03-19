@@ -1,5 +1,8 @@
 """Team name standardization for tournament results data."""
 
+import copy
+import re
+
 
 def clean_names(team):
     """Normalize a single team name string to match SportsReference conventions.
@@ -10,8 +13,6 @@ def clean_names(team):
     Returns:
         Normalized team name string.
     """
-    import re
-
     team = re.sub(r"Mount St Marys", "Mount Saint Mary's", team)
     team = re.sub(r"^St ", "Saint ", team)
     team = re.sub(r"Saint Marys Ca", "Saint Mary's", team)
@@ -69,8 +70,6 @@ def clean_results(dict_teams):
     Returns:
         Deep copy of the input dict with all team names normalized.
     """
-    import copy
-
     dict_teams_copy = copy.deepcopy(dict_teams)
 
     for _year, regions in dict_teams_copy.items():

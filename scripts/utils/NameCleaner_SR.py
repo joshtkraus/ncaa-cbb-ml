@@ -1,5 +1,7 @@
 """Team name standardization for SportsReference data."""
 
+import pandas as pd
+
 
 def clean_SR(df):
     """Standardize team names in a SportsReference DataFrame to a canonical form.
@@ -10,8 +12,6 @@ def clean_SR(df):
     Returns:
         DataFrame with normalized team names.
     """
-    import pandas as pd
-
     pd.options.mode.chained_assignment = None
     df.loc[:, "Team"] = df["Team"].str.replace("Mount St Marys", "Mount Saint Mary's", regex=False)
     df.loc[:, "Team"] = df["Team"].str.replace(r"^St ", "Saint ", regex=True)

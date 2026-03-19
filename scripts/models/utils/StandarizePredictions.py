@@ -1,5 +1,12 @@
 """Utilities for normalizing model predictions and computing expected bracket points."""
 
+import json
+import os
+
+import pandas as pd
+from models.utils.MakePicks import real_Bracket
+from models.utils.SimulatePicks import simulate_picks
+
 
 def standarize(df):
     """Normalize raw model probabilities to sum to 1 within each matchup group.
@@ -11,8 +18,6 @@ def standarize(df):
     Returns:
         DataFrame with normalized columns R32, S16, E8, F4, NCG, Winner.
     """
-    import pandas as pd  # noqa: F401
-
     df.columns = ["Team", "Seed", "Region", "R32", "S16", "E8", "F4", "NCG", "Winner"]
 
     df["R32_Group"] = 0
@@ -63,32 +68,20 @@ def standarize(df):
     return df[["Team", "Seed", "Region", "R32", "S16", "E8", "F4", "NCG", "Winner"]]
 
 
-def standardize_predict(
-    years, predictions, correct_picks, data=None, matchup_predictor=None, thresholds=None
-):
-    """Normalize predictions, generate picks, apply matchup corrections, score them, export results.
+def standardize_predict(years, predictions, correct_picks, data=None, matchup_predictor=None):
+    """Normalize predictions, generate picks via simulation, score them, and export results.
 
     Args:
         years: List of backtest training years (test year = year + 1).
         predictions: Nested dict of raw model outputs keyed by test year and round.
         correct_picks: Dict of actual tournament results keyed by year string.
-        data: Full modeling DataFrame.
-        matchup_predictor: Optional fitted matchup TabularPredictor.
-        thresholds: Optional dict mapping round number to threshold.
+        data: Full modeling DataFrame. Required when matchup_predictor is provided.
+        matchup_predictor: Optional dict mapping test year to fitted matchup TabularPredictor.
 
     Returns:
         Tuple of (points_df, accs_df) summarizing backtesting performance.
     """
-    import json
-    import os
-
-    import pandas as pd
-    from models.utils.MakePicks import predict_bracket
-
-    use_correction = matchup_predictor is not None and data is not None
-
-    if use_correction:
-        from models.utils.BracketCorrection import correct_bracket
+    use_matchup = matchup_predictor is not None and data is not None
 
     points = {}
     pick_accs = {}
@@ -103,50 +96,24 @@ def standardize_predict(
         os.makedirs(os.path.dirname(path), exist_ok=True)
         pred_df.to_csv(path, index=False)
 
-        points_df = pred_df.copy()
-        points_df["R32"] = pred_df["R32"] * 10
-        points_df["S16"] = pred_df["R32"] * 10 + pred_df["S16"] * 20
-        points_df["E8"] = pred_df["R32"] * 10 + pred_df["S16"] * 20 + pred_df["E8"] * 40
-        points_df["F4"] = (
-            pred_df["R32"] * 10 + pred_df["S16"] * 20 + pred_df["E8"] * 40 + pred_df["F4"] * 80
-        )
-        points_df["NCG"] = (
-            pred_df["R32"] * 10
-            + pred_df["S16"] * 20
-            + pred_df["E8"] * 40
-            + pred_df["F4"] * 80
-            + pred_df["NCG"] * 160
-        )
-        points_df["Winner"] = (
-            pred_df["R32"] * 10
-            + pred_df["S16"] * 20
-            + pred_df["E8"] * 40
-            + pred_df["F4"] * 80
-            + pred_df["NCG"] * 160
-            + pred_df["Winner"] * 320
-        )
-
-        # Generate initial backward-selection bracket
-        picks, point, acc = predict_bracket(points_df, correct_picks[str(test_year)])
-        assert isinstance(acc, dict)
-
-        # Apply forward-pass matchup corrections if predictor is available.
-        if use_correction:
+        # Resolve per-year matchup predictor
+        predictor_for_year = None
+        if use_matchup:
             if isinstance(matchup_predictor, dict):
                 predictor_for_year = matchup_predictor.get(test_year)
             else:
                 predictor_for_year = matchup_predictor
 
-            if predictor_for_year is not None:
-                year_data = data[data["Year"] == test_year][["Team", "Seed", "Region"]]
-                full_year_data = data[data["Year"] == test_year]
-                picks = correct_bracket(
-                    picks, year_data, full_year_data, predictor_for_year, thresholds=thresholds
-                )
-                # Re-score the corrected bracket
-                from models.utils.MakePicks import real_Bracket
+        full_year_data = data[data["Year"] == test_year] if use_matchup else None
 
-                point, acc = real_Bracket(picks, correct_picks[str(test_year)])
+        # Generate bracket via simulation
+        picks = simulate_picks(
+            pred_df,
+            predictor=predictor_for_year,
+            full_data=full_year_data,
+        )
+
+        point, acc = real_Bracket(picks, correct_picks[str(test_year)])
 
         path = os.path.join(os.path.abspath(os.getcwd()), f"results/picks/{test_year}.json")
         os.makedirs(os.path.dirname(path), exist_ok=True)

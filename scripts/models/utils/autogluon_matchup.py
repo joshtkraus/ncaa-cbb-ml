@@ -6,6 +6,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from autogluon.tabular import TabularPredictor
+from sklearn.utils.class_weight import compute_class_weight
 
 warnings.filterwarnings(
     "ignore",
@@ -191,8 +192,6 @@ def _make_matchup_train_df(matchup_data, year_mask, weight_col):
     Returns:
         DataFrame with features, Outcome, and weight column.
     """
-    from sklearn.utils.class_weight import compute_class_weight
-
     subset = matchup_data[year_mask].copy()
     subset = subset.drop(columns=["Year", "Team_A", "Team_B"])
 

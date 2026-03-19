@@ -1,5 +1,9 @@
 """Walk-forward backtesting using a frozen AutoGluon model config per round."""
 
+import tempfile
+
+from models.utils.autogluon import _make_test_df, _make_train_df, fit_autogluon
+
 
 def run_test(data, ag_params, years, r, predictions):
     """Run walk-forward backtesting for a single round using AutoGluon.
@@ -14,10 +18,6 @@ def run_test(data, ag_params, years, r, predictions):
     Returns:
         Updated predictions dict with Round_{r} arrays added for each test year.
     """
-    import tempfile
-
-    from models.utils.autogluon import _make_test_df, _make_train_df, fit_autogluon
-
     params = ag_params[r]
 
     for year in years:

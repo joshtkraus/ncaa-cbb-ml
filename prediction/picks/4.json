@@ -1,0 +1,213 @@
+{
+  "West": {
+    "R32": {
+      "1": [
+        "Duke"
+      ],
+      "8": [
+        "Ohio State"
+      ],
+      "5": [
+        "Northern Iowa"
+      ],
+      "4": [
+        "Kansas"
+      ],
+      "6": [
+        "Louisville"
+      ],
+      "3": [
+        "Michigan State"
+      ],
+      "7": [
+        "UCF"
+      ],
+      "2": [
+        "Connecticut"
+      ]
+    },
+    "S16": {
+      "1": [
+        "Duke"
+      ],
+      "4": [
+        "Kansas"
+      ],
+      "3": [
+        "Michigan State"
+      ],
+      "2": [
+        "Connecticut"
+      ]
+    },
+    "E8": {
+      "Upper": [
+        "Duke"
+      ],
+      "Lower": [
+        "Connecticut"
+      ]
+    },
+    "F4": "Duke"
+  },
+  "East": {
+    "R32": {
+      "1": [
+        "Florida"
+      ],
+      "8": [
+        "Clemson"
+      ],
+      "5": [
+        "Vanderbilt"
+      ],
+      "4": [
+        "Nebraska"
+      ],
+      "6": [
+        "North Carolina"
+      ],
+      "3": [
+        "Illinois"
+      ],
+      "7": [
+        "Texas A&M"
+      ],
+      "2": [
+        "Houston"
+      ]
+    },
+    "S16": {
+      "1": [
+        "Florida"
+      ],
+      "4": [
+        "Nebraska"
+      ],
+      "3": [
+        "Illinois"
+      ],
+      "2": [
+        "Houston"
+      ]
+    },
+    "E8": {
+      "Upper": [
+        "Florida"
+      ],
+      "Lower": [
+        "Houston"
+      ]
+    },
+    "F4": "Florida"
+  },
+  "South": {
+    "R32": {
+      "1": [
+        "Arizona"
+      ],
+      "8": [
+        "Villanova"
+      ],
+      "5": [
+        "Wisconsin"
+      ],
+      "4": [
+        "Arkansas"
+      ],
+      "6": [
+        "Texas"
+      ],
+      "3": [
+        "Gonzaga"
+      ],
+      "7": [
+        "Miami FL"
+      ],
+      "2": [
+        "Purdue"
+      ]
+    },
+    "S16": {
+      "1": [
+        "Arizona"
+      ],
+      "4": [
+        "Arkansas"
+      ],
+      "3": [
+        "Gonzaga"
+      ],
+      "2": [
+        "Purdue"
+      ]
+    },
+    "E8": {
+      "Upper": [
+        "Arizona"
+      ],
+      "Lower": [
+        "Gonzaga"
+      ]
+    },
+    "F4": "Arizona"
+  },
+  "Midwest": {
+    "R32": {
+      "1": [
+        "Michigan"
+      ],
+      "8": [
+        "Georgia"
+      ],
+      "5": [
+        "Texas Tech"
+      ],
+      "4": [
+        "Alabama"
+      ],
+      "6": [
+        "Tennessee"
+      ],
+      "3": [
+        "Virginia"
+      ],
+      "7": [
+        "Kentucky"
+      ],
+      "2": [
+        "Iowa State"
+      ]
+    },
+    "S16": {
+      "1": [
+        "Michigan"
+      ],
+      "4": [
+        "Alabama"
+      ],
+      "3": [
+        "Virginia"
+      ],
+      "2": [
+        "Iowa State"
+      ]
+    },
+    "E8": {
+      "Upper": [
+        "Michigan"
+      ],
+      "Lower": [
+        "Iowa State"
+      ]
+    },
+    "F4": "Michigan"
+  },
+  "NCG": [
+    "Duke",
+    "Arizona"
+  ],
+  "Winner": [
+    "Duke"
+  ]
+}
