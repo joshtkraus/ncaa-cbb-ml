@@ -5,6 +5,7 @@ import shutil
 
 from models.utils.autogluon_matchup import fit_matchup_autogluon
 from models.utils.backwards_test import run_test
+from models.utils.plot_score_distribution import plot_score_distributions
 from models.utils.StandarizePredictions import standardize_predict
 
 
@@ -66,11 +67,12 @@ def combine_model(
             )
             matchup_predictors[test_year] = predictor
 
-    points_df, accs_df = standardize_predict(
+    print("Simulating Brackets...")
+    points_df, accs_df, score_distributions = standardize_predict(
         years,
         predictions,
         correct_picks,
-        data=data if use_matchup else None,
+        data=data,
         matchup_predictor=matchup_predictors if use_matchup else None,
     )
 
@@ -78,8 +80,16 @@ def combine_model(
     if use_matchup and os.path.exists(matchup_base_dir):
         shutil.rmtree(matchup_base_dir)
 
-    path = os.path.join(cwd, "results/backwards_test/picks_accuracy.csv")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    accs_df.to_csv(path, index=False)
-    path = os.path.join(cwd, "results/backwards_test/picks_points.csv")
-    points_df.to_csv(path, index=False)
+    out_dir = os.path.join(cwd, "results/backwards_test")
+    os.makedirs(out_dir, exist_ok=True)
+
+    accs_df.to_csv(os.path.join(out_dir, "picks_accuracy.csv"), index=False)
+
+    # points_df has three rows: Top1, Top10, Top25
+    points_df.to_csv(os.path.join(out_dir, "picks_points.csv"), index=True)
+
+    # Generate score distribution plot directly — no intermediate JSON saved
+    plot_score_distributions(
+        score_distributions,
+        out_path=os.path.join(out_dir, "score_distribution.png"),
+    )
