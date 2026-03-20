@@ -10,6 +10,7 @@ from models.utils.autogluon_matchup import fit_matchup_autogluon
 from models.utils.SimulatePicks import simulate_picks
 from models.utils.StandarizePredictions import standarize
 from scrapers.GetData_SR import run_scraper
+from scrapers.GetData_SR_Win import run
 from utils.GetSeedProb import calc_seed_prob
 from utils.GroupedMetrics import get_grouped_metrics
 from utils.NameCleaner_KP import clean_KP
@@ -20,8 +21,7 @@ year = 2026
 
 n_top = 25  # number of brakcets to save
 
-playin = ["Texas", "Miami OH", "Howard", "Prairie View A&M"]
-# playin = ["Texas", "SMU", "Howard","Prairie View A&M"]
+playin = ["North Carolina State", "SMU", "UMBC", "Lehigh"]
 
 
 def check_data_join(data, SR, KP):
@@ -55,10 +55,17 @@ if scraper_ind:
     SR = run_scraper(years=[year], export=False)
     assert SR is not None, "run_scraper returned None unexpectedly"
 else:
+    sr_path = os.path.join(os.path.abspath(os.getcwd()), "data/prediction/sportsreference.csv")
     SR = pd.read_csv(
-        os.path.join(os.path.abspath(os.getcwd()), "data/prediction/sportsreference.csv"),
+        sr_path,
         index_col=False,
     )
+    if "WinStreak" not in SR.columns:
+        run(input_path=sr_path, output_path=sr_path)
+        SR = pd.read_csv(
+            sr_path,
+            index_col=False,
+        )
 
 summary_temp = pd.read_csv(
     os.path.join(os.path.abspath(os.getcwd()), "data/prediction/KP/summary.csv"), index_col=False

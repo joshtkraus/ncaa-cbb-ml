@@ -16,12 +16,14 @@ def _update_readme_results(points_path, accs_path, readme_path):
         accs_path: Path to picks_accuracy.csv.
         readme_path: Path to README.md.
     """
-    points_df = pd.read_csv(points_path)
+    points_df = pd.read_csv(points_path, index_col=0)
     accs_df = pd.read_csv(accs_path)
 
+    # Use Top1 row for README — primary single-bracket metric
+    top1 = points_df.loc["Top1"]
     year_cols = [c for c in points_df.columns if c not in ("Mean", "SD")]
-    mean = points_df["Mean"].iloc[0]
-    rows = "\n".join(f"| {col} | {int(points_df[col].iloc[0])} |" for col in year_cols)
+    mean = top1["Mean"]
+    rows = "\n".join(f"| {col} | {int(top1[col])} |" for col in year_cols)
 
     games_per_round = {"R32": 32, "S16": 16, "E8": 8, "F4": 4, "NCG": 2, "Winner": 1}
     accs_df = accs_df.set_index("Round")
@@ -39,7 +41,7 @@ def _update_readme_results(points_path, accs_path, readme_path):
         "|------|--------|\n"
         f"{rows}\n\n"
         f"**Mean: {mean:.0f} pts** &nbsp;|&nbsp; "
-        f"**SD: {points_df['SD'].iloc[0]:.0f} pts** &nbsp;|&nbsp; "
+        f"**SD: {top1['SD']:.0f} pts** &nbsp;|&nbsp; "
         f"**Overall pick accuracy: {weighted_acc:.1%}**\n"
     )
 

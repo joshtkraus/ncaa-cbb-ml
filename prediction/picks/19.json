@@ -8,13 +8,13 @@
         "TCU"
       ],
       "5": [
-        "Saint John's"
+        "Northern Iowa"
       ],
       "4": [
         "Kansas"
       ],
       "6": [
-        "South Florida"
+        "Louisville"
       ],
       "3": [
         "Michigan State"
@@ -45,7 +45,7 @@
         "Duke"
       ],
       "Lower": [
-        "Connecticut"
+        "Michigan State"
       ]
     },
     "F4": "Duke"
@@ -96,7 +96,7 @@
         "Florida"
       ],
       "Lower": [
-        "Illinois"
+        "Houston"
       ]
     },
     "F4": "Florida"
@@ -205,7 +205,7 @@
   },
   "NCG": [
     "Florida",
-    "Arizona"
+    "Michigan"
   ],
   "Winner": [
     "Florida"

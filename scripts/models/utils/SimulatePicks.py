@@ -731,8 +731,6 @@ def _select_optimal_bracket(candidates, scoring_sims, rate_tables=None, team_to_
         [_bracket_to_flat(s, team_to_int) for s in scoring_sims], dtype=np.int16
     )
 
-    print(f"    Scoring {n_cands} candidates against {n_scores} scoring sims")
-
     scores = np.zeros((n_cands, n_scores), dtype=np.float32)
     for s in range(63):
         scores += (cand_arrays[:, s : s + 1] == score_arrays[np.newaxis, :, s]) * _POINTS[s]
@@ -858,7 +856,6 @@ def simulate_picks(
     cache: dict = {}
 
     # --- Candidate brackets ---
-    print(f"    Generating {n_sims} candidate brackets...")
     candidates = [
         _simulate_once_candidate(
             region_teams,
@@ -873,7 +870,6 @@ def simulate_picks(
     ]
 
     # --- Scoring simulations ---
-    print(f"    Generating {n_scoring_sims} scoring simulations...")
     scoring_sims = [
         _simulate_once_scoring(
             region_teams,
