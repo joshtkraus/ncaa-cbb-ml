@@ -1,4 +1,6 @@
-# NCAA College Basketball Tournament Predictive Modeling
+# NCAA Basketball Tournament Predictive Model
+
+A machine learning pipeline to predict NCAA tournament outcomes and generate optimized bracket picks using Automated Machine Learning and Monte Carlo simulation.
 
 ## Overview
 This project builds a predictive model for the NCAA Men's Basketball Tournament using a two-model architecture and a simulation-based bracket selection strategy that maximizes **expected points** under the standard scoring structure where point values double each round.
