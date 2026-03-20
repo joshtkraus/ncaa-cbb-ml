@@ -69,9 +69,9 @@ def plot_score_distributions(score_distributions, out_path):
         zorder=5,
     )
 
-    ax.set_xlabel("Simulation Rank (1 = highest combined score, averaged per 10)", fontsize=12)
+    ax.set_xlabel("Simulation Number", fontsize=12)
     ax.set_ylabel("Actual Points Scored", fontsize=12)
-    ax.set_title("Actual Points by Simulation Rank — All Backtest Years", fontsize=13)
+    ax.set_title("Actual Points by Simulation Number", fontsize=13)
     ax.legend(loc="upper right", fontsize=9, framealpha=0.8)
     ax.grid(True, alpha=0.3)
     ax.set_xlim(bin_centers[0], bin_centers[-1])
