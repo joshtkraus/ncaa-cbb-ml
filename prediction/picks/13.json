@@ -5,10 +5,10 @@
         "Duke"
       ],
       "8": [
-        "Ohio State"
+        "TCU"
       ],
       "5": [
-        "Northern Iowa"
+        "Saint John's"
       ],
       "4": [
         "Kansas"
@@ -45,7 +45,7 @@
         "Duke"
       ],
       "Lower": [
-        "Connecticut"
+        "Michigan State"
       ]
     },
     "F4": "Duke"
@@ -59,13 +59,13 @@
         "Iowa"
       ],
       "5": [
-        "McNeese"
+        "Vanderbilt"
       ],
       "4": [
         "Nebraska"
       ],
       "6": [
-        "VCU"
+        "North Carolina"
       ],
       "3": [
         "Illinois"
@@ -99,7 +99,7 @@
         "Houston"
       ]
     },
-    "F4": "Florida"
+    "F4": "Houston"
   },
   "South": {
     "R32": {
@@ -116,13 +116,13 @@
         "Arkansas"
       ],
       "6": [
-        "Texas"
+        "BYU"
       ],
       "3": [
         "Gonzaga"
       ],
       "7": [
-        "Miami FL"
+        "Missouri"
       ],
       "2": [
         "Purdue"
@@ -173,7 +173,7 @@
         "Virginia"
       ],
       "7": [
-        "Kentucky"
+        "Santa Clara"
       ],
       "2": [
         "Iowa State"
@@ -198,16 +198,16 @@
         "Michigan"
       ],
       "Lower": [
-        "Iowa State"
+        "Virginia"
       ]
     },
     "F4": "Michigan"
   },
   "NCG": [
     "Duke",
-    "Arizona"
+    "Michigan"
   ],
   "Winner": [
-    "Arizona"
+    "Duke"
   ]
 }

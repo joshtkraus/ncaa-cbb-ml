@@ -34,6 +34,7 @@ def tune_matchup_autogluon(matchup_data, folds):
     """
     weight_col = "sample_weight"
     model_scores: dict[str, list[float]] = {}
+    model_roc_scores: dict[str, list[float]] = {}
     fold_leaderboards = []
     fold_importances = []
 
@@ -71,7 +72,7 @@ def tune_matchup_autogluon(matchup_data, folds):
             calibrate=True,
         )
 
-        fold_lb = predictor.leaderboard(val_df, silent=True)
+        fold_lb = predictor.leaderboard(val_df, extra_metrics=["roc_auc"], silent=True)
         fold_lb["fold"] = fold_idx
         fold_leaderboards.append(fold_lb)
 
@@ -79,13 +80,18 @@ def tune_matchup_autogluon(matchup_data, folds):
             if "WeightedEnsemble" in row["model"]:
                 continue
             model_scores.setdefault(row["model"], []).append(float(row["score_val"]))
+            model_roc_scores.setdefault(row["model"], []).append(float(row["roc_auc"]))
 
         fold_imp = predictor.feature_importance(val_df, silent=True)
         fold_imp["fold"] = fold_idx
         fold_importances.append(fold_imp)
 
     mean_scores = {m: float(np.mean(v)) for m, v in model_scores.items() if len(v) == len(folds)}
-    best_model_name = min(mean_scores, key=lambda m: mean_scores[m])
+    mean_roc_scores = {
+        m: float(np.mean(v)) for m, v in model_roc_scores.items() if len(v) == len(folds)
+    }
+
+    best_model_name = max(mean_scores, key=lambda m: mean_scores[m])
     print(f"    Best model: {best_model_name}  (mean log loss: {mean_scores[best_model_name]:.4f})")
 
     cwd = os.path.abspath(os.getcwd())
@@ -94,7 +100,8 @@ def tune_matchup_autogluon(matchup_data, folds):
     numeric_lb_cols = all_lb.select_dtypes(include="number").columns.difference(["fold"])
     avg_leaderboard = all_lb.groupby("model")[numeric_lb_cols].mean().reset_index()
     avg_leaderboard["log_loss_score"] = avg_leaderboard["model"].map(mean_scores)
-    avg_leaderboard = avg_leaderboard.sort_values("log_loss_score", ascending=True)
+    avg_leaderboard["roc_auc_score"] = avg_leaderboard["model"].map(mean_roc_scores)
+    avg_leaderboard = avg_leaderboard.sort_values("log_loss_score", ascending=False)
     leaderboard_path = os.path.join(cwd, _LEADERBOARD_DIR, "matchup.csv")
     os.makedirs(os.path.dirname(leaderboard_path), exist_ok=True)
     avg_leaderboard.to_csv(leaderboard_path, index=False)

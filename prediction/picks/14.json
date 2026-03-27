@@ -5,7 +5,7 @@
         "Duke"
       ],
       "8": [
-        "TCU"
+        "Ohio State"
       ],
       "5": [
         "Saint John's"
@@ -20,7 +20,7 @@
         "Michigan State"
       ],
       "7": [
-        "UCF"
+        "UCLA"
       ],
       "2": [
         "Connecticut"
@@ -59,7 +59,7 @@
         "Iowa"
       ],
       "5": [
-        "Vanderbilt"
+        "McNeese"
       ],
       "4": [
         "Nebraska"
@@ -107,7 +107,7 @@
         "Arizona"
       ],
       "8": [
-        "Villanova"
+        "Utah State"
       ],
       "5": [
         "Wisconsin"
@@ -147,10 +147,10 @@
         "Arizona"
       ],
       "Lower": [
-        "Gonzaga"
+        "Purdue"
       ]
     },
-    "F4": "Arizona"
+    "F4": "Purdue"
   },
   "Midwest": {
     "R32": {
@@ -161,7 +161,7 @@
         "Georgia"
       ],
       "5": [
-        "Akron"
+        "Texas Tech"
       ],
       "4": [
         "Alabama"
@@ -198,7 +198,7 @@
         "Michigan"
       ],
       "Lower": [
-        "Iowa State"
+        "Virginia"
       ]
     },
     "F4": "Michigan"
