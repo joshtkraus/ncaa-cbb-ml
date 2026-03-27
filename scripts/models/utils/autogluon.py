@@ -142,7 +142,7 @@ def tune_autogluon(data, r, folds):
                 continue
             model_scores.setdefault(row["model"], []).append(float(row["score_val"]))
 
-        fold_imp = predictor.feature_importance(val_df_labeled, silent=True)
+        fold_imp = predictor.feature_importance(val_df_labeled, num_shuffle_sets=10, silent=True)
         fold_imp["fold"] = fold_idx
         fold_importances.append(fold_imp)
 

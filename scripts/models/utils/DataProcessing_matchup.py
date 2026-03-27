@@ -3,9 +3,9 @@
 import pandas as pd
 
 _REGION_RANK = {"West": 1, "East": 4, "South": 2, "Midwest": 3}
-_DROP_COLS = ["Round", "First_Year"]
+_DROP_COLS = ["Round"]
 _DROP_SUFFIXES = ("_Avg", "_Seed_Avg")
-_DROP_CONTAINS = ("_Actual_",)
+_DROP_CONTAINS = ("_Actual_6", "_Actual_12")
 _REGIONS = ["West", "East", "South", "Midwest"]
 _REGIONAL_ROUND_MAP = {2: ("R64", "R32"), 3: ("R32", "S16"), 4: ("S16", "E8")}
 
@@ -72,11 +72,9 @@ def _make_matchup_row(team_a, team_b, round_num, winner, numeric_cols):
     }
     for col in numeric_cols:
         row[f"{col}_diff"] = float(team_a[col]) - float(team_b[col])
-    # AdjEM vs seed expectation differential
+
     row["AdjEM_vs_Seed_diff"] = float(team_a["AdjEM_Seed_Avg"]) - float(team_b["AdjEM_Seed_Avg"])
-    # Tempo mismatch
     row["Tempo_Mismatch"] = abs(float(team_a["AdjTempo"]) - float(team_b["AdjTempo"]))
-    # Defensive/offensive matchup
     row["DefOff_Matchup_A"] = float(team_a["AdjDE"]) - float(team_b["AdjOE"])
     row["DefOff_Matchup_B"] = float(team_b["AdjDE"]) - float(team_a["AdjOE"])
     return row
@@ -248,7 +246,7 @@ def make_matchup_train_df(matchup_data, year_mask):
         DataFrame with features and Outcome column.
     """
     subset = matchup_data[year_mask].copy()
-    return subset.drop(columns=["Team_A", "Team_B", "Year"])
+    return subset.drop(columns=["Team_A", "Team_B"])
 
 
 def make_matchup_pred_df(team_a_row, team_b_row, round_num, data):
@@ -284,6 +282,7 @@ def make_matchup_pred_df(team_a_row, team_b_row, round_num, data):
     }
     for col in numeric_cols:
         row[f"{col}_diff"] = float(team_a[col]) - float(team_b[col])
+
     row["AdjEM_vs_Seed_diff"] = float(team_a["AdjEM_Seed_Avg"]) - float(team_b["AdjEM_Seed_Avg"])
     row["Tempo_Mismatch"] = abs(float(team_a["AdjTempo"]) - float(team_b["AdjTempo"]))
     row["DefOff_Matchup_A"] = float(team_a["AdjDE"]) - float(team_b["AdjOE"])

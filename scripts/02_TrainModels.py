@@ -9,7 +9,7 @@ from models.FitModels import train_models
 
 def run():
     """Tune AutoGluon per round and run walk-forward backtesting."""
-    data_path = os.path.join(os.path.abspath(os.getcwd()), "data/processed/data.csv")
+    data_path = os.path.join(os.path.abspath(os.getcwd()), "data/processed/data_norm.csv")
     data = pd.read_csv(data_path)
 
     train_models(data)

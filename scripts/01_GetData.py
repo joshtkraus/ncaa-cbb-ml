@@ -123,7 +123,6 @@ with open(os.path.join(os.path.abspath(os.getcwd()), "data/raw/results.json"), "
 
 # Filter by Start Year
 SR_sub = SR[SR["Year"] >= start_year]
-SR_sub = SR[SR["Year"] < 2025]
 
 # Teams who made play-in but lost
 playin_dict = {
@@ -297,9 +296,8 @@ data[
         "F4_Actual_Full",
         "NCG_Actual_Full",
         "Winner_Actual_Full",
-        "First_Year",
     ]
-] = calc_seed_prob(data, lag=None, ind_col=True)
+] = calc_seed_prob(data, lag=None, ind_col=False)
 data[
     [
         "R32_Actual_12",
@@ -324,9 +322,36 @@ data[
 # Get Grouped Metrics
 data = get_grouped_metrics(data)
 
+# Get Total Starter Injuries
+data["starters_injuries"] = data["starters_out"] + data["starters_questionable"]
+
+# Build normalized copy: z-score each KenPom metric within year
+id_cols = {
+    "Year",
+    "Team",
+    "Seed",
+    "Round",
+    "Conf Tourney",
+    "starters_out",
+    "starters_questionable",
+    "starters_injuries",
+}
+actual_cols = {c for c in data.columns if "_Actual_" in c}
+skip_cols = id_cols | actual_cols
+metric_cols = [
+    c for c in data.columns if c not in skip_cols and pd.api.types.is_numeric_dtype(data[c])
+]
+
+data_norm = data.copy()
+data_norm[metric_cols] = data_norm.groupby("Year")[metric_cols].transform(
+    lambda s: (s - s.mean()) / s.std(ddof=1)
+)
+
 # Export Data
 data_path = os.path.join(os.path.abspath(os.getcwd()), "data/processed/data.csv")
+data_norm_path = os.path.join(os.path.abspath(os.getcwd()), "data/processed/data_norm.csv")
 bracket_path = os.path.join(os.path.abspath(os.getcwd()), "data/processed/results.json")
 data.to_csv(data_path, index=False)
+data_norm.to_csv(data_norm_path, index=False)
 with open(bracket_path, "w") as f:
     json.dump(results, f)

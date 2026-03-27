@@ -198,9 +198,8 @@ data[
         "F4_Actual_Full",
         "NCG_Actual_Full",
         "Winner_Actual_Full",
-        "First_Year",
     ]
-] = calc_seed_prob(data, lag=None, ind_col=True)
+] = calc_seed_prob(data, lag=None, ind_col=False)
 data[
     [
         "R32_Actual_12",
